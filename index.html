@@ -251,6 +251,20 @@
     </div>
   </div>
 
+  <!-- Modal: Notification/Confirmation -->
+  <div id="notifyModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="notifyTitle">
+    <div class="modal" style="max-width:480px">
+      <header><div style="font-weight:800" id="notifyTitle">Notification</div></header>
+      <div class="body">
+        <p id="notifyMessage" style="margin-top:0"></p>
+        <div id="notifyActions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button type="button" id="notifyCancel" class="ghost hidden">Cancel</button>
+          <button type="button" id="notifyOK" class="primary">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     // ===== Firebase Web SDK config (your real project) =====
     const CONFIG = {
@@ -443,11 +457,58 @@
       document.getElementById('fNotes').value = it?.notes || '';
     }
     function closeItemModal(){ document.getElementById('itemModal').classList.add('hidden') }
-    function confirmDelete(it){ if(!canEdit()) return alert('You are not allowed to delete items.'); if(confirm(`Delete “${it.title}”?`)) store.deleteItem(it.id); }
+    
+    // ===== Custom Notification System =====
+    const notifyModal = $('#notifyModal');
+    const notifyTitle = $('#notifyTitle');
+    const notifyMessage = $('#notifyMessage');
+    const notifyOK = $('#notifyOK');
+    const notifyCancel = $('#notifyCancel');
+    let notifyResolve = null;
+
+    function notify(message, title = 'Notification', isConfirm = false) {
+      return new Promise(resolve => {
+        notifyResolve = resolve;
+        notifyTitle.textContent = title;
+        notifyMessage.textContent = message;
+        if (isConfirm) {
+          notifyCancel.classList.remove('hidden');
+          notifyOK.textContent = 'Confirm';
+        } else {
+          notifyCancel.classList.add('hidden');
+          notifyOK.textContent = 'OK';
+        }
+        notifyModal.classList.remove('hidden');
+      });
+    }
+
+    notifyOK.onclick = () => {
+      notifyModal.classList.add('hidden');
+      if (notifyResolve) notifyResolve(true);
+    };
+
+    notifyCancel.onclick = () => {
+      notifyModal.classList.add('hidden');
+      if (notifyResolve) notifyResolve(false);
+    };
+
+    async function confirmDelete(it){ 
+        if(!canEdit()) {
+            await notify('You are not allowed to delete items.', 'Permission Denied');
+            return;
+        }
+        const confirmed = await notify(`Are you sure you want to delete "${it.title}"? This cannot be undone.`, 'Confirm Deletion', true);
+        if(confirmed) {
+            store.deleteItem(it.id);
+        }
+    }
 
     // CSV Export
-    function exportCSV(){
-      if(!state.items || !state.items.length) return alert('No items to export yet.');
+    async function exportCSV(){
+      if(!state.items || !state.items.length) {
+        await notify('No items to export yet.', 'Export');
+        return;
+      }
       const cols=['id','title','owner','stage','status','progress','due','priority','link','notes','updatedAt'];
       const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
       const rows=[cols.join(',')].concat(state.items.map(it=> cols.map(k=>{
@@ -459,7 +520,7 @@
     }
 
     // Wire up static UI
-    document.getElementById('btnNew').onclick = ()=> canEdit()? openItemModal(null) : alert('Sign in to add items.');
+    document.getElementById('btnNew').onclick = ()=> canEdit()? openItemModal(null) : notify('Sign in to add items.', 'Permission Denied');
     document.getElementById('btnCancel').onclick = closeItemModal;
     document.getElementById('q').oninput = renderRows;
     document.getElementById('filterOwner').onchange = renderRows;
@@ -469,7 +530,11 @@
 
     // Save form
     document.getElementById('itemForm').onsubmit = async (e)=>{
-      e.preventDefault(); if(!canEdit()) return alert('You are not allowed to edit.');
+      e.preventDefault(); 
+      if(!canEdit()) {
+        await notify('You are not allowed to edit items.', 'Permission Denied');
+        return;
+      }
       const payload = {
         title: document.getElementById('fTitle').value.trim(),
         owner: document.getElementById('fOwner').value,
@@ -491,7 +556,16 @@
     // Auth UI
     document.getElementById('btnSignIn').onclick = ()=> document.getElementById('authModal').classList.remove('hidden');
     document.getElementById('btnSignOut').onclick = async ()=>{ if(state.mode==='firebase') await firebaseBits.signOut(firebaseBits.auth); state.user=null; updateAuthUI(); };
-    document.getElementById('demoGo').onclick = ()=>{ const name=document.getElementById('demoPicker').value; if(!name) return alert('Choose a teammate'); state.user={displayName:name,email:name.replace(/\s+/g,'.').toLowerCase()+'@demo.local'}; document.getElementById('authModal').classList.add('hidden'); updateAuthUI(true); };
+    document.getElementById('demoGo').onclick = async ()=>{ 
+        const name=document.getElementById('demoPicker').value; 
+        if(!name) {
+            await notify('Please choose a teammate to impersonate.', 'Demo Mode');
+            return;
+        }
+        state.user={displayName:name,email:name.replace(/\s+/g,'.').toLowerCase()+'@demo.local'}; 
+        document.getElementById('authModal').classList.add('hidden'); 
+        updateAuthUI(true); 
+    };
 
     function updateAuthUI(){ const who=document.getElementById('whoami'); if(state.user){ who.textContent=`Signed in as ${state.user.displayName||state.user.email}`; document.getElementById('btnSignIn').classList.add('hidden'); document.getElementById('btnSignOut').classList.remove('hidden'); } else { who.textContent='Not signed in'; document.getElementById('btnSignIn').classList.remove('hidden'); document.getElementById('btnSignOut').classList.add('hidden'); } }
 
@@ -553,8 +627,16 @@
         store.onChange(items=>{ state.items=items; renderRows(); });
         firebaseBits.onAuthStateChanged(auth, user=>{ state.user = user? { uid:user.uid, email:user.email, displayName:user.displayName||user.email }: null; updateAuthUI(); });
         document.getElementById('googleBtn').onclick = async ()=>{
-          try{ const provider=new firebaseBits.GoogleAuthProvider(); provider.setCustomParameters({prompt:'select_account'}); await firebaseBits.signInWithPopup(firebaseBits.auth, provider); document.getElementById('authModal').classList.add('hidden'); }
-          catch(err){ alert('Sign‑in failed: '+err.message) }
+          try{ 
+            const provider=new firebaseBits.GoogleAuthProvider(); 
+            provider.setCustomParameters({prompt:'select_account'}); 
+            await firebaseBits.signInWithPopup(firebaseBits.auth, provider); 
+            document.getElementById('authModal').classList.add('hidden'); 
+          }
+          catch(err){ 
+            console.error('Sign-in error:', err);
+            notify('Sign‑in failed: ' + err.message, 'Sign-in Error');
+          }
         };
         document.getElementById('modeBadge').textContent='Firebase Mode';
       } catch(e){
