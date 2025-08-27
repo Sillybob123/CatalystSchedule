@@ -92,7 +92,15 @@
       function isAllowlisted() {
         return request.auth != null && (
           request.auth.token.email in [
-            "bendoryair@gmail.com"
+            "yairbendor@gwmail.gwu.edu", "ac6892@princeton.edu",
+            "acarter45@gwu.edu", "act128@georgetown.edu",
+            "aidan.schurr@gwmail.gwu.edu", "aidan.schurr@gwu.edu",
+            "aidansbrown@gwmail.gwu.edu", "atcarter2002@gmail.com",
+            "azzarreeu@gwmail.gwu.edu", "ginger.taurek@gwmail.gwu.edu",
+            "loripreci@gwmail.gwu.edu", "loripreci03@gmail.com",
+            "Naama.bendor1@gmail.com", "nb852@georgetown.edu",
+            "rachel.lee@gwmail.gwu.edu", "sas562@georgetown.edu",
+            "stemcatalystmagazine@gmail.com", "bendoryair@gmail.com"
           ] ||
           request.auth.token.email.matches(".*@(gwu|georgetown|princeton|howard|jhu)\\.edu")
         );
@@ -255,7 +263,17 @@
     };
 
     // Client‑side allowlist (UI hint only; real enforcement via Firestore Rules above)
-    const ALLOWLIST_EMAILS = ['bendoryair@gmail.com'];
+    const ALLOWLIST_EMAILS = [
+        "yairbendor@gwmail.gwu.edu", "ac6892@princeton.edu",
+        "acarter45@gwu.edu", "act128@georgetown.edu",
+        "aidan.schurr@gwmail.gwu.edu", "aidan.schurr@gwu.edu",
+        "aidansbrown@gwmail.gwu.edu", "atcarter2002@gmail.com",
+        "azzarreeu@gwmail.gwu.edu", "ginger.taurek@gwmail.gwu.edu",
+        "loripreci@gwmail.gwu.edu", "loripreci03@gmail.com",
+        "Naama.bendor1@gmail.com", "nb852@georgetown.edu",
+        "rachel.lee@gwmail.gwu.edu", "sas562@georgetown.edu",
+        "stemcatalystmagazine@gmail.com", "bendoryair@gmail.com"
+    ];
     const ALLOWED_DOMAINS = ['gwu.edu','georgetown.edu','princeton.edu','howard.edu','jhu.edu'];
 
     // ===== Team roster (for Owner dropdowns & roster grid) =====
@@ -337,7 +355,7 @@
       const u=state.user; if(!u) return false;
       if(ALLOWLIST_EMAILS.includes(u.email)) return true;
       const domain=(u.email||'').split('@')[1]||''; if(ALLOWED_DOMAINS.includes(domain)) return true;
-      return true; // fallback – real enforcement is in Firestore Rules
+      return false; // fallback – real enforcement is in Firestore Rules
     }
 
     // ===== UI render =====
