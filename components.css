@@ -619,11 +619,11 @@
   overflow-y: auto;
 }
 
-.form-group {
+.form-group, .input-group {
   margin-bottom: var(--space-6);
 }
 
-.form-group label {
+.form-group label, .input-group label {
   display: block;
   font-weight: 500;
   color: var(--text-secondary);
@@ -633,7 +633,8 @@
 
 .form-group input,
 .form-group textarea,
-.form-group select {
+.form-group select,
+.input-group input {
   width: 100%;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-color);
@@ -647,7 +648,8 @@
 
 .form-group input:focus,
 .form-group textarea:focus,
-.form-group select:focus {
+.form-group select:focus,
+.input-group input:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px var(--primary-light);
@@ -741,7 +743,7 @@
 
 /* === LOGIN PAGE === */
 .login-page-body {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: var(--background-color);
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -751,14 +753,15 @@
 
 .login-container {
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
 }
 
 .login-box {
   background: var(--surface-color);
-  border-radius: var(--radius-xl);
-  padding: var(--space-10) var(--space-8);
-  box-shadow: var(--shadow-xl);
+  border-radius: var(--radius-lg);
+  padding: var(--space-12) var(--space-10);
+  box-shadow: none;
+  border: 1px solid var(--border-color);
   text-align: center;
 }
 
@@ -775,7 +778,7 @@
 }
 
 .login-header h1 {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-color);
   margin: 0;
@@ -784,7 +787,22 @@
 .login-box p {
   color: var(--text-secondary);
   margin-bottom: var(--space-8);
-  font-size: 16px;
+  font-size: 15px;
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.input-group {
+    text-align: left;
+}
+
+#login-form .btn-primary {
+    width: 100%;
+    padding-top: var(--space-4);
+    padding-bottom: var(--space-4);
+    font-size: 16px;
+    margin-top: var(--space-4);
 }
 
 .error-message {
@@ -882,4 +900,24 @@
 /* === UTILITY CLASSES === */
 .admin-only {
   display: none;
+}
+
+.deadline-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.deadline-item label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.deadline-item input {
+    background-color: var(--background-color);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    padding: var(--space-2);
 }
