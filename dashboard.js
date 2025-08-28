@@ -244,17 +244,16 @@ function renderCalendar() {
     const year = calendarDate.getFullYear();
     monthYear.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
 
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
     ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
         calendarGrid.innerHTML += `<div class="calendar-day-name">${day}</div>`;
     });
 
+    const firstDay = new Date(year, month, 1).getDay();
     for (let i = 0; i < firstDay; i++) {
         calendarGrid.innerHTML += `<div></div>`;
     }
 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
     for (let day = 1; day <= daysInMonth; day++) {
         const dayEl = document.createElement('div');
         dayEl.className = 'calendar-day';
@@ -319,6 +318,9 @@ function openDetailsModal(projectId) {
     const project = allProjects.find(p => p.id === projectId);
     if (!project) return;
     currentlyViewedProjectId = projectId;
+
+    // --- PERMISSION LOGIC ---
+    const canEdit = currentUserRole === 'admin' || currentUser.uid === project.authorId;
     
     document.getElementById('details-title').textContent = project.title;
     document.getElementById('details-author').textContent = project.authorName;
@@ -327,15 +329,25 @@ function openDetailsModal(projectId) {
     document.getElementById('details-deadline').textContent = new Date(project.deadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
 
-    const isAdmin = currentUserRole === 'admin';
-    const isAuthor = currentUser.uid === project.authorId;
-    document.getElementById('admin-approval-section').style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
-    document.getElementById('delete-section').style.display = isAuthor || isAdmin ? 'block' : 'none';
-    document.getElementById('assign-editor-section').style.display = isAdmin ? 'flex' : 'none';
-    document.getElementById('interview-details-section').style.display = project.type === 'Interview' ? 'block' : 'none';
+    // Hide/show sections based on permissions
+    document.getElementById('admin-approval-section').style.display = currentUserRole === 'admin' && project.proposalStatus === 'pending' ? 'block' : 'none';
+    document.getElementById('assign-editor-section').style.display = currentUserRole === 'admin' ? 'flex' : 'none';
+
+    // Apply permissions to editable sections
+    document.getElementById('change-deadline-section').style.display = canEdit ? 'block' : 'none';
+    document.getElementById('delete-section').style.display = canEdit ? 'block' : 'none';
+    
+    const interviewSection = document.getElementById('interview-details-section');
+    if (project.type === 'Interview') {
+        interviewSection.style.display = 'block';
+        interviewSection.querySelector('#interview-date').disabled = !canEdit;
+        interviewSection.querySelector('#schedule-interview-button').disabled = !canEdit;
+    } else {
+        interviewSection.style.display = 'none';
+    }
 
     populateEditorDropdown(project.editorId);
-    renderTimeline(project);
+    renderTimeline(project, canEdit); // Pass canEdit flag
     renderDeadlineHistory(project);
     renderInterviewStatus(project);
     
@@ -359,15 +371,20 @@ function populateEditorDropdown(currentEditorId) {
     });
 }
 
-function renderTimeline(project) {
+function renderTimeline(project, canEdit) {
     const timelineContainer = document.getElementById('details-timeline');
     timelineContainer.innerHTML = '';
     Object.entries(project.timeline).forEach(([task, completed]) => {
-        const isEditable = currentUser.uid === project.authorId || currentUserRole === 'admin';
+        const isEditable = canEdit;
         const taskEl = document.createElement('div');
         taskEl.className = 'task';
-        taskEl.innerHTML = `<input type="checkbox" id="task-${task.replace(/\s+/g, '-')}" ${completed ? 'checked' : ''} ${!isEditable ? 'disabled' : ''}><label for="task-${task.replace(/\s+/g, '-')}">${task}</label>`;
-        taskEl.querySelector('input').addEventListener('change', (e) => updateTaskStatus(project.id, task, e.target.checked));
+        const taskId = `task-${task.replace(/\s+/g, '-')}`;
+        taskEl.innerHTML = `<input type="checkbox" id="${taskId}" ${completed ? 'checked' : ''} ${!isEditable ? 'disabled' : ''}><label for="${taskId}">${task}</label>`;
+        
+        if (isEditable) {
+            taskEl.querySelector('input').addEventListener('change', (e) => updateTaskStatus(project.id, task, e.target.checked));
+        }
+        
         timelineContainer.appendChild(taskEl);
     });
 }
@@ -449,7 +466,7 @@ async function handleScheduleInterview() {
 async function handleAssignEditor() {
     const dropdown = document.getElementById('editor-dropdown');
     const editorId = dropdown.value;
-    if (!editorId) return; // No editor selected
+    if (!editorId) return;
     const selectedEditor = allEditors.find(e => e.id === editorId);
     if (!selectedEditor || !currentlyViewedProjectId) return;
     await db.collection('projects').doc(currentlyViewedProjectId).update({
