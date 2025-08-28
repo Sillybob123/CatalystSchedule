@@ -667,24 +667,32 @@ async function handleUpdateDeadlines() {
     const newDeadlines = {
         publication: currentProject.deadlines.publication,
     };
-
+    
+    let changes = [];
     const deadlineFields = ['contact', 'interview', 'draft', 'review', 'edits'];
     deadlineFields.forEach(field => {
         const input = document.getElementById(`deadline-${field}`);
         if (input) {
-            newDeadlines[field] = input.value;
+            const oldValue = currentProject.deadlines[field] || '';
+            const newValue = input.value;
+            if (oldValue !== newValue) {
+                changes.push(`${field} deadline from ${oldValue || 'none'} to ${newValue}`);
+            }
+            newDeadlines[field] = newValue;
         }
     });
 
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            deadlines: newDeadlines
-        });
-        await addActivity(currentlyViewedProjectId, 'updated the project deadlines.');
-        alert('Deadlines updated successfully!');
-    } catch (error) {
-        console.error('[DEADLINE UPDATE ERROR]', error);
-        alert('Failed to update deadlines. Please try again.');
+    if (changes.length > 0) {
+        try {
+            await db.collection('projects').doc(currentlyViewedProjectId).update({
+                deadlines: newDeadlines
+            });
+            await addActivity(currentlyViewedProjectId, `updated deadlines: ${changes.join(', ')}.`);
+            alert('Deadlines updated successfully!');
+        } catch (error) {
+            console.error('[DEADLINE UPDATE ERROR]', error);
+            alert('Failed to update deadlines. Please try again.');
+        }
     }
 }
 
@@ -705,65 +713,116 @@ async function handleDeleteProject() {
 function generateStatusReport() {
     const reportModal = document.getElementById('report-modal');
     const reportContent = document.getElementById('report-content');
-    reportContent.innerHTML = ''; 
+    reportContent.innerHTML = ''; // Clear previous report
 
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // 1. General Alerts
     const overdueProjects = allProjects.filter(p => {
         const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
-        return new Date(finalDeadline) < new Date() && getProjectState(p).column !== 'Completed';
+        return new Date(finalDeadline) < now && getProjectState(p).column !== 'Completed';
     });
 
-    let reportHTML = `
-        <div class="report-section">
-            <h3><span class="emoji">🚨</span> Overdue Projects (${overdueProjects.length})</h3>
-            ${overdueProjects.length > 0 ? overdueProjects.map(p => `
-                <div class="report-item overdue-item" data-id="${p.id}">
-                    <span class="report-item-title">${p.title}</span>
-                    <span class="report-item-meta">Due: ${new Date(p.deadlines.publication).toLocaleDateString()} | Author: ${p.authorName}</span>
-                </div>
-            `).join('') : '<p>No overdue projects. Great job!</p>'}
-        </div>
-    `;
-
-    const inReviewProjects = allProjects.filter(p => {
+    const completedThisWeek = allProjects.filter(p => {
         const state = getProjectState(p);
-        return state.column === 'In Review' || state.column === 'Reviewing Suggestions';
+        if (state.column !== 'Completed') return false;
+        const completionActivity = (p.activity || []).find(a => a.text.includes('Suggestions Reviewed'));
+        if (!completionActivity) return false;
+        return completionActivity.timestamp.toDate() >= oneWeekAgo;
+    });
+    
+    let reportHTML = `<div class="report-container">`;
+
+    reportHTML += `
+        <div class="report-section">
+            <h2><span class="emoji">🚨</span> Weekly Alerts</h2>
+            ${overdueProjects.length > 0 ? 
+                `<h3>Overdue Projects (${overdueProjects.length})</h3>` + overdueProjects.map(p => `
+                    <div class="report-item overdue-item" data-id="${p.id}">
+                        <span class="report-item-title">${p.title}</span>
+                        <span class="report-item-meta">Due: ${new Date(p.deadlines.publication).toLocaleDateString()} | Author: ${p.authorName}</span>
+                    </div>
+                `).join('') : '<p>No overdue projects. Great job!</p>'}
+        </div>`;
+
+    reportHTML += `
+        <div class="report-section">
+            <h2><span class="emoji">🎉</span> Recently Completed (Last 7 Days)</h2>
+            ${completedThisWeek.length > 0 ? completedThisWeek.map(p => `
+                 <div class="report-item" data-id="${p.id}">
+                    <span class="report-item-title">${p.title}</span>
+                    <span class="report-item-meta">Author: ${p.authorName}</span>
+                </div>
+            `).join('') : '<p>No projects completed in the last week.</p>'}
+        </div>
+    `;
+
+    // 2. Per-member breakdown
+    reportHTML += `<div class="report-section"><h2><span class="emoji">👥</span> Team Progress</h2></div>`;
+
+    const teamMembers = allEditors.reduce((acc, user) => {
+        acc[user.id] = { name: user.name, projects: [] };
+        return acc;
+    }, {});
+    
+    const authors = allProjects.reduce((acc, p) => {
+        if (!acc[p.authorId]) {
+            acc[p.authorId] = { name: p.authorName, projects: [] };
+        }
+        return acc;
+    }, {});
+
+    const allTeamMembers = {...teamMembers, ...authors};
+
+    allProjects.forEach(p => {
+        if (getProjectState(p).column === 'Completed') return; // Skip completed
+        if (allTeamMembers[p.authorId]) {
+            allTeamMembers[p.authorId].projects.push(p);
+        }
+        if (p.editorId && allTeamMembers[p.editorId]) {
+             // Avoid duplicating project if user is both author and editor
+            if (p.authorId !== p.editorId) {
+                allTeamMembers[p.editorId].projects.push(p);
+            }
+        }
     });
 
-    reportHTML += `
-        <div class="report-section">
-            <h3><span class="emoji">🧐</span> In Review (${inReviewProjects.length})</h3>
-            ${inReviewProjects.length > 0 ? inReviewProjects.map(p => `
-                <div class="report-item" data-id="${p.id}">
-                    <span class="report-item-title">${p.title}</span>
-                    <span class="report-item-meta">${getProjectState(p).statusText} | Editor: ${p.editorName || 'N/A'}</span>
-                </div>
-            `).join('') : '<p>No projects are currently in review.</p>'}
-        </div>
-    `;
-    
-    const upcomingProjects = allProjects.filter(p => {
-        const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
-        const deadline = new Date(finalDeadline);
-        const now = new Date();
-        const sevenDaysFromNow = new Date();
-        sevenDaysFromNow.setDate(now.getDate() + 7);
-        return deadline > now && deadline <= sevenDaysFromNow && getProjectState(p).column !== 'Completed';
-    }).sort((a, b) => new Date(a.deadlines.publication) - new Date(b.deadlines.publication));
+    for (const memberId in allTeamMembers) {
+        const member = allTeamMembers[memberId];
+        if (member.projects.length === 0) continue;
 
-    reportHTML += `
-        <div class="report-section">
-            <h3><span class="emoji">🗓️</span> Upcoming Deadlines (Next 7 Days) (${upcomingProjects.length})</h3>
-            ${upcomingProjects.length > 0 ? upcomingProjects.map(p => `
+        reportHTML += `<div class="report-user-section">
+            <h3 class="report-user-header">${member.name}</h3>`;
+
+        member.projects.forEach(p => {
+            const state = getProjectState(p);
+            const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
+            const recentActivities = (p.activity || [])
+                .filter(a => a.timestamp.toDate() >= oneWeekAgo)
+                .map(a => `<li><span class="timestamp">${a.timestamp.toDate().toLocaleDateString()}</span> - ${a.text}</li>`)
+                .join('');
+
+            reportHTML += `
                 <div class="report-item" data-id="${p.id}">
-                    <span class="report-item-title">${p.title}</span>
-                    <span class="report-item-meta">Due: ${new Date(p.deadlines.publication).toLocaleDateString()} | Status: ${getProjectState(p).statusText}</span>
+                    <div class="report-item-main">
+                        <span class="report-item-title">${p.title}</span>
+                        <span class="report-item-meta">
+                            Status: <strong>${state.statusText}</strong> | Deadline: ${new Date(finalDeadline).toLocaleDateString()}
+                        </span>
+                    </div>
+                    ${recentActivities ? `<ul class="report-activity-list">${recentActivities}</ul>` : ''}
                 </div>
-            `).join('') : '<p>No deadlines in the next 7 days.</p>'}
-        </div>
-    `;
+            `;
+        });
+        reportHTML += `</div>`;
+    }
+
+    reportHTML += '</div>'; // close report-container
 
     reportContent.innerHTML = reportHTML;
 
+    // Add event listeners to make items clickable
     reportContent.querySelectorAll('.report-item').forEach(item => {
         item.style.cursor = 'pointer';
         item.addEventListener('click', () => {
