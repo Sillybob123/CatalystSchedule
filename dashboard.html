@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Dashboard - Catalyst Magazine</title>
+    <title>Dashboard - Catalyst Tracker</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -12,95 +13,135 @@
         <div class="loader"></div>
     </div>
 
-    <div id="main-content" style="display: none;">
-        <header>
-            <div class="header-container">
-                <h1>Catalyst Project Dashboard</h1>
-                <div class="user-info">
-                    <span id="user-name"></span>
-                    <button id="logout-button">Logout</button>
+    <div id="app-container" class="app-container" style="display: none;">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <svg class="logo" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 7L12 12L22 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 12V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <h2>Catalyst Tracker</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active">
+                    <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                    <span>Board</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="user-avatar"></div>
+                    <div class="user-details">
+                        <span id="user-name"></span>
+                        <span id="user-role"></span>
+                    </div>
                 </div>
+                <button id="logout-button" class="logout-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                    <span>Logout</span>
+                </button>
             </div>
-        </header>
+        </aside>
 
-        <main class="dashboard-container">
-            <div class="controls">
-                 <button id="add-project-button" class="add-project-btn">Propose New Article</button>
-            </div>
+        <main class="main-content">
+            <header class="main-header">
+                <h1>Projects Board</h1>
+                <button id="add-project-button" class="add-project-btn">+ Propose New Article</button>
+            </header>
             <div id="kanban-board" class="kanban-board">
                 </div>
         </main>
     </div>
 
-    <div id="project-modal" class="modal">
+    <div id="project-modal" class="modal-overlay">
         <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <h2 id="modal-title">Propose New Article</h2>
+            <div class="modal-header">
+                <h2 id="modal-title">Propose New Article</h2>
+                <button class="close-button">&times;</button>
+            </div>
             <form id="project-form">
-                <input type="hidden" id="project-id">
-                <label for="project-title">Article Title / Topic</label>
-                <input type="text" id="project-title" required>
-
-                <label for="project-type">Project Type</label>
-                <select id="project-type" required>
-                    <option value="Interview">Writer: Interviewing a Professor</option>
-                    <option value="Op-Ed">Writer: Writing an Op-Ed</option>
-                    <option value="Editing">Editor: Editing a Piece</option>
-                </select>
-
-                <label for="project-proposal">Brief Proposal</label>
-                <textarea id="project-proposal" rows="4" placeholder="Briefly describe your article idea, who you might interview, and the main angle."></textarea>
-
-                <label for="project-deadline">Target Deadline</label>
-                <input type="date" id="project-deadline" required>
-                
-                <div class="modal-buttons">
-                    <button type="submit" id="save-project-button">Save Proposal</button>
+                 <input type="hidden" id="project-id">
+                <div class="form-group">
+                    <label for="project-title">Article Title / Topic</label>
+                    <input type="text" id="project-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="project-type">Project Type</label>
+                    <select id="project-type" required>
+                        <option value="Interview">Writer: Interviewing a Professor</option>
+                        <option value="Op-Ed">Writer: Writing an Op-Ed</option>
+                        <option value="Editing">Editor: Editing a Piece</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="project-proposal">Brief Proposal</label>
+                    <textarea id="project-proposal" rows="4" placeholder="Briefly describe your article idea, who you might interview, and the main angle."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="project-deadline">Target Deadline</label>
+                    <input type="date" id="project-deadline" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary close-button">Cancel</button>
+                    <button type="submit" id="save-project-button" class="btn-primary">Save Proposal</button>
                 </div>
             </form>
         </div>
     </div>
-    
-    <div id="details-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <h2 id="details-title"></h2>
-            <p><strong>Author:</strong> <span id="details-author"></span></p>
-            <p><strong>Status:</strong> <span id="details-status"></span></p>
-            <p><strong>Deadline:</strong> <span id="details-deadline"></span></p>
-            <div id="deadline-history" class="deadline-history"></div>
 
-            <hr/>
-
-            <h4>Proposal</h4>
-            <div id="details-proposal-section">
-                <p id="details-proposal"></p>
-                <div id="admin-approval-section" class="admin-controls">
-                    <textarea id="proposal-feedback" placeholder="Provide feedback (optional)"></textarea>
-                    <button id="approve-button">Approve</button>
-                    <button id="reject-button">Reject</button>
-                    <button id="hold-button">On Hold</button>
-                </div>
+    <div id="details-modal" class="modal-overlay">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 id="details-title"></h2>
+                <button class="close-button">&times;</button>
             </div>
-
-            <h4>Progress Checklist</h4>
-            <div id="details-timeline"></div>
-            
-             <hr/>
-            <h4>Change Deadline</h4>
-            <div id="change-deadline-section">
-                <input type="date" id="new-deadline-input">
-                <textarea id="deadline-reason-input" placeholder="Reason for changing the deadline..."></textarea>
-                <button id="update-deadline-button">Update Deadline</button>
+            <div class="details-grid">
+                <div class="details-main">
+                    <h4><span class="emoji">📝</span> Proposal</h4>
+                    <p id="details-proposal"></p>
+                    <hr>
+                    <h4><span class="emoji">✅</span> Progress Checklist</h4>
+                    <div id="details-timeline"></div>
+                    <hr>
+                    <h4><span class="emoji">💬</span> Comments & Activity</h4>
+                    <div class="comment-box">
+                        <textarea id="comment-input" placeholder="Add a comment..."></textarea>
+                        <button id="add-comment-button" class="btn-primary">Post</button>
+                    </div>
+                    <div id="details-activity-feed" class="activity-feed"></div>
+                </div>
+                <div class="details-sidebar">
+                    <div class="sidebar-section">
+                        <h4>Status</h4>
+                        <p id="details-status"></p>
+                    </div>
+                    <div class="sidebar-section">
+                        <h4>Author</h4>
+                        <p id="details-author"></p>
+                    </div>
+                    <div class="sidebar-section">
+                        <h4>Deadline</h4>
+                        <p id="details-deadline"></p>
+                        <div id="deadline-history" class="deadline-history"></div>
+                    </div>
+                    <div id="admin-approval-section" class="sidebar-section admin-controls">
+                        <h4>Admin Actions</h4>
+                        <textarea id="proposal-feedback" placeholder="Provide feedback (optional)"></textarea>
+                        <button id="approve-button" class="btn-success">Approve</button>
+                        <button id="reject-button" class="btn-danger">Reject</button>
+                        <button id="hold-button" class="btn-warning">On Hold</button>
+                    </div>
+                     <div id="change-deadline-section" class="sidebar-section">
+                        <h4>Change Deadline</h4>
+                        <input type="date" id="new-deadline-input">
+                        <textarea id="deadline-reason-input" placeholder="Reason for changing..."></textarea>
+                        <button id="update-deadline-button" class="btn-secondary">Update</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
     <script src="dashboard.js"></script>
 </body>
 </html>
