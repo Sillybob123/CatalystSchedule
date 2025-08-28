@@ -230,6 +230,7 @@ body {
   padding: 20px;
   position: relative;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+  transition: width 0.3s ease;
 }
 .sidebar-header {
   display: flex;
@@ -627,7 +628,7 @@ body {
   color: #212529;
 }
 
-/* Forms — unified & elevated */
+/* --- Forms — unified & elevated --- */
 .form-group {
   margin-bottom: 20px;
 }
@@ -683,10 +684,10 @@ textarea {
   border-bottom-right-radius: var(--radius);
 }
 
-/* Details Modal Layout */
+/* --- Details Modal Layout & Forms --- */
 .details-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 2.2fr) minmax(300px, 1fr);
   gap: 32px;
   padding: 28px 32px;
 }
@@ -698,20 +699,32 @@ textarea {
 .details-form button {
   align-self: flex-start;
 }
+.details-sidebar .details-form button {
+    width: 100%;
+}
 
 .details-main h4 {
-  margin: 0 0 12px;
+  margin: 24px 0 12px;
   font-size: 16px;
   font-weight: 600;
   color: #343a40;
+}
+.details-main h4:first-child {
+    margin-top: 0;
 }
 .details-sidebar .sidebar-section {
   background: #f8f9fa;
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
   box-shadow: var(--shadow);
+}
+.details-sidebar .sidebar-section h4 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
 }
 .deadline-history p {
   margin: 0.2rem 0;
@@ -720,15 +733,22 @@ textarea {
 }
 
 #interview-details-section {
-  background: #f8f9fa;
+  background: #f0f2f5;
   padding: 16px;
   border-radius: var(--radius);
   border: 1px solid #e9ecef;
 }
 #interview-form {
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 12px;
+}
+#admin-approval-section .button-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 /* Timeline checklist */
@@ -750,6 +770,10 @@ textarea {
   height: 20px;
   margin-right: 4px;
   accent-color: var(--primary-color);
+}
+#details-timeline input[type="checkbox"]:disabled + label {
+    color: var(--text-secondary);
+    cursor: not-allowed;
 }
 
 /* Comments & Activity */
@@ -849,30 +873,88 @@ textarea {
   }
 }
 
-/* Accessibility & focus */
+/* --- Accessibility & Focus --- */
 :focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
 }
 
-/* Responsive tweaks */
-@media (max-width: 980px) {
-  .sidebar {
-    width: 240px;
-  }
-  .main-content {
-    padding: 24px;
-  }
-  .details-grid {
-    grid-template-columns: 1fr;
-  }
+
+/* --- Responsive Design --- */
+
+/* For Tablets and smaller desktops */
+@media (max-width: 1024px) {
+    .main-content {
+        padding: 24px;
+    }
+    .kanban-board {
+        /* On tablets, allow horizontal scrolling for the board */
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 16px;
+        gap: 16px;
+    }
+    .kanban-column {
+        min-width: 280px;
+        flex: 1;
+    }
+    .details-grid {
+        /* Stack the details view earlier on tablets */
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
 }
-@media (max-width: 640px) {
-  .sidebar {
-    position: sticky;
-    top: 0;
-  }
-  .main-header h1 {
-    font-size: 24px;
-  }
+
+/* For Mobile Phones */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+    }
+    .app-container {
+        /* Stack sidebar on top of content on mobile */
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative; /* Override sticky position from old styles */
+    }
+    .main-content {
+        padding: 24px 16px;
+    }
+    .main-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .main-header h1 {
+        font-size: 24px;
+    }
+    .kanban-board {
+        /* Stack columns vertically on mobile */
+        display: block;
+        overflow-x: hidden;
+    }
+    .kanban-column {
+        min-width: 100%;
+        margin-bottom: 24px;
+    }
+
+    /* Modal adjustments for small screens */
+    .modal-content {
+        margin: 16px auto;
+        width: calc(100% - 24px);
+    }
+    .modal-header, #project-form, .details-grid, .modal-footer {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+    .calendar-day {
+        min-height: 80px;
+        padding: 8px;
+    }
+    .calendar-day-name {
+        font-size: 12px;
+        padding: 8px 4px;
+    }
 }
