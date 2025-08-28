@@ -18,6 +18,7 @@ const db = firebase.firestore();
 
 let currentUser = null;
 let currentUserRole = null;
+let currentUserName = null; // Variable to store the user's name
 let currentProjects = [];
 
 // --- TIMELINE TEMPLATES ---
@@ -37,14 +38,19 @@ const projectTimelines = {
 
 // --- AUTHENTICATION ---
 auth.onAuthStateChanged(user => {
+    const loader = document.getElementById('loader');
+    const mainContent = document.getElementById('main-content');
+
     if (user) {
         currentUser = user;
-        // Fetch user's role from Firestore
+        // Fetch user's role and name from Firestore
         db.collection('users').doc(user.uid).get().then(doc => {
             if (doc.exists) {
                 const userData = doc.data();
-                document.getElementById('user-name').textContent = `Welcome, ${userData.name}`;
+                currentUserName = userData.name; // Store the user's name
                 currentUserRole = userData.role;
+                
+                document.getElementById('user-name').textContent = `Welcome, ${currentUserName}`;
                 
                 // Hide 'Propose Article' button if user is not a writer or admin
                 if (currentUserRole !== 'writer' && currentUserRole !== 'admin') {
@@ -52,13 +58,18 @@ auth.onAuthStateChanged(user => {
                 }
                 
                 fetchAndRenderProjects();
+
+                // Show main content and hide loader
+                loader.style.display = 'none';
+                mainContent.style.display = 'block';
+
             } else {
-                console.error("User data not found in Firestore!");
-                auth.signOut();
+                console.error("User data not found in Firestore! Signing out.");
+                auth.signOut(); // This will trigger the 'else' block
             }
         });
     } else {
-        // If not logged in, redirect to login page
+        // If not logged in after check, redirect to login page
         window.location.href = 'index.html';
     }
 });
@@ -108,7 +119,7 @@ function renderKanbanBoard(projects) {
             projectColumn = KANBAN_COLUMNS.IN_PROGRESS;
         }
 
-        const columnEl = Array.from(board.querySelectorAll('h3')).find(h => h.textContent === projectColumn).nextElementSibling;
+        const columnEl = Array.from(board.querySelectorAll('h3')).find(h => h.textContent === projectColumn)?.nextElementSibling;
         if (columnEl) {
             columnEl.appendChild(createProjectCard(project));
         }
@@ -121,11 +132,12 @@ function createProjectCard(project) {
     card.dataset.id = project.id;
     
     const deadline = new Date(project.deadline);
-    const isOverdue = new Date() > deadline;
+    const isOverdue = new Date() > deadline && project.status !== "Ready for Publication";
 
     let proposalBadge = '';
     if (project.proposalStatus === 'pending') proposalBadge = `<span style="color: orange;">[Pending Approval]</span>`;
     if (project.proposalStatus === 'rejected') proposalBadge = `<span style="color: red;">[Rejected]</span>`;
+    if (project.proposalStatus === 'on-hold') proposalBadge = `<span style="color: #6c757d;">[On Hold]</span>`;
 
     card.innerHTML = `
         <h4 class="card-title">${project.title} ${proposalBadge}</h4>
@@ -166,7 +178,7 @@ projectForm.addEventListener('submit', async (e) => {
         proposal: document.getElementById('project-proposal').value,
         deadline: document.getElementById('project-deadline').value,
         authorId: currentUser.uid,
-        authorName: currentUser.displayName || currentUser.email,
+        authorName: currentUserName, // FIXED: Use the fetched name
         proposalStatus: 'pending', // 'pending', 'approved', 'rejected', 'on-hold'
         status: 'Proposed',
         timeline: projectTimelines[document.getElementById('project-type').value].reduce((acc, task) => {
@@ -178,8 +190,10 @@ projectForm.addEventListener('submit', async (e) => {
 
     try {
         if (projectId) {
-            // This is an update - logic can be expanded here if needed
+            // Update logic can be expanded here if needed
+            await db.collection('projects').doc(projectId).update(projectData);
         } else {
+            // Create new project
             await db.collection('projects').add(projectData);
         }
         projectModal.style.display = 'none';
@@ -214,6 +228,7 @@ function openDetailsModal(projectId) {
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
     const adminSection = document.getElementById('admin-approval-section');
     adminSection.style.display = (currentUserRole === 'admin') ? 'block' : 'none';
+    document.getElementById('proposal-feedback').value = project.proposalFeedback || '';
 
     // Timeline/Checklist
     const timelineContainer = document.getElementById('details-timeline');
@@ -236,7 +251,7 @@ function openDetailsModal(projectId) {
     const historyContainer = document.getElementById('deadline-history');
     historyContainer.innerHTML = '';
     if (project.originalDeadline) {
-        historyContainer.innerHTML += `<p>Original Deadline: ${project.originalDeadline}</p>`;
+        historyContainer.innerHTML += `<p><strong>Original Deadline:</strong> ${project.originalDeadline}</p>`;
     }
     project.deadlineHistory?.forEach(entry => {
         historyContainer.innerHTML += `<p>Changed to ${entry.newDeadline} on ${new Date(entry.changedAt.seconds * 1000).toLocaleDateString()}: "${entry.reason}"</p>`;
@@ -247,7 +262,7 @@ function openDetailsModal(projectId) {
 
 async function updateTaskStatus(projectId, task, isCompleted) {
     const projectRef = db.collection('projects').doc(projectId);
-    const updatePath = `timeline.${task}`; // Use dot notation for nested fields
+    const updatePath = `timeline.${task}`;
     
     try {
         await projectRef.update({ [updatePath]: isCompleted });
@@ -297,11 +312,11 @@ document.getElementById('update-deadline-button').addEventListener('click', asyn
     try {
         await projectRef.update({
             deadline: newDeadline,
-            originalDeadline: project.originalDeadline || project.deadline, // Set original if it doesn't exist
+            originalDeadline: project.originalDeadline || project.deadline,
             deadlineHistory: firebase.firestore.FieldValue.arrayUnion(historyEntry)
         });
         detailsModal.style.display = 'none';
-    } catch (error) {
+    } catch (error)
         console.error("Error updating deadline: ", error);
     }
 });
