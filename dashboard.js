@@ -1,5 +1,5 @@
 // ===============================
-// Catalyst Tracker - Dashboard JS
+// Catalyst Tracker - FIXED Dashboard JS
 // ===============================
 
 // ---- Firebase Configuration ----
@@ -23,7 +23,7 @@ let currentlyViewedProjectId = null;
 let currentView = 'interviews';
 let calendarDate = new Date();
 
-// ---- Timelines & Columns (from stateManager.js) are referenced implicitly ----
+// ---- Kanban Columns Definition ----
 const KANBAN_COLUMNS = {
     'interviews': ["Topic Proposal", "Interview Stage", "Writing Stage", "In Review", "Reviewing Suggestions", "Completed"],
     'opeds': ["Topic Proposal", "Writing Stage", "In Review", "Reviewing Suggestions", "Completed"],
@@ -150,8 +150,19 @@ function renderCurrentView() {
 //  Data Handling
 // ==================
 function subscribeToProjects() {
+    console.log("[FIREBASE] Setting up projects subscription...");
+    
     db.collection('projects').orderBy("deadline", "desc").onSnapshot(snapshot => {
+        console.log("[FIREBASE] Projects updated, processing...");
+        
         allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Log all project states for debugging
+        allProjects.forEach(project => {
+            const state = getProjectState(project, currentView, { uid: currentUser.uid });
+            console.log(`[PROJECT STATE] "${project.title}" -> Column: ${state.column}, Color: ${state.color}, Status: ${state.statusText}`);
+        });
+        
         renderCurrentView();
         updateNavCounts();
 
@@ -163,6 +174,8 @@ function subscribeToProjects() {
                 closeAllModals();
             }
         }
+    }, error => {
+        console.error("[FIREBASE ERROR] Projects subscription failed:", error);
     });
 }
 
@@ -182,6 +195,8 @@ function updateNavCounts() {
 //  Kanban Board
 // ==================
 function renderKanbanBoard() {
+    console.log(`[RENDER] Rendering kanban board for view: ${currentView}`);
+    
     const projectsToRender = filterProjects();
     const board = document.getElementById('kanban-board');
     board.innerHTML = '';
@@ -189,20 +204,37 @@ function renderKanbanBoard() {
     const columns = KANBAN_COLUMNS[currentView] || [];
     board.style.gridTemplateColumns = `repeat(${columns.length}, 1fr)`;
 
+    console.log(`[RENDER] Rendering ${columns.length} columns:`, columns);
+
     columns.forEach(columnTitle => {
         const columnProjects = projectsToRender.filter(p => {
             const state = getProjectState(p, currentView, { uid: currentUser.uid });
-            return state.column === columnTitle;
+            const matches = state.column === columnTitle;
+            
+            if (matches) {
+                console.log(`[COLUMN MATCH] "${p.title}" -> "${columnTitle}" (${state.color})`);
+            }
+            
+            return matches;
         });
+
+        console.log(`[COLUMN] "${columnTitle}" has ${columnProjects.length} projects`);
 
         const columnEl = document.createElement('div');
         columnEl.className = 'kanban-column';
-        columnEl.innerHTML = `<h3><span class="column-title">${columnTitle}</span><span class="task-count">${columnProjects.length}</span></h3><div class="kanban-cards"></div>`;
+        columnEl.innerHTML = `
+            <h3>
+                <span class="column-title">${columnTitle}</span>
+                <span class="task-count">${columnProjects.length}</span>
+            </h3>
+            <div class="kanban-cards"></div>
+        `;
         
         const cardsContainer = columnEl.querySelector('.kanban-cards');
         columnProjects.forEach(project => {
             cardsContainer.appendChild(createProjectCard(project));
         });
+        
         board.appendChild(columnEl);
     });
 }
@@ -225,9 +257,15 @@ function createProjectCard(project) {
     card.className = 'kanban-card';
     card.dataset.id = project.id;
 
-    const { color } = getProjectState(project, currentView, { uid: currentUser.uid });
-    if (color !== 'default') {
-        card.classList.add(`status-${color}`);
+    const state = getProjectState(project, currentView, { uid: currentUser.uid });
+    
+    // Apply color styling
+    if (state.color !== 'default') {
+        if (state.color === 'red') {
+            card.classList.add('status-danger');
+        } else {
+            card.classList.add(`status-${state.color}`);
+        }
     }
 
     const timeline = project.timeline || {};
@@ -245,7 +283,9 @@ function createProjectCard(project) {
 
     card.innerHTML = `
         <h4 class="card-title">${project.title}</h4>
-        <div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%;"></div></div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" style="width: ${progress}%;"></div>
+        </div>
         <div class="card-footer">
             <div class="card-author">
                 <div class="user-avatar" style="background-color: ${stringToColor(project.authorName)}">${project.authorName.charAt(0)}</div>
@@ -254,12 +294,13 @@ function createProjectCard(project) {
             <div class="card-editor">
                 <span class="card-deadline ${deadlineClass}">${deadline ? deadline.toLocaleDateString() : ''}</span>
             </div>
-        </div>`;
+        </div>
+    `;
+    
     card.addEventListener('click', () => openDetailsModal(project.id));
     return card;
 }
 
-// (The rest of the file: Calendar, Modals, Actions, Utils remain largely the same, but are included for completeness)
 // =================
 // Calendar
 // =================
@@ -310,7 +351,6 @@ function changeMonth(offset) {
     renderCalendar();
 }
 
-
 // =================
 // Modals
 // =================
@@ -342,8 +382,8 @@ function refreshDetailsModal(project) {
     document.getElementById('details-author').textContent = project.authorName;
     document.getElementById('details-editor').textContent = project.editorName || 'Not Assigned';
     
-    const { statusText } = getProjectState(project, currentView, { uid: currentUser.uid });
-    document.getElementById('details-status').textContent = statusText;
+    const state = getProjectState(project, currentView, { uid: currentUser.uid });
+    document.getElementById('details-status').textContent = state.statusText;
 
     document.getElementById('details-deadline').textContent = new Date(project.deadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
@@ -372,7 +412,10 @@ function refreshDetailsModal(project) {
 function renderTimeline(project, isAuthor, isEditor, isAdmin) {
     const timelineContainer = document.getElementById('details-timeline');
     timelineContainer.innerHTML = '';
-    const timelineTasks = Object.keys(project.timeline || {});
+    const timeline = project.timeline || {};
+    const timelineTasks = Object.keys(timeline);
+
+    console.log(`[TIMELINE] Rendering timeline for ${project.title}:`, timeline);
 
     timelineTasks.forEach(task => {
         let canEditTask = false;
@@ -382,14 +425,18 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
         if (authorTasks.includes(task)) canEditTask = isAuthor || isAdmin;
         if (editorTasks.includes(task)) canEditTask = isEditor || isAdmin;
 
-        const completed = project.timeline[task];
+        const completed = timeline[task];
         const taskEl = document.createElement('div');
         taskEl.className = 'task';
         const taskId = `task-${task.replace(/\s+/g, '-')}`;
-        taskEl.innerHTML = `<input type="checkbox" id="${taskId}" ${completed ? 'checked' : ''} ${!canEditTask ? 'disabled' : ''}><label for="${taskId}">${task}</label>`;
+        taskEl.innerHTML = `
+            <input type="checkbox" id="${taskId}" ${completed ? 'checked' : ''} ${!canEditTask ? 'disabled' : ''}>
+            <label for="${taskId}">${task}</label>
+        `;
         
         if (canEditTask) {
             taskEl.querySelector('input').addEventListener('change', async (e) => {
+                console.log(`[CHECKBOX] ${task} changed to ${e.target.checked}`);
                 await updateTaskStatus(project.id, task, e.target.checked);
             });
         }
@@ -411,7 +458,8 @@ function renderInterviewStatus(project) {
 function renderActivityFeed(activity) {
     const activityFeed = document.getElementById('details-activity-feed');
     activityFeed.innerHTML = '';
-    if (!activity) return;
+    if (!activity || !Array.isArray(activity)) return;
+    
     [...activity].sort((a, b) => b.timestamp.seconds - a.timestamp.seconds).forEach(item => {
         activityFeed.innerHTML += `<div class="feed-item">
             <div class="user-avatar" style="background-color: ${stringToColor(item.authorName)}">${item.authorName.charAt(0)}</div>
@@ -435,7 +483,6 @@ function populateEditorDropdown(currentEditorId) {
     });
 }
 
-
 // =================
 // Actions
 // =================
@@ -443,7 +490,10 @@ async function handleProjectFormSubmit(e) {
     e.preventDefault();
     const type = document.getElementById('project-type').value;
     const timeline = {};
-    const tasks = type === "Interview" ? ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete", "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"] : ["Topic Proposal Complete", "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"];
+    const tasks = type === "Interview" 
+        ? ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete", "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"] 
+        : ["Topic Proposal Complete", "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"];
+    
     tasks.forEach(task => timeline[task] = false);
 
     const newProject = {
@@ -459,18 +509,38 @@ async function handleProjectFormSubmit(e) {
         timeline: timeline,
         activity: [{ text: 'created the project.', authorName: currentUserName, timestamp: new Date() }]
     };
-    await db.collection('projects').add(newProject);
-    closeAllModals();
+    
+    try {
+        await db.collection('projects').add(newProject);
+        console.log("[PROJECT] Successfully created new project:", newProject.title);
+        closeAllModals();
+    } catch (error) {
+        console.error("[PROJECT ERROR] Failed to create project:", error);
+        alert('Failed to create project. Please try again.');
+    }
 }
 
 async function addActivity(projectId, text) {
     const activity = { text, authorName: currentUserName, timestamp: new Date() };
-    await db.collection('projects').doc(projectId).update({ activity: firebase.firestore.FieldValue.arrayUnion(activity) });
+    try {
+        await db.collection('projects').doc(projectId).update({ 
+            activity: firebase.firestore.FieldValue.arrayUnion(activity) 
+        });
+        console.log(`[ACTIVITY] Added: ${text}`);
+    } catch (error) {
+        console.error(`[ACTIVITY ERROR] Failed to add activity:`, error);
+    }
 }
 
+// FIXED: Use the new handleTaskCompletion function
 async function updateTaskStatus(projectId, task, isCompleted) {
-    await db.collection('projects').doc(projectId).update({ [`timeline.${task}`]: isCompleted });
-    addActivity(projectId, `${isCompleted ? 'completed' : 'un-completed'} the task: "${task}"`);
+    try {
+        await handleTaskCompletion(projectId, task, isCompleted, db, currentUserName);
+        console.log(`[TASK] Successfully updated ${task} to ${isCompleted} for project ${projectId}`);
+    } catch (error) {
+        console.error(`[TASK ERROR] Failed to update ${task}:`, error);
+        alert('Failed to update task. Please try again.');
+    }
 }
 
 async function handleAddComment() {
@@ -481,51 +551,104 @@ async function handleAddComment() {
     }
 }
 
+// FIXED: Proper proposal status handling
 async function updateProposalStatus(newStatus) {
     if (!currentlyViewedProjectId || currentUserRole !== 'admin') return;
-    const updateData = {
-        proposalStatus: newStatus,
-        'timeline.Topic Proposal Complete': newStatus === 'approved'
-    };
-    await db.collection('projects').doc(currentlyViewedProjectId).update(updateData);
-    addActivity(currentlyViewedProjectId, `${newStatus} the proposal.`);
+    
+    try {
+        const updates = {
+            proposalStatus: newStatus
+        };
+        
+        // If approving, also mark "Topic Proposal Complete" as true
+        if (newStatus === 'approved') {
+            updates['timeline.Topic Proposal Complete'] = true;
+        }
+        
+        await db.collection('projects').doc(currentlyViewedProjectId).update(updates);
+        
+        const activity = {
+            text: `${newStatus} the proposal.`,
+            authorName: currentUserName,
+            timestamp: new Date()
+        };
+        
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            activity: firebase.firestore.FieldValue.arrayUnion(activity)
+        });
+        
+        console.log(`[APPROVAL] Successfully ${newStatus} proposal for project ${currentlyViewedProjectId}`);
+        
+    } catch (error) {
+        console.error(`[APPROVAL ERROR] Failed to ${newStatus} proposal:`, error);
+        alert(`Failed to ${newStatus} proposal. Please try again.`);
+    }
 }
 
 async function handleScheduleInterview() {
     const dateInput = document.getElementById('interview-date').value;
     if (!dateInput || !currentlyViewedProjectId) return;
-    const interviewDate = new Date(dateInput);
-    await db.collection('projects').doc(currentlyViewedProjectId).update({ 
-        interviewDate: interviewDate,
-        'timeline.Interview Scheduled': true
-    });
-    addActivity(currentlyViewedProjectId, `scheduled the interview for ${interviewDate.toLocaleString()}`);
+    
+    try {
+        const interviewDate = new Date(dateInput);
+        await db.collection('projects').doc(currentlyViewedProjectId).update({ 
+            interviewDate: interviewDate,
+            'timeline.Interview Scheduled': true
+        });
+        
+        await addActivity(currentlyViewedProjectId, `scheduled the interview for ${interviewDate.toLocaleString()}`);
+        console.log(`[INTERVIEW] Successfully scheduled interview for ${interviewDate.toLocaleString()}`);
+        
+    } catch (error) {
+        console.error(`[INTERVIEW ERROR] Failed to schedule interview:`, error);
+        alert('Failed to schedule interview. Please try again.');
+    }
 }
 
 async function handleAssignEditor() {
     const dropdown = document.getElementById('editor-dropdown');
     const editorId = dropdown.value;
     if (!editorId) return;
+    
     const selectedEditor = allEditors.find(e => e.id === editorId);
     if (!selectedEditor || !currentlyViewedProjectId) return;
-    await db.collection('projects').doc(currentlyViewedProjectId).update({
-        editorId: editorId,
-        editorName: selectedEditor.name
-    });
-    addActivity(currentlyViewedProjectId, `assigned **${selectedEditor.name}** as the editor.`);
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            editorId: editorId,
+            editorName: selectedEditor.name
+        });
+        
+        await addActivity(currentlyViewedProjectId, `assigned **${selectedEditor.name}** as the editor.`);
+        console.log(`[EDITOR] Successfully assigned ${selectedEditor.name} as editor`);
+        
+    } catch (error) {
+        console.error(`[EDITOR ERROR] Failed to assign editor:`, error);
+        alert('Failed to assign editor. Please try again.');
+    }
 }
 
-async function handleUpdateDeadlines() { /* Placeholder */ }
+async function handleUpdateDeadlines() { 
+    console.log("[DEADLINES] Update deadlines functionality not yet implemented");
+}
 
 async function handleDeleteProject() {
     if (!currentlyViewedProjectId) return;
     if (confirm("Are you sure you want to permanently delete this project? This action cannot be undone.")) {
-        await db.collection('projects').doc(currentlyViewedProjectId).delete();
-        closeAllModals();
+        try {
+            await db.collection('projects').doc(currentlyViewedProjectId).delete();
+            console.log(`[DELETE] Successfully deleted project ${currentlyViewedProjectId}`);
+            closeAllModals();
+        } catch (error) {
+            console.error(`[DELETE ERROR] Failed to delete project:`, error);
+            alert('Failed to delete project. Please try again.');
+        }
     }
 }
 
-function generateStatusReport() { /* Placeholder */ }
+function generateStatusReport() { 
+    console.log("[REPORT] Status report generation not yet implemented");
+}
 
 // =================
 // Utils
@@ -533,7 +656,9 @@ function generateStatusReport() { /* Placeholder */ }
 function stringToColor(str) {
     if (!str) return '#cccccc';
     let hash = 0;
-    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
     let color = '#';
     for (let i = 0; i < 3; i++) {
         let value = (hash >> (i * 8)) & 0xFF;
