@@ -23,13 +23,6 @@ let currentlyViewedProjectId = null;
 let currentView = 'interviews';
 let calendarDate = new Date();
 
-// ---- Kanban Columns Definition ----
-const KANBAN_COLUMNS = {
-    'interviews': ["Topic Proposal", "Interview Stage", "Writing Stage", "In Review", "Reviewing Suggestions", "Completed"],
-    'opeds': ["Topic Proposal", "Writing Stage", "In Review", "Reviewing Suggestions", "Completed"],
-    'my-assignments': ["To Do", "In Progress", "In Review", "Done"]
-};
-
 // ======================
 //  Initialization
 // ======================
@@ -99,7 +92,7 @@ function setupNavAndListeners() {
     document.getElementById('assign-editor-button').addEventListener('click', handleAssignEditor);
     document.getElementById('update-deadlines-button').addEventListener('click', handleUpdateDeadlines);
     document.getElementById('delete-project-button').addEventListener('click', handleDeleteProject);
-    document.getElementById('approve-button').addEventListener('click', () => updateProposalStatus('approved'));
+    document.getElementById('approve-button').addEventListener('click', () => approveProposal(currentlyViewedProjectId));
     document.getElementById('reject-button').addEventListener('click', () => updateProposalStatus('rejected'));
     document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
     document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
@@ -141,10 +134,10 @@ function renderCurrentView() {
         renderCalendar();
     } else {
         boardView.style.display = 'block';
-        calendarView.style.display = 'none';
-        renderKanbanBoard();
+        renderKanbanBoard(filterProjects());
     }
 }
+
 
 // ==================
 //  Data Handling
@@ -156,12 +149,6 @@ function subscribeToProjects() {
         console.log("[FIREBASE] Projects updated, processing...");
         
         allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Log all project states for debugging
-        allProjects.forEach(project => {
-            const state = getProjectState(project, currentView, { uid: currentUser.uid });
-            console.log(`[PROJECT STATE] "${project.title}" -> Column: ${state.column}, Color: ${state.color}, Status: ${state.statusText}`);
-        });
         
         renderCurrentView();
         updateNavCounts();
@@ -181,8 +168,7 @@ function subscribeToProjects() {
 
 function updateNavCounts() {
     const myAssignmentsCount = allProjects.filter(p => {
-        const state = getProjectState(p, 'my-assignments', { uid: currentUser.uid });
-        return state.column !== "Done";
+        return p.authorId === currentUser.uid || p.editorId === currentUser.uid;
     }).length;
     
     const navLink = document.querySelector('#nav-my-assignments span');
@@ -194,30 +180,22 @@ function updateNavCounts() {
 // ==================
 //  Kanban Board
 // ==================
-function renderKanbanBoard() {
-    console.log(`[RENDER] Rendering kanban board for view: ${currentView}`);
-    
-    const projectsToRender = filterProjects();
+function renderKanbanBoard(projects) {
+    console.log(`[RENDER] Rendering ${projects.length} projects`);
     const board = document.getElementById('kanban-board');
     board.innerHTML = '';
     
-    const columns = KANBAN_COLUMNS[currentView] || [];
+    // Get columns based on current view
+    const columns = getColumnsForView(currentView);
     board.style.gridTemplateColumns = `repeat(${columns.length}, 1fr)`;
-
-    console.log(`[RENDER] Rendering ${columns.length} columns:`, columns);
-
+    
+    // Create column structure
     columns.forEach(columnTitle => {
-        const columnProjects = projectsToRender.filter(p => {
-            const state = getProjectState(p, currentView, { uid: currentUser.uid });
-            const matches = state.column === columnTitle;
-            
-            if (matches) {
-                console.log(`[COLUMN MATCH] "${p.title}" -> "${columnTitle}" (${state.color})`);
-            }
-            
-            return matches;
+        const columnProjects = projects.filter(project => {
+            const state = getProjectState(project);
+            return state.column === columnTitle;
         });
-
+        
         console.log(`[COLUMN] "${columnTitle}" has ${columnProjects.length} projects`);
 
         const columnEl = document.createElement('div');
@@ -253,46 +231,35 @@ function filterProjects() {
 }
 
 function createProjectCard(project) {
+    const state = getProjectState(project);
     const card = document.createElement('div');
-    card.className = 'kanban-card';
+    
+    // Apply color class based on state
+    card.className = `kanban-card status-${state.color}`;
     card.dataset.id = project.id;
-
-    const state = getProjectState(project, currentView, { uid: currentUser.uid });
     
-    // Apply color styling
-    if (state.color !== 'default') {
-        if (state.color === 'red') {
-            card.classList.add('status-danger');
-        } else {
-            card.classList.add(`status-${state.color}`);
-        }
-    }
-
-    const timeline = project.timeline || {};
-    const totalTasks = Object.keys(timeline).length;
-    const completedTasks = Object.values(timeline).filter(Boolean).length;
-    const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+    const progress = calculateProgress(project.timeline);
+    const daysUntilDeadline = Math.ceil((new Date(project.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+    const deadlineClass = daysUntilDeadline < 0 ? 'overdue' : daysUntilDeadline <= 3 ? 'due-soon' : '';
     
-    const deadline = project.deadline ? new Date(project.deadline + 'T23:59:59') : null;
-    let deadlineClass = '';
-    if (deadline) {
-        const daysUntilDue = (deadline - new Date()) / (1000 * 60 * 60 * 24);
-        if (daysUntilDue < 0) deadlineClass = 'overdue';
-        else if (daysUntilDue < 7) deadlineClass = 'due-soon';
-    }
-
     card.innerHTML = `
         <h4 class="card-title">${project.title}</h4>
+        <div class="card-meta">
+            <span class="card-type">${project.type}</span>
+            <span class="card-status">${state.statusText}</span>
+        </div>
         <div class="progress-bar-container">
-            <div class="progress-bar" style="width: ${progress}%;"></div>
+            <div class="progress-bar" style="width: ${progress}%"></div>
         </div>
         <div class="card-footer">
             <div class="card-author">
-                <div class="user-avatar" style="background-color: ${stringToColor(project.authorName)}">${project.authorName.charAt(0)}</div>
+                <div class="user-avatar" style="background: ${stringToColor(project.authorName)}">
+                    ${project.authorName.charAt(0)}
+                </div>
                 <span>${project.authorName}</span>
             </div>
-            <div class="card-editor">
-                <span class="card-deadline ${deadlineClass}">${deadline ? deadline.toLocaleDateString() : ''}</span>
+            <div class="card-deadline ${deadlineClass}">
+                ${new Date(project.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
         </div>
     `;
@@ -382,7 +349,7 @@ function refreshDetailsModal(project) {
     document.getElementById('details-author').textContent = project.authorName;
     document.getElementById('details-editor').textContent = project.editorName || 'Not Assigned';
     
-    const state = getProjectState(project, currentView, { uid: currentUser.uid });
+    const state = getProjectState(project);
     document.getElementById('details-status').textContent = state.statusText;
 
     document.getElementById('details-deadline').textContent = new Date(project.deadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -532,13 +499,60 @@ async function addActivity(projectId, text) {
     }
 }
 
-// FIXED: Use the new handleTaskCompletion function
-async function updateTaskStatus(projectId, task, isCompleted) {
+async function updateTaskStatus(projectId, taskName, isCompleted) {
+    console.log(`[TASK UPDATE] ${taskName} -> ${isCompleted ? 'completed' : 'uncompleted'}`);
+    
+    const updates = {
+        [`timeline.${taskName}`]: isCompleted
+    };
+    
+    // Handle automatic state transitions
+    if (isCompleted) {
+        switch (taskName) {
+            case "Topic Proposal Complete":
+                // This is set automatically when admin approves
+                break;
+                
+            case "Interview Scheduled":
+                // Card should turn yellow and stay in Interview Stage
+                break;
+                
+            case "Interview Complete":
+                // Move to Writing Stage
+                break;
+                
+            case "Article Writing Complete":
+                // Trigger editor assignment flow
+                break;
+                
+            case "Review Complete":
+                // Move to Reviewing Suggestions
+                break;
+                
+            case "Suggestions Reviewed":
+                // Move to Completed
+                break;
+        }
+    }
+    
     try {
-        await handleTaskCompletion(projectId, task, isCompleted, db, currentUserName);
-        console.log(`[TASK] Successfully updated ${task} to ${isCompleted} for project ${projectId}`);
+        await db.collection('projects').doc(projectId).update(updates);
+        
+        // Add activity log
+        const activity = {
+            text: `${isCompleted ? 'completed' : 'un-completed'} the task: "${taskName}"`,
+            authorName: currentUserName,
+            timestamp: new Date()
+        };
+        
+        await db.collection('projects').doc(projectId).update({
+            activity: window.firebase.firestore.FieldValue.arrayUnion(activity)
+        });
+        
+        console.log(`[TASK UPDATE] Successfully updated ${taskName} for project ${projectId}`);
+        
     } catch (error) {
-        console.error(`[TASK ERROR] Failed to update ${task}:`, error);
+        console.error('[TASK UPDATE ERROR]', error);
         alert('Failed to update task. Please try again.');
     }
 }
@@ -551,37 +565,19 @@ async function handleAddComment() {
     }
 }
 
-// FIXED: Proper proposal status handling
-async function updateProposalStatus(newStatus) {
-    if (!currentlyViewedProjectId || currentUserRole !== 'admin') return;
-    
+async function approveProposal(projectId) {
     try {
-        const updates = {
-            proposalStatus: newStatus
-        };
-        
-        // If approving, also mark "Topic Proposal Complete" as true
-        if (newStatus === 'approved') {
-            updates['timeline.Topic Proposal Complete'] = true;
-        }
-        
-        await db.collection('projects').doc(currentlyViewedProjectId).update(updates);
-        
-        const activity = {
-            text: `${newStatus} the proposal.`,
-            authorName: currentUserName,
-            timestamp: new Date()
-        };
-        
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            activity: firebase.firestore.FieldValue.arrayUnion(activity)
+        await db.collection('projects').doc(projectId).update({
+            proposalStatus: 'approved',
+            'timeline.Topic Proposal Complete': true // Automatically check this
         });
         
-        console.log(`[APPROVAL] Successfully ${newStatus} proposal for project ${currentlyViewedProjectId}`);
+        await addActivity(projectId, 'approved the proposal.');
+        console.log('[APPROVAL] Proposal approved and Topic Proposal Complete checked');
         
     } catch (error) {
-        console.error(`[APPROVAL ERROR] Failed to ${newStatus} proposal:`, error);
-        alert(`Failed to ${newStatus} proposal. Please try again.`);
+        console.error('[APPROVAL ERROR]', error);
+        alert('Failed to approve proposal. Please try again.');
     }
 }
 
@@ -665,4 +661,11 @@ function stringToColor(str) {
         color += ('00' + value.toString(16)).substr(-2);
     }
     return color;
+}
+
+function calculateProgress(timeline) {
+    if (!timeline) return 0;
+    const totalTasks = Object.keys(timeline).length;
+    const completedTasks = Object.values(timeline).filter(Boolean).length;
+    return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 }
