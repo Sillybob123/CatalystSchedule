@@ -224,15 +224,10 @@
 .kanban-column {
   background: var(--surface-color);
   border-radius: var(--radius-lg);
+  padding: var(--space-6);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  
-  /* FIXED: Set proper height constraints */
-  height: calc(100vh - 200px);
-  min-height: 400px;
-  max-height: calc(100vh - 200px);
+  min-height: 600px;
 }
 
 .kanban-column h3 {
@@ -245,16 +240,6 @@
   font-size: 18px;
   font-weight: 700;
   color: var(--text-color);
-}
-
-.column-header {
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--border-color);
-  background: #fafbfc;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  flex-shrink: 0; /* FIXED: Prevent header from shrinking */
-  position: relative;
-  z-index: 1;
 }
 
 .column-title {
@@ -273,60 +258,10 @@
   text-align: center;
 }
 
-.column-count {
-  font-size: clamp(12px, 0.9vw, 14px);
-  color: var(--text-secondary);
-  margin-top: var(--space-1);
-}
-
-.column-content {
-  padding: var(--space-4);
-  flex: 1; /* FIXED: Take up remaining space */
-  overflow-y: auto; /* FIXED: Add vertical scrolling */
-  overflow-x: hidden; /* Prevent horizontal scroll */
-  min-height: 0; /* FIXED: Allow flex item to shrink below content size */
-  
-  /* Enhanced scrollbar styling for better UX */
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-color) transparent;
-}
-
-/* Enhanced scrollbar styling for webkit browsers */
-.column-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.column-content::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 3px;
-}
-
-.column-content::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-}
-
-.column-content::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
 .kanban-cards {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding-bottom: var(--space-2); /* Extra padding at bottom for better scrolling */
-}
-
-/* Optional: Add a subtle fade effect at the bottom of scrollable areas */
-.column-content::after {
-  content: '';
-  position: sticky;
-  bottom: 0;
-  display: block;
-  height: 20px;
-  background: linear-gradient(transparent, var(--surface-color));
-  pointer-events: none;
-  margin: 0 calc(-1 * var(--space-4));
 }
 
 /* === KANBAN CARDS === */
@@ -1013,3 +948,102 @@
     border-radius: var(--radius-lg);
     padding: var(--space-6);
     margin-bottom: var(--space-8);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.report-section h2 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.report-section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: var(--space-4);
+    color: var(--text-secondary);
+}
+
+.report-user-section {
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+}
+
+.report-user-header {
+    background-color: var(--primary-subtle);
+    color: var(--primary-color);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius);
+    margin: -20px -20px var(--space-4) -20px;
+    font-size: 20px;
+}
+
+
+.report-item {
+    padding: var(--space-4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    margin-bottom: var(--space-4);
+    transition: all 0.2s ease;
+}
+
+.report-item:hover {
+    border-color: var(--primary-color);
+    background-color: var(--primary-subtle);
+}
+
+.report-item-main {
+    display: flex;
+    flex-direction: column;
+}
+
+.report-item.overdue-item {
+    background-color: #fff1f2;
+    border-color: var(--danger-color);
+}
+
+.report-item-title {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: var(--space-2);
+}
+
+.report-item-meta {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.report-activity-list {
+    list-style: none;
+    padding-left: var(--space-5);
+    margin-top: var(--space-3);
+    border-left: 2px solid var(--border-color);
+}
+
+.report-activity-list li {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+    position: relative;
+}
+.report-activity-list li::before {
+    content: '•';
+    color: var(--primary-color);
+    font-weight: bold;
+    display: inline-block;
+    width: 1em;
+    margin-left: -1em;
+    position: absolute;
+    left: -12px;
+    top: 0px;
+}
+.report-activity-list .timestamp {
+    font-weight: 500;
+    color: var(--text-color);
+}
