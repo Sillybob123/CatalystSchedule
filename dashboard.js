@@ -18,7 +18,7 @@ const db = firebase.firestore();
 let currentUser = null, currentUserName = null, currentUserRole = null;
 let allProjects = [], allEditors = [];
 let currentlyViewedProjectId = null, activityUnsubscribe = null;
-let currentView = 'interviews';
+let currentView = 'interviews'; // Default view
 let calendarDate = new Date();
 
 // --- CONSTANTS ---
@@ -29,7 +29,8 @@ const projectTimelines = {
 
 const KANBAN_COLUMNS = {
     'interviews': ["Topic Proposal", "Interview Stage", "Writing Stage", "Reviewing Suggestions", "Completed"],
-    'opeds': ["Topic Proposal", "Writing Stage", "Reviewing Suggestions", "Completed"]
+    'opeds': ["Topic Proposal", "Writing Stage", "Reviewing Suggestions", "Completed"],
+    'my-assignments': ["To Do", "In Progress", "In Review", "Done"]
 };
 
 // --- INITIALIZATION ---
@@ -38,7 +39,7 @@ auth.onAuthStateChanged(async user => {
         currentUser = user;
         try {
             const userDoc = await db.collection('users').doc(user.uid).get();
-            if (!userDoc.exists) throw new Error("User profile not found.");
+            if (!userDoc.exists) throw new Error("User profile not found in Firestore.");
             
             const userData = userDoc.data();
             currentUserName = userData.name;
@@ -47,7 +48,7 @@ auth.onAuthStateChanged(async user => {
             await fetchEditors();
             setupUI();
             setupNavAndListeners();
-            await fetchAndRenderProjects();
+            fetchAndRenderProjects(); // Initial fetch
 
             document.getElementById('loader').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
@@ -68,6 +69,7 @@ function setupUI() {
     document.getElementById('user-name').textContent = currentUserName;
     document.getElementById('user-role').textContent = currentUserRole;
     document.getElementById('user-avatar').textContent = currentUserName.charAt(0);
+    document.getElementById('user-avatar').style.backgroundColor = stringToColor(currentUserName);
     if (currentUserRole === 'admin') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
     }
@@ -84,10 +86,7 @@ function handleAuthError(message) {
 
 // --- NAVIGATION & VIEWS ---
 function setupNavAndListeners() {
-    const navLinks = document.querySelectorAll('.nav-item');
-    navLinks.forEach(link => link.addEventListener('click', e => handleNavClick(e, link.id)));
-    
-    // Add other event listeners once
+    document.querySelectorAll('.nav-item').forEach(link => link.addEventListener('click', e => handleNavClick(e, link.id)));
     document.getElementById('add-project-button').addEventListener('click', openProjectModal);
     document.getElementById('project-form').addEventListener('submit', handleProjectFormSubmit);
     document.getElementById('status-report-button').addEventListener('click', generateStatusReport);
@@ -98,37 +97,34 @@ function setupNavAndListeners() {
     document.getElementById('delete-project-button').addEventListener('click', handleDeleteProject);
     document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
     document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
-    ['approve-button', 'reject-button'].forEach(id => document.getElementById(id).addEventListener('click', () => updateProposalStatus(id.split('-')[0])));
-    
-    const modals = document.querySelectorAll('.modal-overlay');
-    modals.forEach(modal => {
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', e => {
             if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('close-button')) {
                 closeAllModals();
             }
         });
     });
+    ['approve-button', 'reject-button'].forEach(id => document.getElementById(id).addEventListener('click', () => updateProposalStatus(id.split('-')[0])));
 }
 
 function handleNavClick(e, linkId) {
     e.preventDefault();
     document.querySelectorAll('.nav-item').forEach(l => l.classList.remove('active'));
     document.getElementById(linkId).classList.add('active');
-
-    const boardView = document.getElementById('board-view');
-    const calendarView = document.getElementById('calendar-view');
     
-    const views = {
+    const viewMappings = {
         'nav-my-assignments': { view: 'my-assignments', title: 'My Assignments' },
         'nav-interviews': { view: 'interviews', title: 'Catalyst in the Capital' },
         'nav-opeds': { view: 'opeds', title: 'Op-Eds' },
         'nav-calendar': { view: 'calendar', title: 'Deadlines Calendar' }
     };
     
-    const { view, title } = views[linkId];
+    const { view, title } = viewMappings[linkId];
     currentView = view;
     document.getElementById('board-title').textContent = title;
 
+    const boardView = document.getElementById('board-view');
+    const calendarView = document.getElementById('calendar-view');
     if (currentView === 'calendar') {
         boardView.style.display = 'none';
         calendarView.style.display = 'block';
@@ -141,8 +137,8 @@ function handleNavClick(e, linkId) {
 }
 
 // --- DATA FETCHING & RENDERING ---
-async function fetchAndRenderProjects() {
-    db.collection('projects').orderBy("deadline").onSnapshot(snapshot => {
+function fetchAndRenderProjects() {
+    db.collection('projects').orderBy("deadline", "desc").onSnapshot(snapshot => {
         allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         if (currentView === 'calendar') {
             renderCalendar();
@@ -156,8 +152,7 @@ function filterProjects() {
     switch(currentView) {
         case 'interviews': return allProjects.filter(p => p.type === 'Interview');
         case 'opeds': return allProjects.filter(p => p.type === 'Op-Ed');
-        case 'my-assignments':
-            return allProjects.filter(p => p.authorId === currentUser.uid || p.editorId === currentUser.uid);
+        case 'my-assignments': return allProjects.filter(p => p.authorId === currentUser.uid || p.editorId === currentUser.uid);
         default: return allProjects;
     }
 }
@@ -184,19 +179,26 @@ function renderKanbanBoard() {
 }
 
 function getProjectColumn(project) {
-    if (project.proposalStatus !== 'approved') return "Topic Proposal";
-    
     const completedTasks = Object.keys(project.timeline).filter(task => project.timeline[task]);
+    
+    if (project.proposalStatus !== 'approved') return "Topic Proposal";
+
+    if (currentView === 'my-assignments') {
+        if (completedTasks.length === Object.keys(project.timeline).length) return "Done";
+        if (project.status === 'In Editing') return "In Review"; // Simplified for personal view
+        if (completedTasks.length > 0) return "In Progress";
+        return "To Do";
+    }
     
     if (project.type === 'Interview') {
         if (completedTasks.length === 5) return "Completed";
         if (completedTasks.length === 4) return "Reviewing Suggestions";
-        if (completedTasks.length === 3) return "Writing Stage";
-        if (completedTasks.length >= 1) return "Interview Stage";
+        if (completedTasks.length >= 3) return "Writing Stage"; // Writing is after interview is complete
+        if (completedTasks.length >= 1) return "Interview Stage"; // Proposal complete is first step
     } else { // Op-Ed
         if (completedTasks.length === 3) return "Completed";
         if (completedTasks.length === 2) return "Reviewing Suggestions";
-        if (completedTasks.length === 1) return "Writing Stage";
+        if (completedTasks.length >= 1) return "Writing Stage";
     }
     return "Topic Proposal";
 }
@@ -220,15 +222,18 @@ function createProjectCard(project) {
         <div class="card-footer">
             <div class="card-author">
                 <div class="user-avatar" style="background-color: ${stringToColor(project.authorName)}">${project.authorName.charAt(0)}</div>
-                <span>${project.editorName || 'No Editor'}</span>
+                <span>${project.authorName}</span>
             </div>
-            <span class="card-deadline ${deadlineClass}">${deadline.toLocaleDateString()}</span>
+            <div class="card-editor">
+                <span class="card-deadline ${deadlineClass}">${deadline.toLocaleDateString()}</span>
+            </div>
         </div>`;
     card.addEventListener('click', () => openDetailsModal(project.id));
     return card;
 }
 
-// --- CALENDAR VIEW ---
+// --- CALENDAR VIEW & MODALS... (Rest of the functions remain largely the same, but are included for completeness)
+
 function renderCalendar() {
     const calendarGrid = document.getElementById('calendar-grid');
     const monthYear = document.getElementById('month-year');
@@ -276,7 +281,6 @@ function changeMonth(offset) {
     renderCalendar();
 }
 
-// --- MODALS & FORMS ---
 function openProjectModal() {
     document.getElementById('project-form').reset();
     document.getElementById('modal-title').textContent = 'Propose New Article';
@@ -287,14 +291,12 @@ async function handleProjectFormSubmit(e) {
     e.preventDefault();
     const type = document.getElementById('project-type').value;
     const newProject = {
-        title: document.getElementById('project-title').value,
-        type: type,
+        title: document.getElementById('project-title').value, type,
         proposal: document.getElementById('project-proposal').value,
         deadline: document.getElementById('project-deadline').value,
-        authorId: currentUser.uid,
-        authorName: currentUserName,
+        authorId: currentUser.uid, authorName: currentUserName,
         editorId: null, editorName: null,
-        proposalStatus: 'pending',
+        proposalStatus: 'pending', status: 'Proposed',
         interviewDate: null,
         timeline: projectTimelines[type].reduce((acc, task) => ({...acc, [task]: false }), {}),
         activity: [{ text: 'created the project.', authorName: currentUserName, timestamp: new Date() }]
@@ -311,29 +313,25 @@ function closeAllModals() {
     currentlyViewedProjectId = null;
 }
 
-// --- DETAILS MODAL ---
 function openDetailsModal(projectId) {
     const project = allProjects.find(p => p.id === projectId);
     if (!project) return;
     currentlyViewedProjectId = projectId;
     
-    // Populate fields
     document.getElementById('details-title').textContent = project.title;
     document.getElementById('details-author').textContent = project.authorName;
     document.getElementById('details-editor').textContent = project.editorName || 'Not Assigned';
     document.getElementById('details-status').textContent = project.proposalStatus !== 'approved' ? `Proposal: ${project.proposalStatus}` : getProjectColumn(project);
-    document.getElementById('details-deadline').textContent = new Date(project.deadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'long', month: 'long', day: 'numeric' });
+    document.getElementById('details-deadline').textContent = new Date(project.deadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
 
-    // Show/hide sections
-    const isAuthor = currentUser.uid === project.authorId;
     const isAdmin = currentUserRole === 'admin';
+    const isAuthor = currentUser.uid === project.authorId;
     document.getElementById('admin-approval-section').style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
     document.getElementById('delete-section').style.display = isAuthor || isAdmin ? 'block' : 'none';
     document.getElementById('assign-editor-section').style.display = isAdmin ? 'flex' : 'none';
     document.getElementById('interview-details-section').style.display = project.type === 'Interview' ? 'block' : 'none';
 
-    // Populate dynamic elements
     populateEditorDropdown(project.editorId);
     renderTimeline(project);
     renderDeadlineHistory(project);
@@ -382,7 +380,7 @@ function renderDeadlineHistory(project) {
 
 function renderInterviewStatus(project) {
     const statusDisplay = document.getElementById('interview-status-display');
-    if (project.interviewDate) {
+    if (project.interviewDate?.seconds) {
         statusDisplay.innerHTML = `<strong>Scheduled for:</strong> ${new Date(project.interviewDate.seconds * 1000).toLocaleString()}`;
     } else {
         statusDisplay.innerHTML = 'Not yet scheduled.';
@@ -392,6 +390,7 @@ function renderInterviewStatus(project) {
 function renderActivityFeed(activity) {
     const activityFeed = document.getElementById('details-activity-feed');
     activityFeed.innerHTML = '';
+    if (!activity) return;
     activity.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds).forEach(item => {
         activityFeed.innerHTML += `<div class="feed-item">
             <div class="user-avatar" style="background-color: ${stringToColor(item.authorName)}">${item.authorName.charAt(0)}</div>
@@ -481,13 +480,11 @@ async function handleDeleteProject() {
     }
 }
 
-// --- STATUS REPORT ---
 function generateStatusReport() {
     const reportContent = document.getElementById('report-content');
     const now = new Date();
-    
     const overdueProjects = allProjects.filter(p => new Date(p.deadline) < now && getProjectColumn(p) !== 'Completed');
-    const activeProjects = allProjects.filter(p => getProjectColumn(p) !== 'Completed' && getProjectColumn(p) !== 'Topic Proposal');
+    const activeProjects = allProjects.filter(p => getProjectColumn(p) !== 'Completed' && p.proposalStatus === 'approved');
 
     let reportHTML = `<div class="report-section"><h3><span class="emoji">⚠️</span> Overdue Projects (${overdueProjects.length})</h3>`;
     if (overdueProjects.length > 0) {
@@ -498,8 +495,9 @@ function generateStatusReport() {
     reportHTML += `</div>`;
 
     reportHTML += `<div class="report-section"><h3><span class="emoji">🚀</span> Active Projects by Person</h3>`;
-    allEditors.concat(allProjects.map(p => ({name: p.authorName, id: p.authorId}))).filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i).forEach(person => {
-        const projects = activeProjects.filter(p => p.authorId === person.id || p.editorId === person.id);
+    const teamMembers = [...new Map(allProjects.map(p => [p.authorId, {name: p.authorName, id: p.authorId}])).values()];
+    teamMembers.forEach(person => {
+        const projects = activeProjects.filter(p => p.authorId === person.id);
         if (projects.length > 0) {
             reportHTML += `<h4>${person.name} (${projects.length})</h4>`;
             projects.forEach(p => {
@@ -513,8 +511,8 @@ function generateStatusReport() {
     document.getElementById('report-modal').style.display = 'flex';
 }
 
-// --- UTILITY ---
 function stringToColor(str) {
+    if (!str) return '#cccccc';
     let hash = 0;
     for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
     let color = '#';
