@@ -22,6 +22,7 @@ let currentView = 'interviews'; // Default view
 let calendarDate = new Date();
 
 // --- CONSTANTS ---
+// Updated timeline to follow logical order
 const projectTimelines = {
     "Interview": [
         "Topic Proposal Complete",
@@ -187,11 +188,13 @@ function getMyAssignmentsCount() {
         const timeline = p.timeline || {};
         
         if (isAuthor) {
+            // Author tasks: waiting for review completion, or approved but not written
             if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return true;
             if (p.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return true;
         }
         
         if (isEditor) {
+            // Editor tasks: assigned and article ready for review
             if (timeline["Article Writing Complete"] && !timeline["Review Complete"]) return true;
         }
         
@@ -248,7 +251,10 @@ function renderKanbanBoard() {
 function getProjectColumn(project, view = 'interviews') {
     const timeline = project.timeline || {};
 
-    if (timeline["Suggestions Reviewed"]) return view === 'my-assignments' ? "Done" : "Completed";
+    // If suggestions reviewed, it's completed
+    if (timeline["Suggestions Reviewed"]) {
+        return view === 'my-assignments' ? "Done" : "Completed";
+    }
 
     if (view === 'my-assignments') {
         const isAuthor = project.authorId === currentUser.uid;
@@ -259,21 +265,43 @@ function getProjectColumn(project, view = 'interviews') {
         }
         if (isAuthor) {
             if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return "In Review";
-            if (p.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return "In Progress";
+            if (project.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return "In Progress";
         }
         return "To Do";
     }
     
-    if (project.proposalStatus !== 'approved') return "Topic Proposal";
-    if (timeline["Review Complete"]) return "Reviewing Suggestions";
-    if (timeline["Article Writing Complete"] && project.editorId) return "In Review";
+    // Main workflow logic
+    if (project.proposalStatus !== 'approved') {
+        return "Topic Proposal";
+    }
+
+    // Once approved, "Topic Proposal Complete" is automatically checked
     
+    // If review is complete, move to reviewing suggestions
+    if (timeline["Review Complete"]) {
+        return "Reviewing Suggestions";
+    }
+    
+    // If article is complete and editor assigned, move to review
+    if (timeline["Article Writing Complete"] && project.editorId) {
+        return "In Review";
+    }
+    
+    // Interview-specific logic
     if (project.type === 'Interview') {
-        if (timeline["Interview Complete"]) return "Writing Stage";
-        if (timeline["Interview Scheduled"]) return "Interview Stage";
-        if (timeline["Topic Proposal Complete"]) return "Interview Stage";
+        // If interview is complete, move to writing
+        if (timeline["Interview Complete"]) {
+            return "Writing Stage";
+        }
+        // If proposal complete (approved), move to interview stage
+        if (timeline["Topic Proposal Complete"]) {
+            return "Interview Stage";
+        }
     } else { // Op-Ed
-        if (timeline["Topic Proposal Complete"]) return "Writing Stage";
+        // If proposal complete (approved), move to writing
+        if (timeline["Topic Proposal Complete"]) {
+            return "Writing Stage";
+        }
     }
     
     return "Topic Proposal";
@@ -287,14 +315,23 @@ function createProjectCard(project) {
     const column = getProjectColumn(project, currentView);
     const timeline = project.timeline || {};
     
-    // Color coding based on status
-    if (column === "Interview Stage" || column === "Writing Stage") {
+    // Color coding based on status and progress
+    if (column === "Interview Stage") {
+        // Yellow if interview scheduled but not complete
+        if (timeline["Interview Scheduled"] && !timeline["Interview Complete"]) {
+            card.classList.add('status-yellow');
+        }
+    } else if (column === "Writing Stage") {
+        // Yellow while writing
         card.classList.add('status-yellow');
-    } else if (column === "In Review" && !timeline["Review Complete"]) {
+    } else if (column === "In Review") {
+        // Yellow while in review (editor working)
         card.classList.add('status-yellow');
-    } else if (column === "Reviewing Suggestions" && timeline["Review Complete"]) {
+    } else if (column === "Reviewing Suggestions") {
+        // Blue when review complete, waiting for author
         card.classList.add('status-blue');
     } else if (column === "Completed" || column === "Done") {
+        // Green when fully complete
         card.classList.add('status-green');
     }
     
@@ -302,8 +339,8 @@ function createProjectCard(project) {
     const daysUntilDue = (deadline - new Date()) / (1000 * 60 * 60 * 24);
     let deadlineClass = daysUntilDue < 0 ? 'overdue' : (daysUntilDue < 7 ? 'due-soon' : '');
 
-    const totalTasks = (project.timeline ? Object.keys(project.timeline).length : 0);
-    const completedTasks = (project.timeline ? Object.values(project.timeline).filter(Boolean).length : 0);
+    const totalTasks = projectTimelines[project.type] ? projectTimelines[project.type].length : 0;
+    const completedTasks = timeline ? Object.values(timeline).filter(Boolean).length : 0;
     const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
     
     card.innerHTML = `
@@ -382,11 +419,14 @@ async function handleProjectFormSubmit(e) {
     const timeline = projectTimelines[type].reduce((acc, task) => ({...acc, [task]: false }), {});
     
     const newProject = {
-        title: document.getElementById('project-title').value, type,
+        title: document.getElementById('project-title').value, 
+        type,
         proposal: document.getElementById('project-proposal').value,
         deadline: document.getElementById('project-deadline').value,
-        authorId: currentUser.uid, authorName: currentUserName,
-        editorId: null, editorName: null,
+        authorId: currentUser.uid, 
+        authorName: currentUserName,
+        editorId: null, 
+        editorName: null,
         proposalStatus: 'pending',
         timeline: timeline,
         deadlines: {},
@@ -395,7 +435,9 @@ async function handleProjectFormSubmit(e) {
     try {
         await db.collection('projects').add(newProject);
         closeAllModals();
-    } catch (error) { console.error("Error saving project:", error); }
+    } catch (error) { 
+        console.error("Error saving project:", error); 
+    }
 }
 
 function closeAllModals() {
@@ -424,7 +466,10 @@ function refreshDetailsModal(project) {
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
 
     document.getElementById('admin-approval-section').style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
-    document.getElementById('assign-editor-section').style.display = isAdmin && project.timeline["Article Writing Complete"] ? 'flex' : 'none';
+    
+    // Show editor assignment when article is complete and no editor assigned
+    const needsEditor = project.timeline && project.timeline["Article Writing Complete"] && !project.editorId;
+    document.getElementById('assign-editor-section').style.display = isAdmin && needsEditor ? 'flex' : 'none';
     
     const interviewSection = document.getElementById('interview-details-section');
     if (project.type === 'Interview' && project.proposalStatus === 'approved') {
@@ -449,7 +494,7 @@ function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
     const writerDeadlines = project.type === "Interview" 
         ? ["Interview Contact", "Interview Scheduled", "Interview Complete", "Article Writing Complete", "Suggestions Reviewed"]
         : ["Article Writing Complete", "Suggestions Reviewed"];
-    const editorDeadlines = ["Review Complete"];
+    const editorDeadlines = ["Review In Progress", "Review Complete"];
     
     let deadlinesToShow = [];
     
@@ -474,6 +519,7 @@ function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
             "Interview Scheduled": "Interview Date",
             "Interview Complete": "Interview Complete By", 
             "Article Writing Complete": "Article Writing Complete By",
+            "Review In Progress": "Review In Progress By",
             "Review Complete": "Review Complete By",
             "Suggestions Reviewed": "Review Suggestions By"
         };
@@ -510,10 +556,10 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
         
         if (task === "Topic Proposal Complete") {
             canEditTask = false; // Only changed by admin approval
-        } else if (task.includes("Review") && !task.includes("Reviewed")) {
-            canEditTask = isEditor || isAdmin;
+        } else if (task === "Review In Progress" || task === "Review Complete") {
+            canEditTask = isEditor || isAdmin; // Only editors can check review tasks
         } else {
-            canEditTask = isAuthor || isAdmin;
+            canEditTask = isAuthor || isAdmin; // Authors can check their tasks
         }
 
         const completed = project.timeline[task];
@@ -587,7 +633,9 @@ async function updateProposalStatus(newStatus) {
         
         await db.collection('projects').doc(currentlyViewedProjectId).update(updateData);
         await addActivity(currentlyViewedProjectId, `${newStatus} the proposal.`);
-    } catch (error) { console.error("Error updating status:", error); }
+    } catch (error) { 
+        console.error("Error updating status:", error); 
+    }
 }
 
 async function handleScheduleInterview() {
@@ -645,7 +693,9 @@ async function handleDeleteProject() {
         try {
             await db.collection('projects').doc(currentlyViewedProjectId).delete();
             closeAllModals();
-        } catch (error) { console.error("Error deleting project:", error); }
+        } catch (error) { 
+            console.error("Error deleting project:", error); 
+        }
     }
 }
 
@@ -661,7 +711,9 @@ function generateStatusReport() {
         overdueProjects.forEach(p => {
             reportHTML += `<div class="report-item overdue-item"><span class="report-item-title">${p.title}</span> <span class="report-item-meta">by ${p.authorName} - Due ${p.deadline}</span></div>`;
         });
-    } else { reportHTML += `<p>No overdue projects. Great job, team!</p>`; }
+    } else { 
+        reportHTML += `<p>No overdue projects. Great job, team!</p>`; 
+    }
     reportHTML += `</div>`;
 
     reportHTML += `<div class="report-section"><h3><span class="emoji">🚀</span> Active Projects by Person</h3>`;
