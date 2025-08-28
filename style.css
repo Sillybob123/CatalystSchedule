@@ -10,7 +10,8 @@
     --surface-color: #FFFFFF;
     --text-color: #1D1D1F;
     --text-secondary: #6E6E73;
-    --border-color: rgba(0, 0, 0, 0.1);
+    --border-color: #D1D1D6;
+    --input-bg-color: #EFF0F1;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.05), 0 3px 6px rgba(0, 0, 0, 0.05);
     --border-radius: 12px;
@@ -35,12 +36,6 @@ body {
 .login-header { display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 12px; color: var(--primary-color); }
 .login-header h1 { margin: 0; font-size: 24px; font-weight: 600; }
 .login-box > p { margin-bottom: 32px; color: var(--text-secondary); }
-.input-group { margin-bottom: 20px; text-align: left; }
-.input-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
-.input-group input { width: 100%; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: var(--border-radius); box-sizing: border-box; font-size: 16px; transition: border-color 0.2s, box-shadow 0.2s; }
-.input-group input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.2); }
-button[type="submit"] { width: 100%; padding: 14px; background-color: var(--primary-color); color: white; border: none; border-radius: var(--border-radius); cursor: pointer; font-size: 16px; font-weight: 600; transition: background-color 0.2s; }
-button[type="submit"]:hover { background-color: var(--primary-hover); }
 .error-message { color: var(--danger-color); margin-top: 15px; font-size: 14px; min-height: 20px; }
 
 /* --- App Layout --- */
@@ -66,9 +61,6 @@ button[type="submit"]:hover { background-color: var(--primary-hover); }
 .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-shrink: 0; }
 .main-header h1 { margin: 0; font-size: 28px; }
 .header-actions { display: flex; gap: 12px; align-items: center; }
-.add-project-btn, .btn-primary, .btn-secondary, .btn-success, .btn-danger { padding: 10px 16px; border-radius: var(--border-radius); border: 1px solid transparent; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px; white-space: nowrap; }
-.add-project-btn { background-color: var(--primary-color); color: white; }
-.add-project-btn:hover { background-color: var(--primary-hover); }
 .admin-only { display: none; }
 
 /* Kanban Board */
@@ -80,11 +72,11 @@ button[type="submit"]:hover { background-color: var(--primary-hover); }
 .kanban-card { background-color: var(--surface-color); padding: 16px; border-radius: var(--border-radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
 .kanban-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
 .card-title { font-weight: 600; margin: 0 0 12px 0; }
-.card-footer { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-secondary); margin-top: 12px; padding-top: 12px; border-top: 1px solid #F5F5F7; }
-.card-author, .card-editor { display: flex; align-items: center; gap: 6px; }
-.card-editor .user-avatar { width: 24px; height: 24px; font-size: 12px; }
+.card-footer { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-secondary); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--background-color); }
+.card-author { display: flex; align-items: center; gap: 6px; }
+.card-author .user-avatar { width: 24px; height: 24px; font-size: 12px; }
 .card-deadline.overdue { color: var(--danger-color); font-weight: 600; }
-.progress-bar-container { background-color: #E5E7EB; border-radius: 99px; height: 6px; margin-top: 12px; overflow: hidden; }
+.progress-bar-container { background-color: var(--background-color); border-radius: 99px; height: 6px; margin-top: 12px; overflow: hidden; }
 .progress-bar { background-color: var(--primary-color); height: 100%; border-radius: 99px; transition: width 0.3s ease; }
 
 /* Calendar View */
@@ -99,7 +91,7 @@ button[type="submit"]:hover { background-color: var(--primary-hover); }
 .calendar-event { background-color: var(--primary-color); color: white; padding: 4px 8px; margin-top: 4px; border-radius: 6px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .calendar-event.overdue { background-color: var(--danger-color); }
 
-/* --- Modals --- */
+/* --- MODALS & FORMS (REFINED) --- */
 .modal-overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(17, 24, 39, 0.6); backdrop-filter: blur(4px); animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .modal-content { background-color: var(--surface-color); margin: 5% auto; border-radius: 16px; width: 90%; max-width: 560px; box-shadow: var(--shadow-lg); animation: slideIn 0.3s ease-out; }
@@ -108,22 +100,59 @@ button[type="submit"]:hover { background-color: var(--primary-hover); }
 .modal-header { padding: 24px 32px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
 .modal-header h2 { font-size: 20px; margin: 0; }
 .close-button { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary); }
+
+/* Unified Form Styling */
+.form-group { margin-bottom: 24px; }
+.form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; color: var(--text-color); }
+.form-group input, .form-group select, .form-group textarea, .details-form input, .details-form select, .details-form textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-sizing: border-box;
+    font-size: 16px;
+    background-color: var(--surface-color);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus, .details-form input:focus, .details-form select:focus, .details-form textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.2);
+}
+textarea { resize: vertical; min-height: 80px; }
+
 #project-form { padding: 32px; }
-.modal-footer { padding: 16px 32px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; background-color: #FBFBFB; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;}
+.modal-footer { padding: 16px 32px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; background-color: var(--background-color); border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;}
+
+/* Unified Button Styling */
+.btn-primary, .btn-secondary, .btn-success, .btn-danger {
+    padding: 10px 20px;
+    border-radius: var(--border-radius);
+    border: 1px solid transparent;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    white-space: nowrap;
+}
+.btn-primary { background-color: var(--primary-color); color: white; }
+.btn-primary:hover { background-color: var(--primary-hover); }
 .btn-secondary { background-color: #E5E5EA; color: var(--text-color); border: none; }
 .btn-secondary:hover { background-color: #D1D1D6; }
 .btn-success { background-color: var(--success-color); color: white; }
 .btn-danger { background-color: var(--danger-color); color: white; }
 .btn-danger:hover { background-color: #D9362B; }
 
-/* Details Modal */
+/* Details Modal Specifics */
 .details-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; padding: 32px; }
-hr { border: none; border-top: 1px solid var(--border-color); margin: 24px 0; }
+hr { border: none; border-top: 1px solid var(--background-color); margin: 24px 0; }
 .details-form { display: flex; flex-direction: column; gap: 8px; }
-.details-form input, .details-form select, .details-form textarea { width: 100%; font-size: 14px; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; }
 .details-form button { align-self: flex-end; }
 #interview-details-section { background: var(--background-color); padding: 16px; border-radius: var(--border-radius); }
 #interview-form { flex-direction: row; align-items: center; }
+#details-timeline .task { display: flex; align-items: center; padding: 8px; border-radius: 8px; transition: background-color 0.2s; }
+#details-timeline .task:hover { background-color: var(--background-color); }
+#details-timeline input[type="checkbox"] { width: 18px; height: 18px; margin-right: 12px; accent-color: var(--primary-color); }
 .feed-item { align-items: flex-start; }
 .feed-content p { margin: 2px 0; }
 .feed-content .author { font-weight: 600; }
