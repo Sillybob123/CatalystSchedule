@@ -20,21 +20,23 @@
                 <h2>Catalyst Tracker</h2>
             </div>
             <nav class="sidebar-nav">
-                <a href="#" id="nav-all" class="nav-item active">
-                    <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-                    <span>All Projects</span>
+                <p class="nav-heading">Views</p>
+                <a href="#" id="nav-my-assignments" class="nav-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span>My Assignments</span>
                 </a>
-                 <a href="#" id="nav-interviews" class="nav-item">
+                 <a href="#" id="nav-calendar" class="nav-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span>Calendar</span>
+                </a>
+                <p class="nav-heading">Workflows</p>
+                <a href="#" id="nav-interviews" class="nav-item active">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                     <span>In The Capital</span>
                 </a>
                 <a href="#" id="nav-opeds" class="nav-item">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
                     <span>Op-Eds</span>
-                </a>
-                <a href="#" id="nav-editors" class="nav-item">
-                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                    <span>Editors' View</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -46,7 +48,7 @@
                     </div>
                 </div>
                 <button id="logout-button" class="logout-btn">
-                    <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                     <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
                     <span>Logout</span>
                 </button>
             </div>
@@ -54,14 +56,23 @@
 
         <main class="main-content">
             <header class="main-header">
-                <h1 id="board-title">All Projects</h1>
+                <h1 id="board-title">Catalyst in the Capital</h1>
                 <div class="header-actions">
                     <button id="status-report-button" class="btn-secondary admin-only">Generate Status Report</button>
                     <button id="add-project-button" class="add-project-btn">+ Propose New Article</button>
                 </div>
             </header>
-            <div id="kanban-board" class="kanban-board">
+            <div id="board-view">
+                <div id="kanban-board" class="kanban-board"></div>
+            </div>
+            <div id="calendar-view" style="display: none;">
+                <div class="calendar-header">
+                    <button id="prev-month">&lt;</button>
+                    <h2 id="month-year"></h2>
+                    <button id="next-month">&gt;</button>
                 </div>
+                <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
         </main>
     </div>
 
@@ -72,10 +83,9 @@
                 <button class="close-button">&times;</button>
             </div>
             <form id="project-form">
-                 <input type="hidden" id="project-id">
                 <div class="form-group">
                     <label for="project-title">Article Title / Topic</label>
-                    <input type="text" id="project-title" required>
+                    <input type="text" id="project-title" required placeholder="e.g., The Future of AI in Neuroscience">
                 </div>
                 <div class="form-group">
                     <label for="project-type">Project Type</label>
@@ -86,7 +96,7 @@
                 </div>
                 <div class="form-group">
                     <label for="project-proposal">Brief Proposal</label>
-                    <textarea id="project-proposal" rows="4" placeholder="Briefly describe your article idea, who you might interview, and the main angle."></textarea>
+                    <textarea id="project-proposal" rows="4" placeholder="Describe your article idea, potential interviewees, and the main angle."></textarea>
                 </div>
                 <div class="form-group">
                     <label for="project-deadline">Target Deadline</label>
@@ -111,12 +121,21 @@
                     <h4><span class="emoji">📝</span> Proposal</h4>
                     <p id="details-proposal"></p>
                     <hr>
+                    <div id="interview-details-section" style="display:none;">
+                        <h4><span class="emoji">🗓️</span> Interview Status</h4>
+                        <div id="interview-status-display"></div>
+                        <div id="interview-form">
+                            <input type="datetime-local" id="interview-date">
+                            <button id="schedule-interview-button" class="btn-secondary">Schedule</button>
+                        </div>
+                    </div>
+                    <hr>
                     <h4><span class="emoji">✅</span> Progress Checklist</h4>
                     <div id="details-timeline"></div>
                     <hr>
                     <h4><span class="emoji">💬</span> Comments & Activity</h4>
                     <div class="comment-box">
-                        <textarea id="comment-input" placeholder="Add a comment..."></textarea>
+                        <textarea id="comment-input" placeholder="Add a comment or update..."></textarea>
                         <button id="add-comment-button" class="btn-primary">Post</button>
                     </div>
                     <div id="details-activity-feed" class="activity-feed"></div>
@@ -130,6 +149,14 @@
                         <h4>Author</h4>
                         <p id="details-author"></p>
                     </div>
+                     <div class="sidebar-section">
+                        <h4>Editor</h4>
+                        <p id="details-editor">Not Assigned</p>
+                        <div id="assign-editor-section" class="admin-only" style="margin-top: 8px;">
+                            <select id="editor-dropdown"></select>
+                            <button id="assign-editor-button" class="btn-secondary">Assign</button>
+                        </div>
+                    </div>
                     <div class="sidebar-section">
                         <h4>Deadline</h4>
                         <p id="details-deadline"></p>
@@ -140,7 +167,6 @@
                         <textarea id="proposal-feedback" placeholder="Provide feedback (optional)"></textarea>
                         <button id="approve-button" class="btn-success">Approve</button>
                         <button id="reject-button" class="btn-danger">Reject</button>
-                        <button id="hold-button" class="btn-warning">On Hold</button>
                     </div>
                      <div id="change-deadline-section" class="sidebar-section">
                         <h4>Change Deadline</h4>
@@ -163,8 +189,7 @@
                 <h2>Overall Status Report</h2>
                 <button class="close-button">&times;</button>
             </div>
-            <div id="report-content" class="report-content">
-                </div>
+            <div id="report-content" class="report-content"></div>
         </div>
     </div>
 
