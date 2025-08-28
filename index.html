@@ -1,43 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Catalyst Magazine Login</title>
-  <link rel="stylesheet" href="style.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-</head>
-<body class="login-page-body">
-  <div class="login-container">
-    <div class="login-box">
-      <div class="login-header">
-        <svg class="logo" width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 7L12 12L22 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M12 12V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <h1>Catalyst Tracker</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Catalyst Magazine Login</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="login-page-body">
+    <div class="login-container">
+      <div class="login-box">
+        <div class="login-header">
+          <svg
+            class="logo"
+            width="40"
+            height="40"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M2 7L12 12L22 7"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M12 12V22"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <h1>Catalyst Tracker</h1>
+        </div>
+        <p>Welcome back! Please sign in to continue.</p>
+
+        <form id="login-form" novalidate>
+          <div class="input-group">
+            <label for="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              required
+              autocomplete="email"
+              placeholder="you@domain.com"
+            />
+          </div>
+          <div class="input-group">
+            <label for="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              required
+              autocomplete="current-password"
+              placeholder="••••••••"
+            />
+          </div>
+          <button class="btn-primary" type="submit" aria-label="Sign in">
+            Sign In
+          </button>
+          <p id="login-error" class="error-message"></p>
+        </form>
       </div>
-      <p>Welcome back! Please sign in to continue.</p>
-
-      <form id="login-form" novalidate>
-        <div class="input-group">
-          <label for="email">Email</label>
-          <input id="email" type="email" required autocomplete="email" placeholder="you@domain.com" />
-        </div>
-        <div class="input-group">
-          <label for="password">Password</label>
-          <input id="password" type="password" required autocomplete="current-password" placeholder="••••••••" />
-        </div>
-        <button class="btn-primary" type="submit" aria-label="Sign in">Sign In</button>
-        <p id="login-error" class="error-message"></p>
-      </form>
     </div>
-  </div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="auth.js"></script>
-</body>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="auth.js"></script>
+  </body>
 </html>
