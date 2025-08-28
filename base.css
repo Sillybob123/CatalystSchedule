@@ -71,7 +71,7 @@ html {
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
-  font-size: 15px;
+  font-size: clamp(14px, 1.2vw, 16px);
   line-height: 1.6;
   color: var(--text-color);
   background-color: var(--background-color);
@@ -93,6 +93,7 @@ body {
   padding: var(--space-8);
   min-height: 100vh;
   background: var(--background-color);
+  transition: margin-left 0.3s ease;
 }
 
 /* === MAIN CONTENT HEADER === */
@@ -106,7 +107,7 @@ body {
 }
 
 .main-header h1 {
-  font-size: 32px;
+  font-size: clamp(24px, 2.5vw, 32px);
   font-weight: 700;
   color: var(--text-color);
   letter-spacing: -0.5px;
@@ -143,17 +144,11 @@ body {
   .main-content {
     padding: var(--space-6);
   }
-  
-  .kanban-board {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: var(--space-4);
-  }
 }
 
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
-    transition: transform 0.3s ease;
   }
   
   .main-content {
@@ -172,19 +167,6 @@ body {
     min-width: 320px;
     flex-shrink: 0;
   }
-  
-  .modal-content.large {
-    width: 95vw;
-    height: 90vh;
-  }
-  
-  .details-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .details-sidebar {
-    border-top: 1px solid var(--border-color);
-  }
 }
 
 @media (max-width: 768px) {
@@ -194,62 +176,13 @@ body {
     gap: var(--space-4);
   }
   
-  .main-header h1 {
-    font-size: 24px;
-  }
-  
   .header-actions {
     width: 100%;
-    justify-content: stretch;
+    flex-direction: column;
   }
   
   .header-actions > * {
-    flex: 1;
-  }
-  
-  .kanban-board {
-    display: block;
-  }
-  
-  .kanban-column {
-    margin-bottom: var(--space-6);
-  }
-  
-  .modal-content {
-    margin: var(--space-4);
-    width: calc(100vw - 2rem);
-    height: calc(100vh - 2rem);
-  }
-  
-  .details-main,
-  .details-sidebar {
-    padding: var(--space-4);
-  }
-  
-  .login-box {
-    padding: var(--space-8) var(--space-6);
-  }
-}
-
-@media (max-width: 480px) {
-  .main-content {
-    padding: var(--space-3);
-  }
-  
-  .kanban-column {
-    padding: var(--space-4);
-  }
-  
-  .kanban-card {
-    padding: var(--space-4);
-  }
-  
-  .modal-overlay {
-    padding: var(--space-3);
-  }
-  
-  .login-box {
-    padding: var(--space-6) var(--space-4);
+    width: 100%;
   }
 }
 
@@ -280,59 +213,11 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes slideIn {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
-}
-
-.kanban-card {
-  animation: fadeIn 0.3s ease-out;
-}
-
 /* === FOCUS STATES === */
 :focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
   border-radius: 4px;
-}
-
-/* === PRINT STYLES === */
-@media print {
-  body {
-    background: none;
-  }
-  
-  .sidebar,
-  .header-actions,
-  .modal-overlay {
-    display: none !important;
-  }
-  
-  .main-content {
-    margin-left: 0;
-    padding: 0;
-  }
-  
-  .kanban-board {
-    display: block;
-  }
-  
-  .kanban-card {
-    break- inside: avoid;
-    box-shadow: none;
-    border: 1px solid #ccc;
-  }
-}
-
-/* === ACCESSIBILITY === */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
 }
 
 /* === SELECTION STYLING === */
