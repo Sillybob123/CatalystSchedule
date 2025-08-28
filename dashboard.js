@@ -111,8 +111,13 @@ function setupNavAndListeners() {
 // ==================
 function handleNavClick(view) {
     currentView = view;
-    document.querySelectorAll('.nav-item').forEach(l => l.classList.remove('active'));
-    document.getElementById(`nav-${view}`).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(l => {
+        l.setAttribute('aria-current', 'false');
+        l.classList.remove('active');
+    });
+    const activeLink = document.getElementById(`nav-${view}`);
+    activeLink.classList.add('active');
+    activeLink.setAttribute('aria-current', 'page');
     
     const viewTitles = {
         'my-assignments': 'My Assignments',
@@ -134,6 +139,7 @@ function renderCurrentView() {
         renderCalendar();
     } else {
         boardView.style.display = 'block';
+        calendarView.style.display = 'none'; // Fixed: Hide calendar on non-calendar views
         renderKanbanBoard(filterProjects());
     }
 }
@@ -757,4 +763,5 @@ function calculateProgress(timeline) {
     const totalTasks = Object.keys(timeline).length;
     const completedTasks = Object.values(timeline).filter(Boolean).length;
     return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+}
 }
