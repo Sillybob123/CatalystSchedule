@@ -198,7 +198,7 @@ function renderKanbanBoard(projects) {
     // Create column structure
     columns.forEach(columnTitle => {
         const columnProjects = projects.filter(project => {
-            const state = getProjectState(project);
+            const state = getProjectState(project, currentView, currentUser); // FIXED
             return state.column === columnTitle;
         });
         
@@ -237,7 +237,7 @@ function filterProjects() {
 }
 
 function createProjectCard(project) {
-    const state = getProjectState(project);
+    const state = getProjectState(project, currentView, currentUser); // FIXED
     const card = document.createElement('div');
     
     // Apply color class based on state
@@ -355,7 +355,7 @@ function refreshDetailsModal(project) {
     document.getElementById('details-author').textContent = project.authorName;
     document.getElementById('details-editor').textContent = project.editorName || 'Not Assigned';
     
-    const state = getProjectState(project);
+    const state = getProjectState(project, currentView, currentUser); // FIXED
     document.getElementById('details-status').textContent = state.statusText;
 
     document.getElementById('details-deadline').textContent = new Date(project.deadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -672,7 +672,8 @@ function generateStatusReport() {
     // --- Overdue Projects Section ---
     const overdueProjects = allProjects.filter(p => {
         const deadline = new Date(p.deadline + 'T23:59:59');
-        return deadline < new Date() && getProjectState(p).column !== 'Completed';
+        const reportView = p.type === 'Interview' ? 'interviews' : 'opeds'; // FIXED
+        return deadline < new Date() && getProjectState(p, reportView, currentUser).column !== 'Completed'; // FIXED
     });
 
     let reportHTML = `
@@ -689,19 +690,22 @@ function generateStatusReport() {
 
     // --- In Review Section ---
     const inReviewProjects = allProjects.filter(p => {
-        const state = getProjectState(p);
+        const reportView = p.type === 'Interview' ? 'interviews' : 'opeds'; // FIXED
+        const state = getProjectState(p, reportView, currentUser); // FIXED
         return state.column === 'In Review' || state.column === 'Reviewing Suggestions';
     });
 
     reportHTML += `
         <div class="report-section">
             <h3><span class="emoji">🧐</span> In Review (${inReviewProjects.length})</h3>
-            ${inReviewProjects.length > 0 ? inReviewProjects.map(p => `
+            ${inReviewProjects.length > 0 ? inReviewProjects.map(p => {
+                const reportView = p.type === 'Interview' ? 'interviews' : 'opeds'; // FIXED
+                return `
                 <div class="report-item" data-id="${p.id}">
                     <span class="report-item-title">${p.title}</span>
-                    <span class="report-item-meta">${getProjectState(p).statusText} | Editor: ${p.editorName || 'N/A'}</span>
+                    <span class="report-item-meta">${getProjectState(p, reportView, currentUser).statusText} | Editor: ${p.editorName || 'N/A'}</span>
                 </div>
-            `).join('') : '<p>No projects are currently in review.</p>'}
+            `}).join('') : '<p>No projects are currently in review.</p>'}
         </div>
     `;
 
@@ -711,18 +715,21 @@ function generateStatusReport() {
         const now = new Date();
         const sevenDaysFromNow = new Date();
         sevenDaysFromNow.setDate(now.getDate() + 7);
-        return deadline > now && deadline <= sevenDaysFromNow && getProjectState(p).column !== 'Completed';
+        const reportView = p.type === 'Interview' ? 'interviews' : 'opeds'; // FIXED
+        return deadline > now && deadline <= sevenDaysFromNow && getProjectState(p, reportView, currentUser).column !== 'Completed'; // FIXED
     }).sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
 
     reportHTML += `
         <div class="report-section">
             <h3><span class="emoji">🗓️</span> Upcoming Deadlines (Next 7 Days) (${upcomingProjects.length})</h3>
-            ${upcomingProjects.length > 0 ? upcomingProjects.map(p => `
+            ${upcomingProjects.length > 0 ? upcomingProjects.map(p => {
+                const reportView = p.type === 'Interview' ? 'interviews' : 'opeds'; // FIXED
+                return `
                 <div class="report-item" data-id="${p.id}">
                     <span class="report-item-title">${p.title}</span>
-                    <span class="report-item-meta">Due: ${new Date(p.deadline + 'T00:00:00').toLocaleDateString()} | Status: ${getProjectState(p).statusText}</span>
+                    <span class="report-item-meta">Due: ${new Date(p.deadline + 'T00:00:00').toLocaleDateString()} | Status: ${getProjectState(p, reportView, currentUser).statusText}</span>
                 </div>
-            `).join('') : '<p>No deadlines in the next 7 days.</p>'}
+            `}).join('') : '<p>No deadlines in the next 7 days.</p>'}
         </div>
     `;
 
@@ -763,5 +770,4 @@ function calculateProgress(timeline) {
     const totalTasks = Object.keys(timeline).length;
     const completedTasks = Object.values(timeline).filter(Boolean).length;
     return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-}
 }
