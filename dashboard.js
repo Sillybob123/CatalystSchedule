@@ -26,7 +26,7 @@ let calendarDate = new Date();
 const projectTimelines = {
     "Interview": [
         "Topic Proposal Complete",
-        "Interview Scheduled", 
+        "Interview Scheduled",
         "Interview Complete",
         "Article Writing Complete",
         "Review In Progress",
@@ -35,7 +35,7 @@ const projectTimelines = {
     ],
     "Op-Ed": [
         "Topic Proposal Complete",
-        "Article Writing Complete", 
+        "Article Writing Complete",
         "Review In Progress",
         "Review Complete",
         "Suggestions Reviewed"
@@ -55,7 +55,7 @@ auth.onAuthStateChanged(async user => {
         try {
             const userDoc = await db.collection('users').doc(user.uid).get();
             if (!userDoc.exists) throw new Error("User profile not found in Firestore.");
-            
+
             const userData = userDoc.data();
             currentUserName = userData.name;
             currentUserRole = userData.role;
@@ -127,14 +127,14 @@ function handleNavClick(e, linkId) {
     e.preventDefault();
     document.querySelectorAll('.nav-item').forEach(l => l.classList.remove('active'));
     document.getElementById(linkId).classList.add('active');
-    
+
     const viewMappings = {
         'nav-my-assignments': { view: 'my-assignments', title: 'My Assignments' },
         'nav-interviews': { view: 'interviews', title: 'Catalyst in the Capital' },
         'nav-opeds': { view: 'opeds', title: 'Op-Eds' },
         'nav-calendar': { view: 'calendar', title: 'Deadlines Calendar' }
     };
-    
+
     const { view, title } = viewMappings[linkId];
     currentView = view;
     document.getElementById('board-title').textContent = title;
@@ -161,7 +161,7 @@ function fetchAndRenderProjects() {
         allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderCurrentView();
         updateNavCounts();
-        
+
         if (currentlyViewedProjectId) {
             const project = allProjects.find(p => p.id === currentlyViewedProjectId);
             if (project) {
@@ -186,18 +186,18 @@ function getMyAssignmentsCount() {
         const isAuthor = p.authorId === currentUser.uid;
         const isEditor = p.editorId === currentUser.uid;
         const timeline = p.timeline || {};
-        
+
         if (isAuthor) {
             // Author tasks: waiting for review completion, or approved but not written
             if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return true;
             if (p.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return true;
         }
-        
+
         if (isEditor) {
             // Editor tasks: assigned and article ready for review
             if (timeline["Article Writing Complete"] && !timeline["Review Complete"]) return true;
         }
-        
+
         return false;
     }).length;
 }
@@ -206,21 +206,21 @@ function filterProjects() {
     switch(currentView) {
         case 'interviews': return allProjects.filter(p => p.type === 'Interview');
         case 'opeds': return allProjects.filter(p => p.type === 'Op-Ed');
-        case 'my-assignments': 
+        case 'my-assignments':
             return allProjects.filter(p => {
                 const isAuthor = p.authorId === currentUser.uid;
                 const isEditor = p.editorId === currentUser.uid;
                 const timeline = p.timeline || {};
-                
+
                 if (isAuthor) {
                     if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return true;
                     if (p.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return true;
                 }
-                
+
                 if (isEditor) {
                     if (timeline["Article Writing Complete"] && !timeline["Review Complete"]) return true;
                 }
-                
+
                 return false;
             });
         default: return allProjects;
@@ -232,7 +232,7 @@ function renderKanbanBoard() {
     const projectsToRender = filterProjects();
     const board = document.getElementById('kanban-board');
     board.innerHTML = '';
-    
+
     const columns = KANBAN_COLUMNS[currentView] || KANBAN_COLUMNS['interviews'];
     board.style.gridTemplateColumns = `repeat(${columns.length}, 1fr)`;
 
@@ -269,43 +269,40 @@ function getProjectColumn(project, view = 'interviews') {
         }
         return "To Do";
     }
-    
+
     // Main workflow logic
     if (project.proposalStatus !== 'approved') {
         return "Topic Proposal";
     }
 
-    // Once approved, "Topic Proposal Complete" is automatically checked
-    
-    // If review is complete, move to reviewing suggestions
     if (timeline["Review Complete"]) {
         return "Reviewing Suggestions";
     }
-    
-    // If article is complete and editor assigned, move to review
-    if (timeline["Article Writing Complete"] && project.editorId) {
-        return "In Review";
+
+    if (timeline["Article Writing Complete"]) {
+        if(project.editorId) {
+            return "In Review";
+        } else {
+            return "Reviewing Suggestions"; // Admin needs to assign an editor.
+        }
     }
-    
-    // Interview-specific logic
+
     if (project.type === 'Interview') {
-        // If interview is complete, move to writing
         if (timeline["Interview Complete"]) {
             return "Writing Stage";
         }
-        // If proposal complete (approved), move to interview stage
         if (timeline["Topic Proposal Complete"]) {
             return "Interview Stage";
         }
     } else { // Op-Ed
-        // If proposal complete (approved), move to writing
         if (timeline["Topic Proposal Complete"]) {
             return "Writing Stage";
         }
     }
-    
+
     return "Topic Proposal";
 }
+
 
 function createProjectCard(project) {
     const card = document.createElement('div');
@@ -314,27 +311,18 @@ function createProjectCard(project) {
 
     const column = getProjectColumn(project, currentView);
     const timeline = project.timeline || {};
-    
+
     // Color coding based on status and progress
-    if (column === "Interview Stage") {
-        // Yellow if interview scheduled but not complete
-        if (timeline["Interview Scheduled"] && !timeline["Interview Complete"]) {
-            card.classList.add('status-yellow');
-        }
-    } else if (column === "Writing Stage") {
-        // Yellow while writing
+    if (column === "Interview Stage" && timeline["Interview Scheduled"] && !timeline["Interview Complete"]) {
         card.classList.add('status-yellow');
-    } else if (column === "In Review") {
-        // Yellow while in review (editor working)
+    } else if (column === "Writing Stage" || column === "In Review") {
         card.classList.add('status-yellow');
     } else if (column === "Reviewing Suggestions") {
-        // Blue when review complete, waiting for author
         card.classList.add('status-blue');
     } else if (column === "Completed" || column === "Done") {
-        // Green when fully complete
         card.classList.add('status-green');
     }
-    
+
     const deadline = new Date(project.deadline + 'T23:59:59');
     const daysUntilDue = (deadline - new Date()) / (1000 * 60 * 60 * 24);
     let deadlineClass = daysUntilDue < 0 ? 'overdue' : (daysUntilDue < 7 ? 'due-soon' : '');
@@ -342,7 +330,7 @@ function createProjectCard(project) {
     const totalTasks = projectTimelines[project.type] ? projectTimelines[project.type].length : 0;
     const completedTasks = timeline ? Object.values(timeline).filter(Boolean).length : 0;
     const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-    
+
     card.innerHTML = `
         <h4 class="card-title">${project.title}</h4>
         <div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%;"></div></div>
@@ -364,7 +352,7 @@ function renderCalendar() {
     const calendarGrid = document.getElementById('calendar-grid');
     const monthYear = document.getElementById('month-year');
     calendarGrid.innerHTML = '';
-    
+
     const month = calendarDate.getMonth();
     const year = calendarDate.getFullYear();
     monthYear.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
@@ -383,12 +371,12 @@ function renderCalendar() {
         const dayEl = document.createElement('div');
         dayEl.className = 'calendar-day';
         dayEl.innerHTML = `<div class="day-number">${day}</div>`;
-        
+
         const dayProjects = allProjects.filter(p => {
             const d = new Date(p.deadline + 'T00:00:00');
             return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
         });
-        
+
         dayProjects.forEach(p => {
             const eventEl = document.createElement('div');
             eventEl.className = 'calendar-event';
@@ -417,15 +405,15 @@ async function handleProjectFormSubmit(e) {
     e.preventDefault();
     const type = document.getElementById('project-type').value;
     const timeline = projectTimelines[type].reduce((acc, task) => ({...acc, [task]: false }), {});
-    
+
     const newProject = {
-        title: document.getElementById('project-title').value, 
+        title: document.getElementById('project-title').value,
         type,
         proposal: document.getElementById('project-proposal').value,
         deadline: document.getElementById('project-deadline').value,
-        authorId: currentUser.uid, 
+        authorId: currentUser.uid,
         authorName: currentUserName,
-        editorId: null, 
+        editorId: null,
         editorName: null,
         proposalStatus: 'pending',
         timeline: timeline,
@@ -435,8 +423,8 @@ async function handleProjectFormSubmit(e) {
     try {
         await db.collection('projects').add(newProject);
         closeAllModals();
-    } catch (error) { 
-        console.error("Error saving project:", error); 
+    } catch (error) {
+        console.error("Error saving project:", error);
     }
 }
 
@@ -457,7 +445,7 @@ function refreshDetailsModal(project) {
     const isAuthor = currentUser.uid === project.authorId;
     const isEditor = currentUser.uid === project.editorId;
     const isAdmin = currentUserRole === 'admin';
-    
+
     document.getElementById('details-title').textContent = project.title;
     document.getElementById('details-author').textContent = project.authorName;
     document.getElementById('details-editor').textContent = project.editorName || 'Not Assigned';
@@ -466,11 +454,11 @@ function refreshDetailsModal(project) {
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
 
     document.getElementById('admin-approval-section').style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
-    
+
     // Show editor assignment when article is complete and no editor assigned
     const needsEditor = project.timeline && project.timeline["Article Writing Complete"] && !project.editorId;
     document.getElementById('assign-editor-section').style.display = isAdmin && needsEditor ? 'flex' : 'none';
-    
+
     const interviewSection = document.getElementById('interview-details-section');
     if (project.type === 'Interview' && project.proposalStatus === 'approved') {
         interviewSection.style.display = 'block';
@@ -490,14 +478,14 @@ function refreshDetailsModal(project) {
 function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
     const container = document.getElementById('details-deadlines-list');
     container.innerHTML = '';
-    
-    const writerDeadlines = project.type === "Interview" 
+
+    const writerDeadlines = project.type === "Interview"
         ? ["Interview Contact", "Interview Scheduled", "Interview Complete", "Article Writing Complete", "Suggestions Reviewed"]
         : ["Article Writing Complete", "Suggestions Reviewed"];
     const editorDeadlines = ["Review In Progress", "Review Complete"];
-    
+
     let deadlinesToShow = [];
-    
+
     if (isAuthor || isAdmin) {
         deadlinesToShow = [...writerDeadlines];
     }
@@ -509,7 +497,7 @@ function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
         const val = project.deadlines?.[task] || '';
         let disabled = true;
 
-        if ((writerDeadlines.includes(task) && (isAuthor || isAdmin)) || 
+        if ((writerDeadlines.includes(task) && (isAuthor || isAdmin)) ||
             (editorDeadlines.includes(task) && (isEditor || isAdmin))) {
             disabled = false;
         }
@@ -517,7 +505,7 @@ function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
         const deadlineLabels = {
             "Interview Contact": "Email Professor for Interview",
             "Interview Scheduled": "Interview Date",
-            "Interview Complete": "Interview Complete By", 
+            "Interview Complete": "Interview Complete By",
             "Article Writing Complete": "Article Writing Complete By",
             "Review In Progress": "Review In Progress By",
             "Review Complete": "Review Complete By",
@@ -553,7 +541,7 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
 
     timelineTasks.forEach(task => {
         let canEditTask = false;
-        
+
         if (task === "Topic Proposal Complete") {
             canEditTask = false; // Only changed by admin approval
         } else if (task === "Review In Progress" || task === "Review Complete") {
@@ -567,13 +555,13 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
         taskEl.className = 'task';
         const taskId = `task-${task.replace(/\s+/g, '-')}`;
         taskEl.innerHTML = `<input type="checkbox" id="${taskId}" ${completed ? 'checked' : ''} ${!canEditTask ? 'disabled' : ''}><label for="${taskId}">${task}</label>`;
-        
+
         if (canEditTask) {
             taskEl.querySelector('input').addEventListener('change', async (e) => {
                 await updateTaskStatus(project.id, task, e.target.checked);
             });
         }
-        
+
         timelineContainer.appendChild(taskEl);
     });
 }
@@ -610,7 +598,7 @@ async function addActivity(projectId, text) {
 
 async function updateTaskStatus(projectId, task, isCompleted) {
     const updateData = { [`timeline.${task}`]: isCompleted };
-    
+
     await db.collection('projects').doc(projectId).update(updateData);
     addActivity(projectId, `${isCompleted ? 'completed' : 'un-completed'} the task: "${task}"`);
 }
@@ -630,11 +618,11 @@ async function updateProposalStatus(newStatus) {
             proposalStatus: newStatus,
             'timeline.Topic Proposal Complete': newStatus === 'approved'
         };
-        
+
         await db.collection('projects').doc(currentlyViewedProjectId).update(updateData);
         await addActivity(currentlyViewedProjectId, `${newStatus} the proposal.`);
-    } catch (error) { 
-        console.error("Error updating status:", error); 
+    } catch (error) {
+        console.error("Error updating status:", error);
     }
 }
 
@@ -642,7 +630,7 @@ async function handleScheduleInterview() {
     const dateInput = document.getElementById('interview-date').value;
     if (!dateInput || !currentlyViewedProjectId) return;
     const interviewDate = new Date(dateInput);
-    await db.collection('projects').doc(currentlyViewedProjectId).update({ 
+    await db.collection('projects').doc(currentlyViewedProjectId).update({
         interviewDate: interviewDate,
         'timeline.Interview Scheduled': true
     });
@@ -693,8 +681,8 @@ async function handleDeleteProject() {
         try {
             await db.collection('projects').doc(currentlyViewedProjectId).delete();
             closeAllModals();
-        } catch (error) { 
-            console.error("Error deleting project:", error); 
+        } catch (error) {
+            console.error("Error deleting project:", error);
         }
     }
 }
@@ -711,8 +699,8 @@ function generateStatusReport() {
         overdueProjects.forEach(p => {
             reportHTML += `<div class="report-item overdue-item"><span class="report-item-title">${p.title}</span> <span class="report-item-meta">by ${p.authorName} - Due ${p.deadline}</span></div>`;
         });
-    } else { 
-        reportHTML += `<p>No overdue projects. Great job, team!</p>`; 
+    } else {
+        reportHTML += `<p>No overdue projects. Great job, team!</p>`;
     }
     reportHTML += `</div>`;
 
