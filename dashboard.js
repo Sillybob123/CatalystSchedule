@@ -566,6 +566,7 @@ async function handleAddComment() {
 }
 
 async function approveProposal(projectId) {
+    if (!projectId) return;
     try {
         await db.collection('projects').doc(projectId).update({
             proposalStatus: 'approved',
@@ -580,6 +581,21 @@ async function approveProposal(projectId) {
         alert('Failed to approve proposal. Please try again.');
     }
 }
+
+async function updateProposalStatus(newStatus) {
+    if (!currentlyViewedProjectId || newStatus !== 'rejected') return;
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            proposalStatus: newStatus
+        });
+        await addActivity(currentlyViewedProjectId, `rejected the proposal.`);
+        console.log(`[REJECTION] Successfully rejected proposal for project ${currentlyViewedProjectId}`);
+    } catch (error) {
+        console.error(`[REJECTION ERROR] Failed to reject proposal:`, error);
+        alert(`Failed to reject proposal. Please try again.`);
+    }
+}
+
 
 async function handleScheduleInterview() {
     const dateInput = document.getElementById('interview-date').value;
@@ -642,8 +658,81 @@ async function handleDeleteProject() {
     }
 }
 
-function generateStatusReport() { 
-    console.log("[REPORT] Status report generation not yet implemented");
+function generateStatusReport() {
+    const reportModal = document.getElementById('report-modal');
+    const reportContent = document.getElementById('report-content');
+    reportContent.innerHTML = ''; // Clear previous report
+
+    // --- Overdue Projects Section ---
+    const overdueProjects = allProjects.filter(p => {
+        const deadline = new Date(p.deadline + 'T23:59:59');
+        return deadline < new Date() && getProjectState(p).column !== 'Completed';
+    });
+
+    let reportHTML = `
+        <div class="report-section">
+            <h3><span class="emoji">🚨</span> Overdue Projects (${overdueProjects.length})</h3>
+            ${overdueProjects.length > 0 ? overdueProjects.map(p => `
+                <div class="report-item overdue-item" data-id="${p.id}">
+                    <span class="report-item-title">${p.title}</span>
+                    <span class="report-item-meta">Due: ${new Date(p.deadline + 'T00:00:00').toLocaleDateString()} | Author: ${p.authorName}</span>
+                </div>
+            `).join('') : '<p>No overdue projects. Great job!</p>'}
+        </div>
+    `;
+
+    // --- In Review Section ---
+    const inReviewProjects = allProjects.filter(p => {
+        const state = getProjectState(p);
+        return state.column === 'In Review' || state.column === 'Reviewing Suggestions';
+    });
+
+    reportHTML += `
+        <div class="report-section">
+            <h3><span class="emoji">🧐</span> In Review (${inReviewProjects.length})</h3>
+            ${inReviewProjects.length > 0 ? inReviewProjects.map(p => `
+                <div class="report-item" data-id="${p.id}">
+                    <span class="report-item-title">${p.title}</span>
+                    <span class="report-item-meta">${getProjectState(p).statusText} | Editor: ${p.editorName || 'N/A'}</span>
+                </div>
+            `).join('') : '<p>No projects are currently in review.</p>'}
+        </div>
+    `;
+
+    // --- Upcoming Deadlines Section ---
+    const upcomingProjects = allProjects.filter(p => {
+        const deadline = new Date(p.deadline + 'T23:59:59');
+        const now = new Date();
+        const sevenDaysFromNow = new Date();
+        sevenDaysFromNow.setDate(now.getDate() + 7);
+        return deadline > now && deadline <= sevenDaysFromNow && getProjectState(p).column !== 'Completed';
+    }).sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+
+    reportHTML += `
+        <div class="report-section">
+            <h3><span class="emoji">🗓️</span> Upcoming Deadlines (Next 7 Days) (${upcomingProjects.length})</h3>
+            ${upcomingProjects.length > 0 ? upcomingProjects.map(p => `
+                <div class="report-item" data-id="${p.id}">
+                    <span class="report-item-title">${p.title}</span>
+                    <span class="report-item-meta">Due: ${new Date(p.deadline + 'T00:00:00').toLocaleDateString()} | Status: ${getProjectState(p).statusText}</span>
+                </div>
+            `).join('') : '<p>No deadlines in the next 7 days.</p>'}
+        </div>
+    `;
+
+    reportContent.innerHTML = reportHTML;
+
+    // Add event listeners to the new report items
+    reportContent.querySelectorAll('.report-item').forEach(item => {
+        item.style.cursor = 'pointer';
+        item.addEventListener('click', () => {
+            closeAllModals();
+            openDetailsModal(item.dataset.id);
+        });
+    });
+
+    // Show the modal
+    reportModal.style.display = 'flex';
 }
 
 // =================
