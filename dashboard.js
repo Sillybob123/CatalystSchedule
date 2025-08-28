@@ -23,13 +23,27 @@ let calendarDate = new Date();
 
 // --- CONSTANTS ---
 const projectTimelines = {
-    "Interview": ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete", "Article Writing Complete", "Suggestions Reviewed"],
-    "Op-Ed": ["Topic Proposal Complete", "Article Writing Complete", "Suggestions Reviewed"]
+    "Interview": [
+        "Topic Proposal Complete",
+        "Interview Scheduled",
+        "Interview Complete",
+        "Article Writing Complete",
+        "Review In Progress",
+        "Review Complete",
+        "Suggestions Reviewed"
+    ],
+    "Op-Ed": [
+        "Topic Proposal Complete",
+        "Article Writing Complete",
+        "Review In Progress",
+        "Review Complete",
+        "Suggestions Reviewed"
+    ]
 };
 
 const KANBAN_COLUMNS = {
-    'interviews': ["Topic Proposal", "Interview Stage", "Writing Stage", "Reviewing Suggestions", "Completed"],
-    'opeds': ["Topic Proposal", "Writing Stage", "Reviewing Suggestions", "Completed"],
+    'interviews': ["Topic Proposal", "Interview Stage", "Writing Stage", "In Review", "Reviewing Suggestions", "Completed"],
+    'opeds': ["Topic Proposal", "Writing Stage", "In Review", "Reviewing Suggestions", "Completed"],
     'my-assignments': ["To Do", "In Progress", "In Review", "Done"]
 };
 
@@ -187,19 +201,22 @@ function getProjectColumn(project) {
     if (completedTasks.length === totalTasks) return "Completed";
 
     if (currentView === 'my-assignments') {
-        if (project.editorId === currentUser.uid) return "In Review";
-        if (completedTasks.length > 0) return "In Progress";
+        if (project.editorId === currentUser.uid) {
+            if (completedTasks.includes("Review Complete")) return "Done";
+            if (completedTasks.includes("Article Writing Complete")) return "In Review";
+        }
+        if (completedTasks.length > 0 && !completedTasks.includes("Article Writing Complete")) return "In Progress";
         return "To Do";
     }
     
     if (project.type === 'Interview') {
-        if (completedTasks.includes("Suggestions Reviewed")) return "Completed";
-        if (completedTasks.includes("Article Writing Complete")) return "Reviewing Suggestions";
+        if (completedTasks.includes("Review Complete")) return "Reviewing Suggestions";
+        if (completedTasks.includes("Article Writing Complete")) return "In Review";
         if (completedTasks.includes("Interview Complete")) return "Writing Stage";
         if (completedTasks.includes("Topic Proposal Complete")) return "Interview Stage";
     } else { // Op-Ed
-        if (completedTasks.includes("Suggestions Reviewed")) return "Completed";
-        if (completedTasks.includes("Article Writing Complete")) return "Reviewing Suggestions";
+        if (completedTasks.includes("Review Complete")) return "Reviewing Suggestions";
+        if (completedTasks.includes("Article Writing Complete")) return "In Review";
         if (completedTasks.includes("Topic Proposal Complete")) return "Writing Stage";
     }
     return "Topic Proposal";
@@ -209,6 +226,15 @@ function createProjectCard(project) {
     const card = document.createElement('div');
     card.className = 'kanban-card';
     card.dataset.id = project.id;
+
+    const column = getProjectColumn(project);
+    if (column === "Interview Stage" || column === "Writing Stage" || (column === "In Review" && !project.timeline["Review Complete"])) {
+        card.classList.add('status-yellow');
+    } else if (column === "Reviewing Suggestions" && project.timeline["Review Complete"]) {
+        card.classList.add('status-blue');
+    } else if (column === "Completed") {
+        card.classList.add('status-green');
+    }
     
     const deadline = new Date(project.deadline + 'T23:59:59');
     const daysUntilDue = (deadline - new Date()) / (1000 * 60 * 60 * 24);
@@ -320,7 +346,9 @@ function openDetailsModal(projectId) {
     currentlyViewedProjectId = projectId;
 
     // --- PERMISSION LOGIC ---
-    const canEdit = currentUserRole === 'admin' || currentUser.uid === project.authorId;
+    const isAuthor = currentUser.uid === project.authorId;
+    const isEditor = currentUser.uid === project.editorId;
+    const isAdmin = currentUserRole === 'admin';
     
     document.getElementById('details-title').textContent = project.title;
     document.getElementById('details-author').textContent = project.authorName;
@@ -330,24 +358,22 @@ function openDetailsModal(projectId) {
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
 
     // Hide/show sections based on permissions
-    document.getElementById('admin-approval-section').style.display = currentUserRole === 'admin' && project.proposalStatus === 'pending' ? 'block' : 'none';
-    document.getElementById('assign-editor-section').style.display = currentUserRole === 'admin' ? 'flex' : 'none';
-
-    // Apply permissions to editable sections
-    document.getElementById('change-deadline-section').style.display = canEdit ? 'block' : 'none';
-    document.getElementById('delete-section').style.display = canEdit ? 'block' : 'none';
+    document.getElementById('admin-approval-section').style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
+    document.getElementById('assign-editor-section').style.display = isAdmin ? 'flex' : 'none';
+    document.getElementById('change-deadline-section').style.display = isAdmin || isAuthor ? 'block' : 'none';
+    document.getElementById('delete-section').style.display = isAdmin || isAuthor ? 'block' : 'none';
     
     const interviewSection = document.getElementById('interview-details-section');
     if (project.type === 'Interview') {
         interviewSection.style.display = 'block';
-        interviewSection.querySelector('#interview-date').disabled = !canEdit;
-        interviewSection.querySelector('#schedule-interview-button').disabled = !canEdit;
+        interviewSection.querySelector('#interview-date').disabled = !isAdmin && !isAuthor;
+        interviewSection.querySelector('#schedule-interview-button').disabled = !isAdmin && !isAuthor;
     } else {
         interviewSection.style.display = 'none';
     }
 
     populateEditorDropdown(project.editorId);
-    renderTimeline(project, canEdit); // Pass canEdit flag
+    renderTimeline(project, isAuthor, isEditor, isAdmin);
     renderDeadlineHistory(project);
     renderInterviewStatus(project);
     
@@ -371,17 +397,26 @@ function populateEditorDropdown(currentEditorId) {
     });
 }
 
-function renderTimeline(project, canEdit) {
+function renderTimeline(project, isAuthor, isEditor, isAdmin) {
     const timelineContainer = document.getElementById('details-timeline');
     timelineContainer.innerHTML = '';
-    Object.entries(project.timeline).forEach(([task, completed]) => {
-        const isEditable = canEdit;
+    const timelineTasks = projectTimelines[project.type] || [];
+
+    timelineTasks.forEach(task => {
+        let canEditTask = false;
+        if (task.includes("Review")) {
+            canEditTask = isEditor || isAdmin;
+        } else {
+            canEditTask = isAuthor || isAdmin;
+        }
+
+        const completed = project.timeline[task];
         const taskEl = document.createElement('div');
         taskEl.className = 'task';
         const taskId = `task-${task.replace(/\s+/g, '-')}`;
-        taskEl.innerHTML = `<input type="checkbox" id="${taskId}" ${completed ? 'checked' : ''} ${!isEditable ? 'disabled' : ''}><label for="${taskId}">${task}</label>`;
+        taskEl.innerHTML = `<input type="checkbox" id="${taskId}" ${completed ? 'checked' : ''} ${!canEditTask ? 'disabled' : ''}><label for="${taskId}">${task}</label>`;
         
-        if (isEditable) {
+        if (canEditTask) {
             taskEl.querySelector('input').addEventListener('change', (e) => updateTaskStatus(project.id, task, e.target.checked));
         }
         
@@ -447,7 +482,11 @@ async function updateProposalStatus(newStatus) {
             proposalStatus: newStatus,
             'timeline.Topic Proposal Complete': newStatus === 'approved'
         });
-        await addActivity(currentlyViewedProjectId, `set the proposal status to **${newStatus}**.`);
+        if (newStatus === 'approved') {
+            await addActivity(currentlyViewedProjectId, `approved the proposal.`);
+        } else {
+            await addActivity(currentlyViewedProjectId, `rejected the proposal.`);
+        }
         closeAllModals();
     } catch (error) { console.error("Error updating status:", error); }
 }
