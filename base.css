@@ -118,3 +118,225 @@ body {
   gap: var(--space-3);
   align-items: center;
 }
+
+/* === LOADING STATES === */
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: var(--space-6);
+}
+
+.loader {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 1200px) {
+  .main-content {
+    padding: var(--space-6);
+  }
+  
+  .kanban-board {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-4);
+  }
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .main-content {
+    margin-left: 0;
+    padding: var(--space-4);
+  }
+  
+  .kanban-board {
+    display: flex;
+    overflow-x: auto;
+    gap: var(--space-4);
+    padding-bottom: var(--space-4);
+  }
+  
+  .kanban-column {
+    min-width: 320px;
+    flex-shrink: 0;
+  }
+  
+  .modal-content.large {
+    width: 95vw;
+    height: 90vh;
+  }
+  
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .details-sidebar {
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+@media (max-width: 768px) {
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+  
+  .main-header h1 {
+    font-size: 24px;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .header-actions > * {
+    flex: 1;
+  }
+  
+  .kanban-board {
+    display: block;
+  }
+  
+  .kanban-column {
+    margin-bottom: var(--space-6);
+  }
+  
+  .modal-content {
+    margin: var(--space-4);
+    width: calc(100vw - 2rem);
+    height: calc(100vh - 2rem);
+  }
+  
+  .details-main,
+  .details-sidebar {
+    padding: var(--space-4);
+  }
+  
+  .login-box {
+    padding: var(--space-8) var(--space-6);
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: var(--space-3);
+  }
+  
+  .kanban-column {
+    padding: var(--space-4);
+  }
+  
+  .kanban-card {
+    padding: var(--space-4);
+  }
+  
+  .modal-overlay {
+    padding: var(--space-3);
+  }
+  
+  .login-box {
+    padding: var(--space-6) var(--space-4);
+  }
+}
+
+/* === UTILITY CLASSES === */
+.hidden {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* === ANIMATIONS === */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.kanban-card {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* === FOCUS STATES === */
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* === PRINT STYLES === */
+@media print {
+  body {
+    background: none;
+  }
+  
+  .sidebar,
+  .header-actions,
+  .modal-overlay {
+    display: none !important;
+  }
+  
+  .main-content {
+    margin-left: 0;
+    padding: 0;
+  }
+  
+  .kanban-board {
+    display: block;
+  }
+  
+  .kanban-card {
+    break- inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}
+
+/* === ACCESSIBILITY === */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* === SELECTION STYLING === */
+::selection {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
