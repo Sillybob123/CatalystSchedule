@@ -744,11 +744,19 @@ textarea {
   align-items: center;
   gap: 12px;
 }
-#admin-approval-section .button-group {
+
+.admin-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.admin-controls h4 {
+    margin: 0;
+}
+.admin-controls .button-group {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-top: 10px;
 }
 
 /* Timeline checklist */
