@@ -22,7 +22,6 @@ let currentView = 'interviews'; // Default view
 let calendarDate = new Date();
 
 // --- CONSTANTS ---
-// Updated timeline to follow logical order
 const projectTimelines = {
     "Interview": [
         "Topic Proposal Complete",
@@ -188,13 +187,11 @@ function getMyAssignmentsCount() {
         const timeline = p.timeline || {};
 
         if (isAuthor) {
-            // Author tasks: waiting for review completion, or approved but not written
             if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return true;
             if (p.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return true;
         }
 
         if (isEditor) {
-            // Editor tasks: assigned and article ready for review
             if (timeline["Article Writing Complete"] && !timeline["Review Complete"]) return true;
         }
 
@@ -256,18 +253,34 @@ function getProjectColumn(project, view = 'interviews') {
         return view === 'my-assignments' ? "Done" : "Completed";
     }
 
-    // "My Assignments" view has its own simplified logic
+    // "My Assignments" view logic
     if (view === 'my-assignments') {
         const isAuthor = project.authorId === currentUser.uid;
         const isEditor = project.editorId === currentUser.uid;
 
-        if (isEditor && timeline["Article Writing Complete"] && !timeline["Review Complete"]) {
-            return "In Review"; // Editor's main task
+        // Editor assignments: Review tasks
+        if (isEditor) {
+            if (timeline["Article Writing Complete"] && !timeline["Review Complete"]) {
+                return "In Progress"; // Editor's active task
+            }
+            if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) {
+                return "Done"; // Editor completed, waiting for author
+            }
         }
+
+        // Author assignments
         if (isAuthor) {
-            if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return "In Review"; // Author reviewing suggestions
-            if (project.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return "In Progress";
+            if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) {
+                return "In Review"; // Author reviewing suggestions
+            }
+            if (project.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) {
+                return "In Progress";
+            }
+            if (project.type === 'Interview' && project.proposalStatus === 'approved' && !timeline["Interview Complete"]) {
+                return "To Do";
+            }
         }
+
         return "To Do"; // Default for anything else in this view
     }
 
@@ -276,28 +289,32 @@ function getProjectColumn(project, view = 'interviews') {
         return "Topic Proposal";
     }
 
-    if (timeline["Review Complete"]) {
-        return "Reviewing Suggestions";
+    if (project.type === 'Interview') {
+        if (!timeline["Interview Complete"]) {
+            return "Interview Stage";
+        }
+        if (timeline["Interview Complete"] && !timeline["Article Writing Complete"]) {
+            return "Writing Stage";
+        }
+    } else { // Op-Ed
+        if (!timeline["Article Writing Complete"]) {
+            return "Writing Stage";
+        }
     }
 
     if (timeline["Article Writing Complete"]) {
-        return project.editorId ? "In Review" : "Reviewing Suggestions"; // Moves to "In Review" ONLY after an editor is assigned.
-    }
-
-    if (project.type === 'Interview') {
-        if (timeline["Interview Complete"]) {
-            return "Writing Stage";
+        if (!project.editorId) {
+            return "Writing Stage"; // Stays here until admin assigns editor
         }
-        if (timeline["Topic Proposal Complete"]) {
-            return "Interview Stage";
+        if (!timeline["Review Complete"]) {
+            return "In Review";
         }
-    } else { // Op-Ed Logic
-        if (timeline["Topic Proposal Complete"]) {
-            return "Writing Stage";
+        if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) {
+            return "Reviewing Suggestions";
         }
     }
 
-    // Default catch-all
+    // Default fallback
     return "Topic Proposal";
 }
 
@@ -310,15 +327,16 @@ function createProjectCard(project) {
     const column = getProjectColumn(project, currentView);
     const timeline = project.timeline || {};
 
-    // Color coding based on status and progress
-    if (column === "Interview Stage" && timeline["Interview Scheduled"] && !timeline["Interview Complete"]) {
-        card.classList.add('status-yellow');
+    if (column === "Interview Stage") {
+        if (timeline["Interview Scheduled"]) {
+            card.classList.add('status-yellow'); // Yellow when interview scheduled
+        }
     } else if (column === "Writing Stage" || column === "In Review") {
-        card.classList.add('status-yellow');
+        card.classList.add('status-yellow'); // Yellow during active work
     } else if (column === "Reviewing Suggestions") {
-        card.classList.add('status-blue');
+        card.classList.add('status-blue'); // Blue when waiting for author review
     } else if (column === "Completed" || column === "Done") {
-        card.classList.add('status-green');
+        card.classList.add('status-green'); // Green when complete
     }
 
     const deadline = new Date(project.deadline + 'T23:59:59');
@@ -541,11 +559,11 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
         let canEditTask = false;
 
         if (task === "Topic Proposal Complete") {
-            canEditTask = false; // Only changed by admin approval
+            canEditTask = false;
+        } else if (task === "Interview Scheduled" || task === "Interview Complete" || task === "Article Writing Complete" || task === "Suggestions Reviewed") {
+            canEditTask = isAuthor || isAdmin;
         } else if (task === "Review In Progress" || task === "Review Complete") {
-            canEditTask = isEditor || isAdmin; // Only editors can check review tasks
-        } else {
-            canEditTask = isAuthor || isAdmin; // Authors can check their tasks
+            canEditTask = isEditor || isAdmin;
         }
 
         const completed = project.timeline[task];
@@ -641,11 +659,12 @@ async function handleAssignEditor() {
     if (!editorId) return;
     const selectedEditor = allEditors.find(e => e.id === editorId);
     if (!selectedEditor || !currentlyViewedProjectId) return;
+
     await db.collection('projects').doc(currentlyViewedProjectId).update({
         editorId: editorId,
         editorName: selectedEditor.name
     });
-    addActivity(currentlyViewedProjectId, `assigned **${selectedEditor.name}** as the editor.`);
+    addActivity(currentlyViewedProjectId, `assigned **${selectedEditor.name}** as the editor. Project moved to "In Review".`);
 }
 
 async function handleUpdateDeadlines() {
