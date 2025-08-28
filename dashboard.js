@@ -587,7 +587,34 @@ async function handleDeleteProject() {
 
 // --- STATUS REPORT ---
 function generateStatusReport() {
-    // ...
+    const reportContent = document.getElementById('report-content');
+    const now = new Date();
+    const overdueProjects = allProjects.filter(p => new Date(p.deadline) < now && getProjectColumn(p, 'interviews') !== 'Completed');
+    const activeProjects = allProjects.filter(p => getProjectColumn(p, 'interviews') !== 'Completed' && p.proposalStatus === 'approved');
+
+    let reportHTML = `<div class="report-section"><h3><span class="emoji">⚠️</span> Overdue Projects (${overdueProjects.length})</h3>`;
+    if (overdueProjects.length > 0) {
+        overdueProjects.forEach(p => {
+            reportHTML += `<div class="report-item overdue-item"><span class="report-item-title">${p.title}</span> <span class="report-item-meta">by ${p.authorName} - Due ${p.deadline}</span></div>`;
+        });
+    } else { reportHTML += `<p>No overdue projects. Great job, team!</p>`; }
+    reportHTML += `</div>`;
+
+    reportHTML += `<div class="report-section"><h3><span class="emoji">🚀</span> Active Projects by Person</h3>`;
+    const teamMembers = [...new Map(allProjects.map(p => [p.authorId, {name: p.authorName, id: p.authorId}])).values()];
+    teamMembers.forEach(person => {
+        const projects = activeProjects.filter(p => p.authorId === person.id);
+        if (projects.length > 0) {
+            reportHTML += `<h4>${person.name} (${projects.length})</h4>`;
+            projects.forEach(p => {
+                reportHTML += `<div class="report-item"><span class="report-item-title">${p.title}</span> <span class="report-item-meta">${getProjectColumn(p, 'interviews')} - Due ${p.deadline}</span></div>`;
+            });
+        }
+    });
+    reportHTML += `</div>`;
+
+    reportContent.innerHTML = reportHTML;
+    document.getElementById('report-modal').style.display = 'flex';
 }
 
 // --- UTILITY ---
