@@ -81,7 +81,7 @@ body {
   background-color: var(--background-color);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  overflow: hidden; /* Prevent body scroll */
   height: 100%;
   min-height: 100vh;
 }
@@ -89,7 +89,6 @@ body {
 /* === LAYOUT STRUCTURE === */
 .app-container {
   display: flex;
-  min-height: 100vh;
   height: 100vh;
   background: var(--background-color);
   overflow: hidden;
@@ -104,7 +103,7 @@ body {
   display: flex;
   flex-direction: column;
   position: fixed;
-  height: 100vh;
+  height: 100%;
   left: 0;
   top: 0;
   z-index: 100;
@@ -115,12 +114,10 @@ body {
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);
-  padding: var(--space-6);
   height: 100vh;
-  overflow-y: auto;
-  background: var(--background-color);
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* Important for containing children */
 }
 
 /* === MAIN CONTENT HEADER === */
@@ -128,10 +125,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-6);
+  padding: var(--space-6);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
+  flex-shrink: 0; /* Prevent header from shrinking */
 }
 
 .main-header h1 {
@@ -154,8 +151,9 @@ body {
 
 /* === BOARD VIEW === */
 #board-view {
-  flex: 1;
-  overflow: hidden;
+  flex: 1; /* Take up remaining space */
+  overflow: hidden; /* Hide overflow */
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
 }
@@ -166,10 +164,10 @@ body {
   gap: var(--space-4);
   height: 100%;
   overflow-x: auto;
-  overflow-y: hidden;
-  padding: var(--space-2);
+  padding-bottom: var(--space-4);
 }
 
+/* === KANBAN COLUMN (FIXED) === */
 .kanban-column {
   background: var(--surface-color);
   border-radius: var(--radius-lg);
@@ -177,38 +175,35 @@ body {
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  height: fit-content;
-  max-height: calc(100vh - 200px);
-  min-height: 300px;
+  max-height: 100%; /* Column takes full height of its row */
+  overflow: hidden; /* Hide overflow to allow child scrolling */
 }
 
 .column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--border-color);
-  background: #fafbfc;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  flex-shrink: 0;
+  flex-shrink: 0; /* Prevent header from shrinking */
 }
 
 .column-title {
   font-size: clamp(14px, 1.1vw, 18px);
   font-weight: 600;
   color: var(--text-color);
-  margin: 0;
-}
-
-.column-count {
-  font-size: clamp(12px, 0.9vw, 14px);
-  color: var(--text-secondary);
-  margin-top: var(--space-1);
 }
 
 .column-content {
   padding: var(--space-4);
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
+  flex: 1; /* Take remaining space */
+  overflow-y: auto; /* Enable vertical scrolling */
+  min-height: 0; /* Flexbox bug fix */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
+
 
 /* === LOADING STATES === */
 .loader-container {
@@ -230,96 +225,19 @@ body {
 }
 
 /* === RESPONSIVE BREAKPOINTS === */
-
-/* Large Desktops (1920px+) */
-@media (min-width: 1920px) {
-  :root {
-    --sidebar-width: 320px;
-  }
-  
-  .kanban-board {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    max-width: 1800px;
-    margin: 0 auto;
-  }
-}
-
-/* Standard Desktops (1200px - 1919px) */
-@media (max-width: 1919px) and (min-width: 1200px) {
-  :root {
-    --sidebar-width: 280px;
-  }
-  
-  .kanban-board {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  }
-}
-
-/* Small Desktops (1024px - 1199px) */
-@media (max-width: 1199px) and (min-width: 1024px) {
-  :root {
-    --sidebar-width: 260px;
-  }
-  
-  .main-content {
-    padding: var(--space-4);
-  }
-  
-  .kanban-board {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  }
-  
-  .main-header h1 {
-    font-size: clamp(18px, 2.2vw, 28px);
-  }
-}
-
-/* Compact Desktops (900px - 1023px) */
-@media (max-width: 1023px) and (min-width: 900px) {
-  :root {
-    --sidebar-width: 240px;
-  }
-  
-  .main-content {
-    padding: var(--space-3);
-  }
-  
-  .kanban-board {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--space-3);
-  }
-  
-  .main-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-3);
-  }
-  
-  .header-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-}
-
-/* Very Small Desktops/Large Tablets (768px - 899px) */
 @media (max-width: 899px) {
   .sidebar {
-    width: 240px;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
   }
   
   .main-content {
     margin-left: 0;
-    padding: var(--space-3);
     width: 100vw;
   }
   
   .kanban-board {
-    display: flex;
-    overflow-x: auto;
-    gap: var(--space-3);
-    padding-bottom: var(--space-4);
+    display: flex; /* Switch to flex for horizontal scrolling on mobile */
   }
   
   .kanban-column {
@@ -372,8 +290,8 @@ body {
 
 /* === SCROLLBAR STYLING === */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -382,7 +300,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-color);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
