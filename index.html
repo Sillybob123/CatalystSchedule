@@ -3,699 +3,256 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>The Catalyst – Team Board (Monday‑style)</title>
-  <meta name="description" content="A single‑file Monday.com‑style team board for The Catalyst Magazine with Google sign‑in and real‑time updates via Firebase. Drop this on GitHub Pages and go." />
+  <title>The Catalyst – Team Board</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg:#0e1116; --panel:#111827; --muted:#9CA3AF; --text:#E5E7EB; --brand:#60A5FA; --brand2:#A78BFA;
-      --ok:#34D399; --warn:#F59E0B; --danger:#F87171; --info:#38BDF8; --chip:#1F2937; --chipb:#374151; --rad:16px;
-      --shadow:0 10px 25px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.02);
-    }
+    :root{--bg:#0e1116;--panel:#111827;--muted:#9CA3AF;--text:#E5E7EB;--brand:#60A5FA;--brand2:#A78BFA;--rad:14px}
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color:var(--text);
-      background:
-        radial-gradient(1200px 600px at 10% -10%, rgba(96,165,250,.15), transparent 60%),
-        radial-gradient(800px 400px at 90% 0%, rgba(167,139,250,.12), transparent 50%),
-        var(--bg);
-    }
-    a{color:var(--brand)} a:hover{text-decoration:underline}
-    .wrap{max-width:1200px;margin:0 auto;padding:24px}
-    header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
-    .logo{display:flex;align-items:center;gap:12px}
-    .badge{padding:6px 10px;border:1px solid var(--chipb);background:linear-gradient(180deg, rgba(31,41,55,.9), rgba(17,24,39,.9));border-radius:999px;font-size:12px;color:var(--muted);box-shadow:var(--shadow)}
-    .panel{background:linear-gradient(180deg, rgba(17,24,39,.96), rgba(11,14,20,.98));border:1px solid #1f2937;border-radius:var(--rad);box-shadow:var(--shadow)}
-    .controls{display:flex;gap:10px;flex-wrap:wrap;padding:12px;border-bottom:1px solid #1f2937}
-    .controls input,.controls select,.controls button{background:var(--chip);color:var(--text);border:1px solid var(--chipb);border-radius:10px;padding:10px 12px;font:inherit}
-    .controls button.primary{background:linear-gradient(180deg,#3b82f6,#2563eb);border-color:#1d4ed8;color:#fff;box-shadow:0 6px 14px rgba(59,130,246,.25)}
-    .controls button.ghost{background:transparent;border-color:#374151}
-    .table{width:100%;border-collapse:separate;border-spacing:0}
-    .thead{background:linear-gradient(180deg,#0b1524,#0b111a);position:sticky;top:0;z-index:1}
-    .thead th{text-align:left;padding:14px 12px;font-weight:600;color:#cbd5e1;font-size:13px;border-bottom:1px solid #1f2937}
-    .tbody tr{border-bottom:1px solid #1f2937}
-    .tbody td{padding:12px;vertical-align:top;font-size:14px}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid transparent}
-    .pill.gray{background:#111827;color:#9CA3AF;border-color:#374151}
-    .pill.blue{background:#0b2748;color:#93C5FD;border-color:#1e3a8a}
-    .pill.green{background:#052d23;color:#6ee7b7;border-color:#065f46}
-    .pill.amber{background:#321e02;color:#fcd34d;border-color:#92400e}
-    .pill.red{background:#34090a;color:#fca5a5;border-color:#991b1b}
-    .pill.purple{background:#1a1034;color:#c4b5fd;border-color:#5b21b6}
-    .progress{height:8px;background:#111827;border:1px solid #1f2937;border-radius:999px;overflow:hidden}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--text);background:#0e1116}
+    header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#111827;border-bottom:1px solid #1f2937}
+    h1{margin:0;font-size:18px}
+    .muted{color:var(--muted)}
+    .wrap{max-width:1100px;margin:0 auto;padding:18px}
+    .bar{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+    button{padding:8px 12px;border-radius:8px;border:1px solid #374151;background:#1f2937;color:#E5E7EB;cursor:pointer}
+    button.primary{background:linear-gradient(180deg,#3b82f6,#2563eb);border-color:#1d4ed8;color:#fff}
+    #msg{margin:0 0 12px;background:#111827;border:1px solid #1f2937;border-radius:var(--rad);padding:10px 12px;display:none}
+    table{width:100%;border-collapse:separate;border-spacing:0;background:#111827;border:1px solid #1f2937;border-radius:var(--rad);overflow:hidden}
+    thead th{background:#0f172a;text-align:left;padding:12px;border-bottom:1px solid #1f2937;font-weight:600}
+    tbody td{padding:12px;border-bottom:1px solid #1f2937;vertical-align:top}
+    tr:hover{background:#0b1324}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid #374151}
+    .blue{background:#0b2748;color:#93c5fd}
+    .green{background:#052d23;color:#6ee7b7}
+    .amber{background:#321e02;color:#fcd34d}
+    .red{background:#34090a;color:#fca5a5}
+    .progress{height:8px;background:#0b1324;border:1px solid #1f2937;border-radius:999px;overflow:hidden}
     .progress>div{height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2))}
-    .toolbar{display:flex;align-items:center;gap:8px}
-    .toolbar button{background:transparent;border:1px solid #374151;color:#E5E7EB;padding:6px 8px;border-radius:8px;font-size:12px}
-    .muted{color:var(--muted)} .small{font-size:12px}
-    .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
-    .card{padding:14px;border:1px solid #1f2937;border-radius:14px;background:linear-gradient(180deg, rgba(17,24,39,.9), rgba(11,14,20,.95));box-shadow:var(--shadow)}
-    .avatar{width:44px;height:44px;border-radius:50%;background:#0b111a;border:1px solid #1f2937;display:inline-block}
-    .role{color:#a5b4fc;font-weight:600;font-size:12px}
-    .hidden{display:none}
-    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.6);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
-    .modal{width:min(840px,100%);background:linear-gradient(180deg, rgba(17,24,39,.98), rgba(11,14,20,.98));border:1px solid #1f2937;border-radius:16px;box-shadow:var(--shadow)}
-    .modal header{padding:16px 18px;border-bottom:1px solid #1f2937}
-    .modal .body{padding:16px 18px}
-    .form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .form .full{grid-column:1/-1}
-    .form label{display:block;font-size:12px;color:#a3a3a3;margin-bottom:6px}
-    .form input,.form select,.form textarea{width:100%;padding:10px 12px;border-radius:10px;background:var(--chip);color:var(--text);border:1px solid var(--chipb);font:inherit}
-    .form textarea{min-height:90px;resize:vertical}
-    #loader {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 100;
-    }
-    @media (max-width:860px){
-      .form{grid-template-columns:1fr}
-      .controls{position:sticky;top:0}
-      .thead{display:none}
-      .tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px}
-      .tbody td[data-col]::before{content:attr(data-col)"\A";white-space:pre;color:#9CA3AF;font-size:11px;display:block;margin-bottom:4px}
-    }
+    .right{margin-left:auto}
+    a{color:#93c5fd}
+    .small{font-size:12px}
   </style>
-  <!--
-  =============================================
-  The Catalyst Board – Single‑file HTML (GitHub Pages)
-  =============================================
-  HOW TO DEPLOY:
-  1) Save this file as index.html in a public GitHub repo.
-  2) Enable GitHub Pages for the repo.
-  3) In Firebase Console:
-     - Enable Authentication → Google
-     - Firestore → Create database (Production)
-     - Authentication → Settings → Authorized domains → add your GitHub Pages domain (e.g., yourname.github.io)
-     - (Optional) Storage if you later want uploads
-  4) That’s it. This page auto‑switches to Firebase mode using the config below.
-
-  FIRESTORE SECURITY RULES (paste in Firebase > Firestore > Rules):
-  rules_version = '2';
-  service cloud.firestore {
-    match /databases/{database}/documents {
-      function isAllowlisted() {
-        return request.auth != null && (
-          request.auth.token.email in [
-            "yairbendor@gwmail.gwu.edu", "ac6892@princeton.edu",
-            "acarter45@gwu.edu", "act128@georgetown.edu",
-            "aidan.schurr@gwmail.gwu.edu", "aidan.schurr@gwu.edu",
-            "aidansbrown@gwmail.gwu.edu", "atcarter2002@gmail.com",
-            "azzarreeu@gwmail.gwu.edu", "ginger.taurek@gwmail.gwu.edu",
-            "loripreci@gwmail.gwu.edu", "loripreci03@gmail.com",
-            "Naama.bendor1@gmail.com", "nb852@georgetown.edu",
-            "rachel.lee@gwmail.gwu.edu", "sas562@georgetown.edu",
-            "stemcatalystmagazine@gmail.com", "bendoryair@gmail.com"
-          ] ||
-          request.auth.token.email.matches(".*@(gwu|georgetown|princeton|howard|jhu)\\.edu")
-        );
-      }
-      match /catalyst_board/{docId} {
-        allow read: if true; // public read
-        allow create, update, delete: if isAllowlisted();
-      }
-      match /catalyst_meta/{docId} {
-        allow read: if true;
-        allow write: if isAllowlisted();
-      }
-    }
-  }
-
-  IMPORTANT: Do NOT commit any Firebase service account JSON to this repo. That’s server‑only.
-  -->
 </head>
 <body>
-  <div id="loader" class="modal-backdrop">
-    <div class="muted">Loading board & checking authentication…</div>
-  </div>
+  <header>
+    <div>
+      <h1>The Catalyst – Team Board</h1>
+      <div class="small muted">Track pitches → interviews → drafts → edits → publication</div>
+    </div>
+    <div class="bar">
+      <span id="whoami" class="small muted">Not signed in</span>
+      <button id="btnSignIn">Sign in with Google</button>
+      <button id="btnSignOut" style="display:none">Sign out</button>
+    </div>
+  </header>
+
   <div class="wrap">
-    <header>
-      <div class="logo">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2l2.39 4.84L20 7.27l-3.9 3.8.92 5.36L12 14.77 6.98 16.43l.92-5.36L4 7.27l5.61-.43L12 2z" fill="url(#g)"/><defs><linearGradient id="g" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop stop-color="#60A5FA"/><stop offset="1" stop-color="#A78BFA"/></linearGradient></defs></svg>
-        <div>
-          <div style="font-weight:800;letter-spacing:.2px">The Catalyst – Team Board</div>
-          <div class="small muted">Monday‑style tracker for pitches, interviews, drafts, edits, and publication</div>
-        </div>
-        <span class="badge" id="modeBadge">Detecting mode…</span>
-      </div>
-      <div class="head-actions" style="display:flex;align-items:center;gap:10px">
-        <div id="whoami" class="small muted">Not signed in</div>
-        <div class="toolbar">
-          <button id="btnSignIn" title="Sign in">Sign in</button>
-          <button id="btnSignOut" class="ghost hidden" title="Sign out">Sign out</button>
-        </div>
-      </div>
-    </header>
+    <div id="msg"></div>
 
-    <section class="panel" aria-label="Board Controls">
-      <div class="controls">
-        <input id="q" type="search" placeholder="Search title or notes…" aria-label="Search" />
-        <select id="filterOwner" aria-label="Filter by owner"><option value="">Owner: All</option></select>
-        <select id="filterStage" aria-label="Filter by stage"><option value="">Stage: All</option></select>
-        <select id="filterPriority" aria-label="Filter by priority"><option value="">Priority: All</option><option>Low</option><option>Medium</option><option>High</option></select>
-        <button id="btnNew" class="primary">+ New Item</button>
-        <button id="btnCSV" class="ghost" title="Download CSV">Export CSV</button>
-      </div>
-      <div style="overflow:auto;border-radius:0 0 var(--rad) var(--rad)">
-        <table class="table" role="table" aria-label="Team Board">
-          <thead class="thead"><tr>
-            <th style="min-width:220px">Article Title</th>
-            <th style="min-width:160px">Owner</th>
-            <th style="min-width:140px">Stage</th>
-            <th style="min-width:120px">Status</th>
-            <th style="min-width:160px">Progress</th>
-            <th style="min-width:140px">Due</th>
-            <th style="min-width:120px">Priority</th>
-            <th style="min-width:180px">Link</th>
-            <th style="min-width:260px">Notes</th>
-            <th style="min-width:160px">Updated</th>
-            <th style="width:1%"></th>
-          </tr></thead>
-          <tbody id="rows" class="tbody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <div style="height:14px"></div>
-
-    <details class="panel" open>
-      <summary style="cursor:pointer;padding:14px 16px;list-style:none;font-weight:700">Team Roster</summary>
-      <div class="body" style="padding:0 16px 16px 16px">
-        <div id="teamGrid" class="team-grid"></div>
-      </div>
-    </details>
-
-    <div style="height:10px"></div>
-
-    <section class="panel" style="padding:12px 16px">
-      <div class="small muted">Tip: Need to test fast? Use <strong>Sign in → Demo</strong> to impersonate a teammate. When Google Auth + Firestore are configured, the board switches to <strong>Firebase Mode</strong> automatically.</div>
-    </section>
-  </div>
-
-  <!-- Modal: Add/Edit Item -->
-  <div id="itemModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="itemTitleLabel">
-    <div class="modal">
-      <header><div style="font-weight:800" id="modalTitle">New Item</div></header>
-      <div class="body">
-        <form id="itemForm" class="form">
-          <div class="full">
-            <label for="fTitle">Article Title</label>
-            <input id="fTitle" required placeholder="e.g., Mapping DC’s Quantum Materials Research" />
-          </div>
-          <div>
-            <label for="fOwner">Owner</label>
-            <select id="fOwner"></select>
-          </div>
-          <div>
-            <label for="fStage">Stage</label>
-            <select id="fStage"></select>
-          </div>
-          <div>
-            <label for="fStatus">Status</label>
-            <select id="fStatus"></select>
-          </div>
-          <div>
-            <label for="fProgress">Progress (%)</label>
-            <input id="fProgress" type="number" min="0" max="100" step="1" value="0" />
-          </div>
-          <div>
-            <label for="fDue">Due date</label>
-            <input id="fDue" type="date" />
-          </div>
-          <div>
-            <label for="fPriority">Priority</label>
-            <select id="fPriority"><option>Low</option><option selected>Medium</option><option>High</option></select>
-          </div>
-          <div class="full">
-            <label for="fLink">Doc Link (Google Doc, Notion, etc.)</label>
-            <input id="fLink" type="url" placeholder="https://…" />
-          </div>
-          <div class="full">
-            <label for="fNotes">Notes</label>
-            <textarea id="fNotes" placeholder="Add details, blockers, interview status, etc."></textarea>
-          </div>
-          <input id="fId" type="hidden" />
-          <div class="full" style="display:flex;gap:10px;justify-content:flex-end">
-            <button type="button" id="btnCancel" class="ghost">Cancel</button>
-            <button type="submit" id="btnSave" class="primary">Save</button>
-          </div>
-        </form>
-      </div>
+    <div class="bar">
+      <input id="q" type="search" placeholder="Search title or notes…" style="flex:1;min-width:220px;background:#111827;border:1px solid #1f2937;border-radius:8px;padding:8px 10px;color:#E5E7EB">
+      <select id="owner" style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:8px 10px;color:#E5E7EB"><option value="">Owner: All</option></select>
+      <select id="stage" style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:8px 10px;color:#E5E7EB"><option value="">Stage: All</option></select>
+      <select id="prio"  style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:8px 10px;color:#E5E7EB"><option value="">Priority: All</option><option>Low</option><option>Medium</option><option>High</option></select>
+      <button id="btnNew" class="primary right">+ New Item</button>
     </div>
-  </div>
 
-  <!-- Modal: Sign‑in -->
-  <div id="authModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-    <div class="modal" style="max-width:680px">
-      <header><div id="authTitle" style="font-weight:800">Sign in</div></header>
-      <div class="body">
-        <p class="muted small" style="margin-top:0">Sign in with Google (Firebase) for real‑time shared editing. Or, in Local Demo Mode, choose a teammate to impersonate.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button id="googleBtn" class="controls google" type="button" style="display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:1px solid #1f2937;background:#0b1524;cursor:pointer"><img alt="" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;height:18px"> <span>Continue with Google</span></button>
-          <select id="demoPicker" title="Demo sign‑in"><option value="">Demo: choose teammate…</option></select>
-          <button id="demoGo" type="button">Use Demo</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Notification/Confirmation -->
-  <div id="notifyModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="notifyTitle">
-    <div class="modal" style="max-width:480px">
-      <header><div style="font-weight:800" id="notifyTitle">Notification</div></header>
-      <div class="body">
-        <p id="notifyMessage" style="margin-top:0"></p>
-        <div id="notifyActions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-          <button type="button" id="notifyCancel" class="ghost hidden">Cancel</button>
-          <button type="button" id="notifyOK" class="primary">OK</button>
-        </div>
-      </div>
-    </div>
+    <table aria-label="Team Board">
+      <thead><tr>
+        <th>Title</th>
+        <th>Owner</th>
+        <th>Stage</th>
+        <th>Status</th>
+        <th>Progress</th>
+        <th>Due</th>
+        <th>Priority</th>
+        <th>Notes</th>
+        <th>Updated</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
   </div>
 
   <script type="module">
-    // ===== Firebase Web SDK config (your real project) =====
+    // --- Firebase (your project) ---
     const CONFIG = {
-      apiKey: 'AIzaSyBT6urJvPCtuYQ1c2iH77QTDfzE3yGw-Xk',
-      authDomain: 'catalystmonday.firebaseapp.com',
-      projectId: 'catalystmonday',
-      storageBucket: 'catalystmonday.appspot.com',
-      messagingSenderId: '394311851220'
-      // appId not required unless using Analytics
+      apiKey: "AIzaSyBT6urJvPCtuYQ1c2iH77QTDfzE3yGw-Xk",
+      authDomain: "catalystmonday.firebaseapp.com",
+      projectId: "catalystmonday",
+      storageBucket: "catalystmonday.appspot.com",
+      messagingSenderId: "394311851220"
     };
 
-    // Client‑side allowlist (UI hint only; real enforcement via Firestore Rules above)
-    const ALLOWLIST_EMAILS = [
-        "yairbendor@gwmail.gwu.edu", "ac6892@princeton.edu",
-        "acarter45@gwu.edu", "act128@georgetown.edu",
-        "aidan.schurr@gwmail.gwu.edu", "aidan.schurr@gwu.edu",
-        "aidansbrown@gwmail.gwu.edu", "atcarter2002@gmail.com",
-        "azzarreeu@gwmail.gwu.edu", "ginger.taurek@gwmail.gwu.edu",
-        "loripreci@gwmail.gwu.edu", "loripreci03@gmail.com",
-        "Naama.bendor1@gmail.com", "nb852@georgetown.edu",
-        "rachel.lee@gwmail.gwu.edu", "sas562@georgetown.edu",
-        "stemcatalystmagazine@gmail.com", "bendoryair@gmail.com"
-    ];
-    const ALLOWED_DOMAINS = ['gwu.edu','georgetown.edu','princeton.edu','howard.edu','jhu.edu'];
-
-    // ===== Team roster (for Owner dropdowns & roster grid) =====
-    const TEAM = [
-      { name: 'Yair Ben-Dor', role: 'Co-Founder, Editor-in-Chief, Website Developer', bio: 'GWU graduate in Cellular & Molecular Biology; building cross-DC STEM collaboration; applying to medical school.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=Yair' },
-      { name: 'Aidan Schurr', role: 'Co-Founder, Editor-in-Chief', bio: 'GWU Biomedical Engineering (Pre‑Med); research across ML to Alzheimer’s care; science communication for impact.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=AidanS' },
-      { name: 'Lori Preci', role: 'Senior Writer', bio: 'JHU Biotechnology master’s; GWU dual degree in CMB & Chemistry; passionate about making research accessible.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=Lori' },
-      { name: 'Naama Ben-Dor', role: 'Managing Editor, Senior Writer, Media Specialist', bio: 'Georgetown Neurobiology; creative lead for digital; writes on neuroscience & “Wacky Words.”', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=Naama' },
-      { name: 'Stephanie Solomon', role: 'Managing Editor, Fact Checker', bio: 'Georgetown History/Spanish/World Affairs; investigative/editorial background; integrity & impact focused.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=Stephanie' },
-      { name: 'Alex Carter', role: 'Writer', bio: 'Princeton PhD in Developmental Biology; genetics & evolution communicator; ex‑GWU Martin Lab.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=AlexC' },
-      { name: 'Ginger Taurek', role: 'Writer', bio: 'GWU Entrepreneurship & Innovation; wildlife conservation & climate resilience storyteller.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=Ginger' },
-      { name: 'Aidan Brown', role: 'Writer', bio: 'GWU B.S./M.S. Biology; ecology + data science; ML for tree mortality & coastal systems.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=AidanB' },
-      { name: 'Azza Uwhubetine', role: 'Writer', bio: 'GWU English + Astronomy minor; physics + publishing; nonprofit founder; future law school.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=Azza' },
-      { name: 'Alexis Tamm', role: 'Writer', bio: 'Georgetown English; bridging research & the public via clear journalism; DC innovators focus.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=Alexis' },
-      { name: 'Layla Abdoulaye', role: 'Writer', bio: 'Howard Physics; loves astronomy & quantum; aims for PhD in quantum materials.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=Layla' },
-      { name: 'Rachel Lee', role: 'Photographer, Media Specialist', bio: 'GWU Communications & Business; STEM background + visual storytelling for accessible science.', avatar: 'https://api.dicebear.com/9.x/identicon/svg?seed=Rachel' },
-    ];
-
-    // Stages + Statuses akin to Monday.com
+    // --- Stages & status ---
     const STAGES = ['Pitch','Researching','Interviewing','Drafting','Editing','Ready for Publication','Published','On Hold'];
     const STATUS = [
-      { key:'Not Started', color:'gray' },
+      { key:'Not Started', color:'red' },
       { key:'In Progress', color:'blue' },
-      { key:'Blocked', color:'red' },
       { key:'Needs Review', color:'amber' },
       { key:'Approved', color:'green' }
     ];
 
-    // ===== Utilities =====
+    // --- Helpers ---
     const $ = s => document.querySelector(s);
-    const html = s => s;
-    const uid = () => Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+    const show = (el, ok=true)=> el.style.display = ok ? '' : 'none';
+    const msgBox = $('#msg');
+    function message(text, type='info'){ msgBox.textContent=text; msgBox.style.display=text ? 'block' : 'none'; }
+
+    function statusPill(key){ const e=STATUS.find(s=>s.key===key) || STATUS[0]; return `<span class="pill ${e.color}">${e.key}</span>`; }
+    function stagePill(stage){
+      const c = stage==='Ready for Publication' || stage==='Published' ? 'green'
+            : stage==='Editing' || stage==='Drafting' ? 'amber'
+            : stage==='Interviewing' || stage==='Researching' ? 'blue' : 'red';
+      return `<span class="pill ${c}">${stage}</span>`;
+    }
     const clamp = (n,min,max)=> Math.max(min, Math.min(max, n));
-    const fmtUpdated = (u)=> u ? (u.seconds? new Date(u.seconds*1000): new Date(u)).toLocaleString() : '';
-    function escapeHtml(str){return (str||'').replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[s]))}
-    function escapeAttr(str){return escapeHtml(str).replace(/"/g,'%22')}
+    const fmtUpdated = (u)=> u?.seconds ? new Date(u.seconds*1000).toLocaleString() : (u ? new Date(u).toLocaleString() : '');
 
-    function statusPill(key){ const e=STATUS.find(s=>s.key===key)||STATUS[0]; return `<span class="pill ${e.color}">${e.key}</span>`}
-    function pillForStage(stage){
-      const c = stage==='Pitch'?'purple': stage==='Researching'?'blue': stage==='Interviewing'?'blue': stage==='Drafting'?'amber': stage==='Editing'?'amber': stage==='Ready for Publication'?'green': stage==='Published'?'green':'gray';
-      return `<span class="pill ${c}">${stage}</span>`
-    }
+    // --- Owners (from team list you gave me) ---
+    const OWNERS = [
+      'Yair Ben-Dor','Aidan Schurr','Lori Preci','Naama Ben-Dor','Stephanie Solomon',
+      'Alex Carter','Ginger Taurek','Aidan Brown','Azza Uwhubetine','Alexis Tamm',
+      'Layla Abdoulaye','Rachel Lee'
+    ];
+    const ownerSel = $('#owner'); OWNERS.forEach(n=>{const o=document.createElement('option');o.textContent=n;ownerSel.append(o);});
+    const stageSel = $('#stage'); STAGES.forEach(s=>{const o=document.createElement('option');o.textContent=s;stageSel.append(o);});
 
-    // ===== Storage abstraction =====
-    class LocalDataStore {
-      constructor(){ this.key='catalyst_board_v1'; this.subs=[] }
-      async init(){ if(!localStorage.getItem(this.key)){ localStorage.setItem(this.key, JSON.stringify({items: seedItems(), meta:{seededAt:Date.now()}})); } this.emit(); }
-      onChange(cb){ this.subs.push(cb) }
-      emit(){ const d=JSON.parse(localStorage.getItem(this.key)); this.subs.forEach(cb=>cb(d.items)) }
-      _write(items){ localStorage.setItem(this.key, JSON.stringify({items, meta:{updatedAt:Date.now()}})); this.emit(); }
-      async addItem(item){ const d=JSON.parse(localStorage.getItem(this.key)); d.items.unshift(item); this._write(d.items); }
-      async updateItem(id, changes){ const d=JSON.parse(localStorage.getItem(this.key)); const ix=d.items.findIndex(x=>x.id===id); if(ix>-1){ d.items[ix]={...d.items[ix], ...changes, updatedAt:Date.now()}; this._write(d.items);} }
-      async deleteItem(id){ const d=JSON.parse(localStorage.getItem(this.key)); this._write(d.items.filter(x=>x.id!==id)); }
-      async listOnce(){ const d=JSON.parse(localStorage.getItem(this.key)); return d.items }
-    }
+    // --- Firebase SDKs (loaded via ES modules) ---
+    const appMod = await import('https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js');
+    const authMod = await import('https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js');
+    const fsMod   = await import('https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js');
 
-    class FirestoreDataStore {
-      constructor(fb){ this.fb=fb; this.sub=null; this.onEmit=null; }
-      async init(){
-        const { db, collection, query, orderBy, onSnapshot, getDocs, limit, addDoc, setDoc, doc, serverTimestamp } = this.fb;
-        const q = query(collection(db,'catalyst_board'), orderBy('updatedAt','desc'));
-        this.sub = onSnapshot(q, snap=>{ const items = snap.docs.map(d=>({id:d.id, ...d.data()})); this.onEmit && this.onEmit(items); });
-        const one = await getDocs(query(collection(db,'catalyst_board'), orderBy('updatedAt','desc'), limit(1)));
-        if(one.empty){ for(const it of seedItems()){ const {id, ...rest}=it; await addDoc(collection(db,'catalyst_board'), {...rest, createdAt:serverTimestamp(), updatedAt:serverTimestamp()}); }
-          await setDoc(doc(db,'catalyst_meta','seeded'), { at: serverTimestamp() });
-        }
+    const app = appMod.initializeApp(CONFIG);
+    const auth = authMod.getAuth(app);
+    const db   = fsMod.getFirestore(app);
+
+    // Use redirect flow to avoid popup blockers on GitHub Pages
+    $('#btnSignIn').onclick = async () => {
+      try {
+        const provider = new authMod.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        await authMod.signInWithRedirect(auth, provider);
+      } catch(err) {
+        console.error(err);
+        message('Could not start Google sign-in: ' + err.message);
       }
-      onChange(cb){ this.onEmit=cb }
-      async addItem(item){ const { db, addDoc, collection, serverTimestamp } = this.fb; await addDoc(collection(db,'catalyst_board'), {...item, createdAt:serverTimestamp(), updatedAt:serverTimestamp()}); }
-      async updateItem(id, changes){ const { db, updateDoc, doc, serverTimestamp } = this.fb; await updateDoc(doc(db,'catalyst_board',id), {...changes, updatedAt:serverTimestamp()}); }
-      async deleteItem(id){ const { db, deleteDoc, doc } = this.fb; await deleteDoc(doc(db,'catalyst_board',id)); }
-      async listOnce(){ return [] }
-    }
+    };
+    $('#btnSignOut').onclick = async () => { try { await authMod.signOut(auth); } catch(err){ message('Sign-out error: '+err.message); } };
 
-    // ===== Auth helpers =====
-    const state = { mode:'detect', user:null, items:[] };
-    function canEdit(){
-      if(state.mode==='local') return true;
-      const u=state.user; if(!u) return false;
-      if(ALLOWLIST_EMAILS.includes(u.email)) return true;
-      const domain=(u.email||'').split('@')[1]||''; if(ALLOWED_DOMAINS.includes(domain)) return true;
-      return false; // fallback – real enforcement is in Firestore Rules
-    }
+    // Complete redirect sign-in if returning from Google
+    try { await authMod.getRedirectResult(auth); } catch(err){ console.error(err); message('Sign-in error: ' + err.message); }
 
-    // ===== UI render =====
-    const rowsEl = document.getElementById('rows');
-    function renderRows(){
-      const q = (document.getElementById('q').value||'').toLowerCase();
-      const own = document.getElementById('filterOwner').value;
-      const stg = document.getElementById('filterStage').value;
-      const pri = document.getElementById('filterPriority').value;
-      rowsEl.innerHTML='';
-      for(const it of state.items){
-        if(q && !(`${it.title} ${it.notes||''}`.toLowerCase().includes(q))) continue;
-        if(own && it.owner!==own) continue;
-        if(stg && it.stage!==stg) continue;
-        if(pri && it.priority!==pri) continue;
-        rowsEl.append(renderRow(it));
-      }
-    }
+    // Update header
+    authMod.onAuthStateChanged(auth, u=>{
+      $('#whoami').textContent = u ? `Signed in as ${u.displayName || u.email}` : 'Not signed in';
+      show($('#btnSignIn'), !u);
+      show($('#btnSignOut'), !!u);
+    });
 
-    function renderRow(it){
-      const tr=document.createElement('tr');
+    // --- Firestore live view ---
+    const rowsEl = $('#rows');
+    function renderRow(it, id){
+      const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td data-col="Article Title"><strong>${escapeHtml(it.title)}</strong><div class="small muted">${(it.id||'').slice(0,6)}</div></td>
-        <td data-col="Owner">${escapeHtml(it.owner)}</td>
-        <td data-col="Stage">${pillForStage(it.stage)}</td>
-        <td data-col="Status">${statusPill(it.status)}</td>
-        <td data-col="Progress"><div class="progress" title="${it.progress||0}%"><div style="width:${clamp(+it.progress||0,0,100)}%"></div></div><div class="small muted">${clamp(+it.progress||0,0,100)}%</div></td>
-        <td data-col="Due">${it.due||''}</td>
-        <td data-col="Priority">${it.priority||''}</td>
-        <td data-col="Link">${it.link? `<a href="${escapeAttr(it.link)}" target="_blank" rel="noopener">Open</a>`: '<span class="muted">—</span>'}</td>
-        <td data-col="Notes">${it.notes? escapeHtml(it.notes) : '<span class="muted">—</span>'}</td>
-        <td data-col="Updated">${fmtUpdated(it.updatedAt)}</td>
-        <td><div class="toolbar"><button data-act="edit">Edit</button><button data-act="del">Del</button></div></td>`;
-      tr.querySelector('[data-act="edit"]').onclick = ()=> openItemModal(it);
-      tr.querySelector('[data-act="del"]').onclick = ()=> confirmDelete(it);
+        <td><strong>${(it.title||'').replace(/</g,'&lt;')}</strong><div class="small muted">${id.slice(0,6)}</div></td>
+        <td>${it.owner||''}</td>
+        <td>${stagePill(it.stage||'Pitch')}</td>
+        <td>${statusPill(it.status||'Not Started')}</td>
+        <td>
+          <div class="progress" title="${it.progress||0}%"><div style="width:${clamp(+it.progress||0,0,100)}%"></div></div>
+          <div class="small muted">${clamp(+it.progress||0,0,100)}%</div>
+        </td>
+        <td>${it.due||''}</td>
+        <td>${it.priority||''}</td>
+        <td>${it.notes ? it.notes.replace(/</g,'&lt;') : '—'}</td>
+        <td>${fmtUpdated(it.updatedAt)}</td>
+        <td><button data-edit="${id}">Edit</button> <button data-del="${id}">Del</button></td>`;
       return tr;
     }
 
-    function populateFilters(){
-      const ownerSel=document.getElementById('filterOwner'); ownerSel.innerHTML='<option value="">Owner: All</option>';
-      for(const t of TEAM){ const o=document.createElement('option'); o.textContent=t.name; ownerSel.append(o); }
-      const stageSel=document.getElementById('filterStage'); stageSel.innerHTML='<option value="">Stage: All</option>';
-      for(const s of STAGES){ const o=document.createElement('option'); o.textContent=s; stageSel.append(o); }
-    }
-
-    function populateTeam(){
-      const grid=document.getElementById('teamGrid'); grid.innerHTML='';
-      for(const t of TEAM){
-        const card=document.createElement('div'); card.className='card';
-        card.innerHTML=`<div style="display:flex;gap:10px;align-items:center">
-            <img class="avatar" alt="" src="${t.avatar}">
-            <div><div style="font-weight:700">${escapeHtml(t.name)}</div><div class="role">${escapeHtml(t.role)}</div></div>
-          </div>
-          <div class="small muted" style="margin-top:8px">${escapeHtml(t.bio)}</div>`;
-        grid.append(card);
-      }
-    }
-
-    function hydrateFormSelects(){
-      const own=document.getElementById('fOwner'); own.innerHTML='';
-      for(const t of TEAM){ const o=document.createElement('option'); o.textContent=t.name; own.append(o); }
-      const stg=document.getElementById('fStage'); stg.innerHTML='';
-      for(const s of STAGES){ const o=document.createElement('option'); o.textContent=s; stg.append(o); }
-      const sts=document.getElementById('fStatus'); sts.innerHTML='';
-      for(const s of STATUS){ const o=document.createElement('option'); o.textContent=s.key; sts.append(o); }
-    }
-
-    function hydrateDemoPicker(){
-      const sel=document.getElementById('demoPicker'); sel.innerHTML='<option value="">Demo: choose teammate…</option>';
-      for(const t of TEAM){ const o=document.createElement('option'); o.value=t.name; o.textContent=t.name; sel.append(o); }
-    }
-
-    function openItemModal(it){
-      document.getElementById('itemModal').classList.remove('hidden');
-      document.getElementById('modalTitle').textContent = it? 'Edit Item':'New Item';
-      document.getElementById('fId').value = it?.id || '';
-      document.getElementById('fTitle').value = it?.title || '';
-      document.getElementById('fOwner').value = it?.owner || TEAM[0].name;
-      document.getElementById('fStage').value = it?.stage || STAGES[0];
-      document.getElementById('fStatus').value = it?.status || 'Not Started';
-      document.getElementById('fProgress').value = it?.progress ?? 0;
-      document.getElementById('fDue').value = it?.due || '';
-      document.getElementById('fPriority').value = it?.priority || 'Medium';
-      document.getElementById('fLink').value = it?.link || '';
-      document.getElementById('fNotes').value = it?.notes || '';
-    }
-    function closeItemModal(){ document.getElementById('itemModal').classList.add('hidden') }
-    
-    // ===== Custom Notification System =====
-    const notifyModal = $('#notifyModal');
-    const notifyTitle = $('#notifyTitle');
-    const notifyMessage = $('#notifyMessage');
-    const notifyOK = $('#notifyOK');
-    const notifyCancel = $('#notifyCancel');
-    let notifyResolve = null;
-
-    function notify(message, title = 'Notification', isConfirm = false) {
-      return new Promise(resolve => {
-        notifyResolve = resolve;
-        notifyTitle.textContent = title;
-        notifyMessage.textContent = message || 'An unspecified error occurred. Please check the console for details.';
-        if (isConfirm) {
-          notifyCancel.classList.remove('hidden');
-          notifyOK.textContent = 'Confirm';
-        } else {
-          notifyCancel.classList.add('hidden');
-          notifyOK.textContent = 'OK';
-        }
-        notifyModal.classList.remove('hidden');
+    // Search/filters
+    const filter = ()=> {
+      const q = ($('#q').value||'').toLowerCase();
+      const ow= ownerSel.value; const st= stageSel.value; const pr=$('#prio').value;
+      [...rowsEl.children].forEach(tr=>{
+        const t = tr.getAttribute('data-text') || '';
+        const o = tr.getAttribute('data-owner') || '';
+        const s = tr.getAttribute('data-stage') || '';
+        const p = tr.getAttribute('data-priority') || '';
+        const showRow = (!q || t.includes(q)) && (!ow || o===ow) && (!st || s===st) && (!pr || p===pr);
+        tr.style.display = showRow ? '' : 'none';
       });
-    }
-
-    notifyOK.onclick = () => {
-      notifyModal.classList.add('hidden');
-      if (notifyResolve) notifyResolve(true);
     };
+    $('#q').oninput = filter; ownerSel.onchange = filter; stageSel.onchange = filter; $('#prio').onchange = filter;
 
-    notifyCancel.onclick = () => {
-      notifyModal.classList.add('hidden');
-      if (notifyResolve) notifyResolve(false);
-    };
+    // Subscribe to Firestore (public read)
+    const qRef = fsMod.query(fsMod.collection(db,'catalyst_board'), fsMod.orderBy('updatedAt','desc'));
+    fsMod.onSnapshot(qRef, snap=>{
+      rowsEl.innerHTML='';
+      snap.forEach(doc=>{
+        const it = doc.data();
+        const tr = renderRow(it, doc.id);
+        tr.setAttribute('data-text', (`${it.title||''} ${it.notes||''}`).toLowerCase());
+        tr.setAttribute('data-owner', it.owner||'');
+        tr.setAttribute('data-stage', it.stage||'');
+        tr.setAttribute('data-priority', it.priority||'');
+        rowsEl.append(tr);
+      });
+      filter();
+    }, err=>{
+      console.error(err);
+      message('Could not load board: ' + err.message);
+    });
 
-    async function confirmDelete(it){ 
-        if(!canEdit()) {
-            await notify('You do not have permission to delete items.', 'Permission Denied');
-            return;
+    // Add / Edit / Delete
+    async function upsertItem(existingId){
+      const u = auth.currentUser;
+      if(!u){ message('Please sign in to add or edit items.'); return; }
+      // very simple prompts to keep single-file; replace with a modal later if you like
+      const title = prompt('Article title?'); if(!title) return;
+      const owner = prompt('Owner (leave blank to use your name/email):') || (u.displayName || u.email || 'Unknown');
+      const stage = prompt('Stage (Pitch, Researching, Interviewing, Drafting, Editing, Ready for Publication, Published, On Hold):','Pitch') || 'Pitch';
+      const status= prompt('Status (Not Started, In Progress, Needs Review, Approved):','In Progress') || 'In Progress';
+      const progress = parseInt(prompt('Progress % (0-100):','0')||'0',10);
+      const due = prompt('Due date (YYYY-MM-DD):','') || '';
+      const priority = prompt('Priority (Low, Medium, High):','Medium') || 'Medium';
+      const notes = prompt('Notes:','') || '';
+
+      try{
+        if(existingId){
+          await fsMod.updateDoc(fsMod.doc(db,'catalyst_board',existingId), {
+            title, owner, stage, status, progress, due, priority, notes,
+            updatedAt: fsMod.serverTimestamp()
+          });
+        }else{
+          await fsMod.addDoc(fsMod.collection(db,'catalyst_board'), {
+            title, owner, stage, status, progress, due, priority, notes,
+            createdAt: fsMod.serverTimestamp(),
+            updatedAt: fsMod.serverTimestamp()
+          });
         }
-        const confirmed = await notify(`Are you sure you want to delete "${it.title}"? This cannot be undone.`, 'Confirm Deletion', true);
-        if(confirmed) {
-            store.deleteItem(it.id);
-        }
+      }catch(err){ message('Save failed: '+err.message); }
     }
 
-    // CSV Export
-    async function exportCSV(){
-      if(!state.items || !state.items.length) {
-        await notify('There are no items to export.', 'Export');
-        return;
-      }
-      const cols=['id','title','owner','stage','status','progress','due','priority','link','notes','updatedAt'];
-      const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
-      const rows=[cols.join(',')].concat(state.items.map(it=> cols.map(k=>{
-        let v=it[k]; if(k==='updatedAt') v = it.updatedAt?.seconds ? new Date(it.updatedAt.seconds*1000).toISOString() : (it.updatedAt? new Date(it.updatedAt).toISOString() : '');
-        return esc(v);
-      }).join(',')));
-      const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'});
-      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='catalyst-board.csv'; a.click(); URL.revokeObjectURL(url);
+    async function deleteItem(id, title){
+      const u = auth.currentUser;
+      if(!u){ message('Please sign in to delete items.'); return; }
+      if(!confirm(`Delete “${title}”? This cannot be undone.`)) return;
+      try{ await fsMod.deleteDoc(fsMod.doc(db,'catalyst_board',id)); }
+      catch(err){ message('Delete failed: '+err.message); }
     }
 
-    // Wire up static UI
-    document.getElementById('btnNew').onclick = ()=> canEdit()? openItemModal(null) : notify('You must be signed in with an authorized email to add new items.', 'Permission Denied');
-    document.getElementById('btnCancel').onclick = closeItemModal;
-    document.getElementById('q').oninput = renderRows;
-    document.getElementById('filterOwner').onchange = renderRows;
-    document.getElementById('filterStage').onchange = renderRows;
-    document.getElementById('filterPriority').onchange = renderRows;
-    document.getElementById('btnCSV').onclick = exportCSV;
+    $('#btnNew').onclick = ()=> upsertItem(null);
 
-    // Save form
-    document.getElementById('itemForm').onsubmit = async (e)=>{
-      e.preventDefault(); 
-      if(!canEdit()) {
-        await notify('You do not have permission to save items.', 'Permission Denied');
-        return;
-      }
-      const payload = {
-        title: document.getElementById('fTitle').value.trim(),
-        owner: document.getElementById('fOwner').value,
-        stage: document.getElementById('fStage').value,
-        status: document.getElementById('fStatus').value,
-        progress: clamp(parseInt(document.getElementById('fProgress').value||'0',10),0,100),
-        due: document.getElementById('fDue').value||'',
-        priority: document.getElementById('fPriority').value,
-        link: document.getElementById('fLink').value.trim(),
-        notes: document.getElementById('fNotes').value.trim(),
-        updatedAt: state.mode==='firebase'? firebaseBits.serverTimestamp() : Date.now(),
-        createdBy: state.user? { name: state.user.displayName||state.user.email||'User', email: state.user.email||'' } : null,
-      };
-      const id=document.getElementById('fId').value;
-      if(id){ await store.updateItem(id, payload) } else { payload.id=uid(); if(state.mode==='local') payload.createdAt=Date.now(); await store.addItem(payload) }
-      closeItemModal();
-    };
-
-    // Auth UI
-    document.getElementById('btnSignIn').onclick = ()=> document.getElementById('authModal').classList.remove('hidden');
-    document.getElementById('btnSignOut').onclick = async ()=>{ if(state.mode==='firebase') await firebaseBits.signOut(firebaseBits.auth); state.user=null; updateAuthUI(); };
-    document.getElementById('demoGo').onclick = async ()=>{ 
-        const name=document.getElementById('demoPicker').value; 
-        if(!name) {
-            await notify('Please choose a teammate to impersonate.', 'Demo Mode');
-            return;
-        }
-        state.user={displayName:name,email:name.replace(/\s+/g,'.').toLowerCase()+'@demo.local'}; 
-        document.getElementById('authModal').classList.add('hidden'); 
-        updateAuthUI(true); 
-    };
-
-    function updateAuthUI(){ const who=document.getElementById('whoami'); if(state.user){ who.textContent=`Signed in as ${state.user.displayName||state.user.email}`; document.getElementById('btnSignIn').classList.add('hidden'); document.getElementById('btnSignOut').classList.remove('hidden'); } else { who.textContent='Not signed in'; document.getElementById('btnSignIn').classList.remove('hidden'); document.getElementById('btnSignOut').classList.add('hidden'); } }
-
-    // ===== Seed items =====
-    function seedItems(){
-      const today=new Date(); const plus=d=>{ const x=new Date(today); x.setDate(x.getDate()+d); return x.toISOString().slice(0,10) }
-      const base=[
-        { title:'Feature: Personalized Medicine in DC — Dr. Kaminski on Myasthenia Gravis', owner:'Yair Ben-Dor', stage:'Drafting', status:'In Progress', progress:55, due:plus(14), priority:'High', link:'', notes:'Pull quotes selected; need figure permissions.' },
-        { title:'Interview: Quantum Materials @ Howard', owner:'Layla Abdoulaye', stage:'Interviewing', status:'In Progress', progress:35, due:plus(10), priority:'Medium', link:'', notes:'Professor confirmed for next Tuesday.' },
-        { title:'Op-Ed: Why DC Needs More Public‑Facing Science', owner:'Stephanie Solomon', stage:'Editing', status:'Needs Review', progress:80, due:plus(5), priority:'High', link:'', notes:'Fact check references 7–10.' },
-        { title:'Explainer: What is a Zwitterion?', owner:'Naama Ben-Dor', stage:'Ready for Publication', status:'Approved', progress:100, due:plus(1), priority:'Medium', link:'', notes:'Schedule for Friday carousel.' },
-        { title:'Photo Essay: Urban Wildlife Corridors', owner:'Rachel Lee', stage:'Researching', status:'Not Started', progress:10, due:plus(21), priority:'Low', link:'', notes:'Scout Rock Creek Park locations.' },
-        { title:'Profile: Machine Learning for Ecology (GWU Lab)', owner:'Aidan Brown', stage:'Pitch', status:'Not Started', progress:0, due:plus(28), priority:'Medium', link:'', notes:'Outline questions around remote sensing.' },
-        { title:'Deep Dive: Gene Regulation & Evolution (Princeton)', owner:'Alex Carter', stage:'Drafting', status:'In Progress', progress:50, due:plus(12), priority:'Medium', link:'', notes:'Need reviewer for Figure 2 caption.' },
-        { title:'Sustainability in Policy: A DC Landscape', owner:'Ginger Taurek', stage:'Researching', status:'In Progress', progress:25, due:plus(18), priority:'Medium', link:'', notes:'Collect case studies + interview shortlist.' },
-        { title:'STEM Wacky Words: Fascicle, Phonon, Oobleck', owner:'Alexis Tamm', stage:'Drafting', status:'In Progress', progress:40, due:plus(9), priority:'Low', link:'', notes:'Pair with Instagram carousel.' },
-        { title:'Feature: Biotech Pathways (JHU & DC Startups)', owner:'Lori Preci', stage:'Interviewing', status:'In Progress', progress:30, due:plus(16), priority:'High', link:'', notes:'Confirm 2nd founder interview.' },
-        { title:'Policy: Science Communication that Moves Needles', owner:'Aidan Schurr', stage:'Pitch', status:'Not Started', progress:0, due:plus(24), priority:'Medium', link:'', notes:'Angle: cross‑disciplinary coalitions.' },
-        { title:'Astro Explainer: Dark Matter 101', owner:'Azza Uwhubetine', stage:'Drafting', status:'In Progress', progress:45, due:plus(13), priority:'Medium', link:'', notes:'Find lead image licensing.' }
-      ];
-      return base.map(x=>({ id:uid(), updatedAt:Date.now(), ...x }));
-    }
-
-    // ===== Boot: try Firebase, fall back to Local =====
-    let store; let firebaseBits=null;
-    async function boot(){
-      const loader = $('#loader');
-      hydrateFormSelects(); populateTeam(); populateFilters(); hydrateDemoPicker();
-      
-      try {
-        // Load Firebase only if config present
-        if(!CONFIG || !CONFIG.apiKey){ throw new Error('No Firebase config'); }
-        document.getElementById('modeBadge').textContent='Starting Firebase…';
-        const appMod = await import('https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js');
-        const authMod = await import('https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js');
-        const fsMod   = await import('https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js');
-        const app = appMod.initializeApp(CONFIG);
-        const auth = authMod.getAuth(app);
-        const db   = fsMod.getFirestore(app);
-        firebaseBits = {
-          app, auth, db,
-          GoogleAuthProvider: authMod.GoogleAuthProvider,
-          signInWithRedirect: authMod.signInWithRedirect,
-          getRedirectResult: authMod.getRedirectResult,
-          signOut: authMod.signOut,
-          onAuthStateChanged: authMod.onAuthStateChanged,
-          collection: fsMod.collection,
-          addDoc: fsMod.addDoc,
-          doc: fsMod.doc,
-          setDoc: fsMod.setDoc,
-          updateDoc: fsMod.updateDoc,
-          deleteDoc: fsMod.deleteDoc,
-          onSnapshot: fsMod.onSnapshot,
-          query: fsMod.query,
-          orderBy: fsMod.orderBy,
-          limit: fsMod.limit,
-          getDocs: fsMod.getDocs,
-          serverTimestamp: fsMod.serverTimestamp,
-        };
-        
-        // Handle Google Sign-in button click
-        document.getElementById('googleBtn').onclick = async () => {
-            try {
-                const provider = new firebaseBits.GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' });
-                await firebaseBits.signInWithRedirect(firebaseBits.auth, provider);
-            } catch (err) {
-                console.error('Sign-in redirect initiation failed:', err);
-                notify('Could not start the sign-in process: ' + (err.message || 'Unknown error'), 'Sign-in Error');
-            }
-        };
-
-        // Listen for authentication state changes
-        firebaseBits.onAuthStateChanged(auth, user => {
-            console.log('Auth state changed. User:', user);
-            if (user) {
-                state.user = { uid: user.uid, email: user.email, displayName: user.displayName || user.email };
-                updateAuthUI();
-                if (!canEdit()) {
-                    notify(`Welcome, ${state.user.displayName}! Your email (${state.user.email}) is not on the authorized list, so you have read-only access.`, 'Read-Only Access');
-                }
-            } else {
-                state.user = null;
-                updateAuthUI();
-            }
-            loader.classList.add('hidden');
-        });
-        
-        // Check for redirect result when the page loads
-        try {
-            const result = await firebaseBits.getRedirectResult(firebaseBits.auth);
-            if (result && result.user) {
-                console.log('Successfully processed sign-in redirect for:', result.user.email);
-                $('#authModal').classList.add('hidden');
-            }
-        } catch (err) {
-            console.error('Sign-in redirect result error:', err);
-            notify('There was an error completing your sign-in: ' + (err.message || 'Unknown error'), 'Sign-in Error');
-            loader.classList.add('hidden');
-        }
-        
-        store = new FirestoreDataStore(firebaseBits);
-        await store.init();
-        store.onChange(items=>{ state.items=items; renderRows(); });
-        document.getElementById('modeBadge').textContent='Firebase Mode';
-
-      } catch(e){
-        // Local fallback
-        console.warn('Falling back to Local Demo Mode:', e.message);
-        document.getElementById('modeBadge').textContent='Local Demo Mode';
-        state.mode='local';
-        store = new LocalDataStore();
-        await store.init();
-        store.onChange(items=>{ state.items=items; renderRows(); });
-        state.user = { displayName:'Demo User', email:'demo@local' }; updateAuthUI(true);
-        document.getElementById('googleBtn').style.display='none';
-        loader.classList.add('hidden');
-      }
-    }
-
-    boot();
+    rowsEl.addEventListener('click', (e)=>{
+      const editId = e.target.getAttribute('data-edit');
+      const delId  = e.target.getAttribute('data-del');
+      if(editId){ const t = e.target.closest('tr').querySelector('td').innerText; upsertItem(editId); }
+      if(delId){  const t = e.target.closest('tr').querySelector('td').innerText; deleteItem(delId, t); }
+    });
   </script>
 </body>
 </html>
