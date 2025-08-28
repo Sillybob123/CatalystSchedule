@@ -159,6 +159,15 @@ function fetchAndRenderProjects() {
         } else {
             renderKanbanBoard();
         }
+        // If a details modal is open, refresh its content
+        if (currentlyViewedProjectId) {
+            const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+            if (project) {
+                refreshDetailsModal(project);
+            } else {
+                closeAllModals();
+            }
+        }
     });
 }
 
@@ -166,7 +175,17 @@ function filterProjects() {
     switch(currentView) {
         case 'interviews': return allProjects.filter(p => p.type === 'Interview');
         case 'opeds': return allProjects.filter(p => p.type === 'Op-Ed');
-        case 'my-assignments': return allProjects.filter(p => p.authorId === currentUser.uid || p.editorId === currentUser.uid);
+        case 'my-assignments': 
+            return allProjects.filter(p => {
+                const isAuthor = p.authorId === currentUser.uid;
+                const isEditor = p.editorId === currentUser.uid;
+                const isCompletedForEditor = p.timeline['Review Complete'];
+
+                if (isAuthor) return true;
+                if (isEditor && !isCompletedForEditor) return true;
+                
+                return false;
+            });
         default: return allProjects;
     }
 }
@@ -193,32 +212,37 @@ function renderKanbanBoard() {
 }
 
 function getProjectColumn(project) {
-    if (project.proposalStatus !== 'approved') return "Topic Proposal";
-    
     const completedTasks = Object.keys(project.timeline).filter(task => project.timeline[task]);
-    const totalTasks = Object.keys(project.timeline).length;
+    const totalTasks = projectTimelines[project.type].length;
 
-    if (completedTasks.length === totalTasks) return "Completed";
+    if (project.timeline["Suggestions Reviewed"]) return "Completed";
 
     if (currentView === 'my-assignments') {
-        if (project.editorId === currentUser.uid) {
-            if (completedTasks.includes("Review Complete")) return "Done";
-            if (completedTasks.includes("Article Writing Complete")) return "In Review";
+        const isAuthor = project.authorId === currentUser.uid;
+        const isEditor = project.editorId === currentUser.uid;
+
+        if (isEditor) {
+            if (project.timeline["Review Complete"]) return "Done";
+            if (project.timeline["Article Writing Complete"]) return "In Review";
+            return "To Do"; 
         }
-        if (completedTasks.length > 0 && !completedTasks.includes("Article Writing Complete")) return "In Progress";
-        return "To Do";
+        if (isAuthor) {
+            if (project.timeline["Review Complete"]) return "In Review";
+            if (project.timeline["Topic Proposal Complete"]) return "In Progress";
+            return "To Do";
+        }
     }
     
+    if (project.proposalStatus !== 'approved') return "Topic Proposal";
+    if (project.timeline["Review Complete"]) return "Reviewing Suggestions";
+    if (project.timeline["Article Writing Complete"]) return "In Review";
     if (project.type === 'Interview') {
-        if (completedTasks.includes("Review Complete")) return "Reviewing Suggestions";
-        if (completedTasks.includes("Article Writing Complete")) return "In Review";
-        if (completedTasks.includes("Interview Complete")) return "Writing Stage";
-        if (completedTasks.includes("Topic Proposal Complete")) return "Interview Stage";
+        if (project.timeline["Interview Complete"]) return "Writing Stage";
+        if (project.timeline["Topic Proposal Complete"]) return "Interview Stage";
     } else { // Op-Ed
-        if (completedTasks.includes("Review Complete")) return "Reviewing Suggestions";
-        if (completedTasks.includes("Article Writing Complete")) return "In Review";
-        if (completedTasks.includes("Topic Proposal Complete")) return "Writing Stage";
+        if (project.timeline["Topic Proposal Complete"]) return "Writing Stage";
     }
+    
     return "Topic Proposal";
 }
 
@@ -228,9 +252,11 @@ function createProjectCard(project) {
     card.dataset.id = project.id;
 
     const column = getProjectColumn(project);
-    if (column === "Interview Stage" || column === "Writing Stage" || (column === "In Review" && !project.timeline["Review Complete"])) {
+    if (column === "Interview Stage" || column === "Writing Stage") {
         card.classList.add('status-yellow');
-    } else if (column === "Reviewing Suggestions" && project.timeline["Review Complete"]) {
+    } else if (column === "In Review" && !project.timeline["Review Complete"]) {
+        card.classList.add('status-yellow');
+    } else if (column === "Reviewing Suggestions") {
         card.classList.add('status-blue');
     } else if (column === "Completed") {
         card.classList.add('status-green');
@@ -336,7 +362,6 @@ async function handleProjectFormSubmit(e) {
 
 function closeAllModals() {
     document.querySelectorAll('.modal-overlay').forEach(modal => modal.style.display = 'none');
-    if (activityUnsubscribe) activityUnsubscribe();
     currentlyViewedProjectId = null;
 }
 
@@ -344,7 +369,11 @@ function openDetailsModal(projectId) {
     const project = allProjects.find(p => p.id === projectId);
     if (!project) return;
     currentlyViewedProjectId = projectId;
+    refreshDetailsModal(project);
+    document.getElementById('details-modal').style.display = 'flex';
+}
 
+function refreshDetailsModal(project) {
     // --- PERMISSION LOGIC ---
     const isAuthor = currentUser.uid === project.authorId;
     const isEditor = currentUser.uid === project.editorId;
@@ -376,14 +405,9 @@ function openDetailsModal(projectId) {
     renderTimeline(project, isAuthor, isEditor, isAdmin);
     renderDeadlineHistory(project);
     renderInterviewStatus(project);
-    
-    if (activityUnsubscribe) activityUnsubscribe();
-    activityUnsubscribe = db.collection('projects').doc(projectId).onSnapshot(doc => {
-        if (doc.exists) renderActivityFeed(doc.data().activity || []);
-    });
-    
-    document.getElementById('details-modal').style.display = 'flex';
+    renderActivityFeed(project.activity || []);
 }
+
 
 function populateEditorDropdown(currentEditorId) {
     const dropdown = document.getElementById('editor-dropdown');
@@ -487,7 +511,7 @@ async function updateProposalStatus(newStatus) {
         } else {
             await addActivity(currentlyViewedProjectId, `rejected the proposal.`);
         }
-        closeAllModals();
+        // Don't close the modal, the listener will refresh it.
     } catch (error) { console.error("Error updating status:", error); }
 }
 
@@ -529,7 +553,7 @@ async function handleUpdateDeadline() {
         deadlineHistory: firebase.firestore.FieldValue.arrayUnion({ newDeadline, reason })
     });
     addActivity(currentlyViewedProjectId, `changed the deadline to **${newDeadline}** for reason: "${reason}"`);
-    closeAllModals();
+    // Don't close the modal, let the listener refresh it
 }
 
 async function handleDeleteProject() {
