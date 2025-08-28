@@ -435,6 +435,18 @@ body {
   box-shadow: var(--shadow-md);
   border-color: #ced4da;
 }
+.kanban-card.status-yellow {
+    background-color: #fffbeb;
+    border-left: 5px solid var(--warning-color);
+}
+.kanban-card.status-blue {
+    background-color: #eff6ff;
+    border-left: 5px solid #3b82f6;
+}
+.kanban-card.status-green {
+    background-color: #f0fdf4;
+    border-left: 5px solid var(--success-color);
+}
 .card-title {
   font-weight: 600;
   margin: 0 0 12px;
