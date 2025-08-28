@@ -124,7 +124,7 @@
                     <div id="interview-details-section" style="display:none;">
                         <h4><span class="emoji">🗓️</span> Interview Status</h4>
                         <div id="interview-status-display"></div>
-                        <div id="interview-form">
+                        <div id="interview-form" class="details-form">
                             <input type="datetime-local" id="interview-date">
                             <button id="schedule-interview-button" class="btn-secondary">Schedule</button>
                         </div>
@@ -152,7 +152,7 @@
                      <div class="sidebar-section">
                         <h4>Editor</h4>
                         <p id="details-editor">Not Assigned</p>
-                        <div id="assign-editor-section" class="admin-only" style="margin-top: 8px;">
+                        <div id="assign-editor-section" class="admin-only details-form" style="margin-top: 8px;">
                             <select id="editor-dropdown"></select>
                             <button id="assign-editor-button" class="btn-secondary">Assign</button>
                         </div>
@@ -170,9 +170,11 @@
                     </div>
                      <div id="change-deadline-section" class="sidebar-section">
                         <h4>Change Deadline</h4>
-                        <input type="date" id="new-deadline-input">
-                        <textarea id="deadline-reason-input" placeholder="Reason for changing..."></textarea>
-                        <button id="update-deadline-button" class="btn-secondary">Update</button>
+                        <div class="details-form">
+                            <input type="date" id="new-deadline-input">
+                            <textarea id="deadline-reason-input" placeholder="Reason for changing..."></textarea>
+                            <button id="update-deadline-button" class="btn-secondary">Update</button>
+                        </div>
                     </div>
                      <div id="delete-section" class="sidebar-section">
                         <h4>Delete Project</h4>
