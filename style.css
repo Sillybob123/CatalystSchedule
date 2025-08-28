@@ -686,12 +686,20 @@ textarea {
 
 /* --- Details Modal Layout & Forms --- */
 .details-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(300px, 1fr);
+  display: flex;
+  align-items: flex-start;
   gap: 32px;
   padding: 28px 32px;
-  align-items: start; /* FIX: Prevents columns from stretching and causing overflow */
 }
+.details-main {
+  flex: 1;
+  min-width: 0;
+}
+.details-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+}
+
 .details-form {
   display: flex;
   flex-direction: column;
@@ -909,8 +917,11 @@ textarea {
     }
     .details-grid {
         /* Stack the details view earlier on tablets */
-        grid-template-columns: 1fr;
+        flex-direction: column; /* Use flex-direction for stacking */
         gap: 32px;
+    }
+    .details-sidebar {
+        width: 100%; /* Allow sidebar to take full width when stacked */
     }
 }
 
