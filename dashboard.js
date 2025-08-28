@@ -25,7 +25,7 @@ let calendarDate = new Date();
 const projectTimelines = {
     "Interview": [
         "Topic Proposal Complete",
-        "Interview Scheduled",
+        "Interview Scheduled", 
         "Interview Complete",
         "Article Writing Complete",
         "Review In Progress",
@@ -34,7 +34,7 @@ const projectTimelines = {
     ],
     "Op-Ed": [
         "Topic Proposal Complete",
-        "Article Writing Complete",
+        "Article Writing Complete", 
         "Review In Progress",
         "Review Complete",
         "Suggestions Reviewed"
@@ -159,6 +159,7 @@ function fetchAndRenderProjects() {
     db.collection('projects').orderBy("deadline", "desc").onSnapshot(snapshot => {
         allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderCurrentView();
+        updateNavCounts();
         
         if (currentlyViewedProjectId) {
             const project = allProjects.find(p => p.id === currentlyViewedProjectId);
@@ -171,6 +172,33 @@ function fetchAndRenderProjects() {
     });
 }
 
+function updateNavCounts() {
+    const myAssignmentsCount = getMyAssignmentsCount();
+    const navLink = document.querySelector('#nav-my-assignments span');
+    if (navLink) {
+        navLink.textContent = `My Assignments (${myAssignmentsCount})`;
+    }
+}
+
+function getMyAssignmentsCount() {
+    return allProjects.filter(p => {
+        const isAuthor = p.authorId === currentUser.uid;
+        const isEditor = p.editorId === currentUser.uid;
+        const timeline = p.timeline || {};
+        
+        if (isAuthor) {
+            if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return true;
+            if (p.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return true;
+        }
+        
+        if (isEditor) {
+            if (timeline["Article Writing Complete"] && !timeline["Review Complete"]) return true;
+        }
+        
+        return false;
+    }).length;
+}
+
 function filterProjects() {
     switch(currentView) {
         case 'interviews': return allProjects.filter(p => p.type === 'Interview');
@@ -179,9 +207,16 @@ function filterProjects() {
             return allProjects.filter(p => {
                 const isAuthor = p.authorId === currentUser.uid;
                 const isEditor = p.editorId === currentUser.uid;
+                const timeline = p.timeline || {};
                 
-                if (isAuthor && !p.timeline["Suggestions Reviewed"]) return true;
-                if (isEditor && !p.timeline["Review Complete"]) return true;
+                if (isAuthor) {
+                    if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return true;
+                    if (p.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return true;
+                }
+                
+                if (isEditor) {
+                    if (timeline["Article Writing Complete"] && !timeline["Review Complete"]) return true;
+                }
                 
                 return false;
             });
@@ -219,22 +254,23 @@ function getProjectColumn(project, view = 'interviews') {
         const isAuthor = project.authorId === currentUser.uid;
         const isEditor = project.editorId === currentUser.uid;
 
-        if (isEditor) {
-            if (timeline["Article Writing Complete"]) return "In Review";
+        if (isEditor && timeline["Article Writing Complete"] && !timeline["Review Complete"]) {
+            return "In Review";
         }
         if (isAuthor) {
-            if (timeline["Review Complete"]) return "In Review"; 
-            if (timeline["Topic Proposal Complete"]) return "In Progress";
+            if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return "In Review";
+            if (p.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return "In Progress";
         }
         return "To Do";
     }
     
     if (project.proposalStatus !== 'approved') return "Topic Proposal";
     if (timeline["Review Complete"]) return "Reviewing Suggestions";
-    if (timeline["Article Writing Complete"]) return "In Review";
+    if (timeline["Article Writing Complete"] && project.editorId) return "In Review";
     
     if (project.type === 'Interview') {
         if (timeline["Interview Complete"]) return "Writing Stage";
+        if (timeline["Interview Scheduled"]) return "Interview Stage";
         if (timeline["Topic Proposal Complete"]) return "Interview Stage";
     } else { // Op-Ed
         if (timeline["Topic Proposal Complete"]) return "Writing Stage";
@@ -249,9 +285,14 @@ function createProjectCard(project) {
     card.dataset.id = project.id;
 
     const column = getProjectColumn(project, currentView);
-    if (column === "Interview Stage" || column === "Writing Stage" || (column === "In Review" && !project.timeline["Review Complete"])) {
+    const timeline = project.timeline || {};
+    
+    // Color coding based on status
+    if (column === "Interview Stage" || column === "Writing Stage") {
         card.classList.add('status-yellow');
-    } else if (column === "Reviewing Suggestions") {
+    } else if (column === "In Review" && !timeline["Review Complete"]) {
+        card.classList.add('status-yellow');
+    } else if (column === "Reviewing Suggestions" && timeline["Review Complete"]) {
         card.classList.add('status-blue');
     } else if (column === "Completed" || column === "Done") {
         card.classList.add('status-green');
@@ -280,7 +321,6 @@ function createProjectCard(project) {
     card.addEventListener('click', () => openDetailsModal(project.id));
     return card;
 }
-
 
 // --- CALENDAR VIEW ---
 function renderCalendar() {
@@ -329,7 +369,6 @@ function changeMonth(offset) {
     renderCalendar();
 }
 
-
 // --- MODALS & FORMS ---
 function openProjectModal() {
     document.getElementById('project-form').reset();
@@ -350,7 +389,7 @@ async function handleProjectFormSubmit(e) {
         editorId: null, editorName: null,
         proposalStatus: 'pending',
         timeline: timeline,
-        deadlines: {}, // Initialize deadlines object
+        deadlines: {},
         activity: [{ text: 'created the project.', authorName: currentUserName, timestamp: new Date() }]
     };
     try {
@@ -385,10 +424,10 @@ function refreshDetailsModal(project) {
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
 
     document.getElementById('admin-approval-section').style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
-    document.getElementById('assign-editor-section').style.display = isAdmin ? 'flex' : 'none';
+    document.getElementById('assign-editor-section').style.display = isAdmin && project.timeline["Article Writing Complete"] ? 'flex' : 'none';
     
     const interviewSection = document.getElementById('interview-details-section');
-    if (project.type === 'Interview') {
+    if (project.type === 'Interview' && project.proposalStatus === 'approved') {
         interviewSection.style.display = 'block';
         interviewSection.querySelector('#interview-date').disabled = !isAdmin && !isAuthor;
         interviewSection.querySelector('#schedule-interview-button').disabled = !isAdmin && !isAuthor;
@@ -406,30 +445,47 @@ function refreshDetailsModal(project) {
 function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
     const container = document.getElementById('details-deadlines-list');
     container.innerHTML = '';
-    const canUpdate = isAuthor || isEditor || isAdmin;
-
+    
     const writerDeadlines = project.type === "Interview" 
-        ? ["Interview Scheduled", "Interview Complete", "Article Writing Complete", "Suggestions Reviewed"]
+        ? ["Interview Contact", "Interview Scheduled", "Interview Complete", "Article Writing Complete", "Suggestions Reviewed"]
         : ["Article Writing Complete", "Suggestions Reviewed"];
     const editorDeadlines = ["Review Complete"];
     
-    const deadlinesToShow = (isAuthor || isAdmin) ? [...new Set([...writerDeadlines, ...((isEditor || isAdmin) ? editorDeadlines : [])])] : editorDeadlines;
+    let deadlinesToShow = [];
+    
+    if (isAuthor || isAdmin) {
+        deadlinesToShow = [...writerDeadlines];
+    }
+    if (isEditor || isAdmin) {
+        deadlinesToShow = [...new Set([...deadlinesToShow, ...editorDeadlines])];
+    }
 
     deadlinesToShow.forEach(task => {
         const val = project.deadlines?.[task] || '';
         let disabled = true;
 
-        if ((writerDeadlines.includes(task) && (isAuthor || isAdmin)) || (editorDeadlines.includes(task) && (isEditor || isAdmin))) {
+        if ((writerDeadlines.includes(task) && (isAuthor || isAdmin)) || 
+            (editorDeadlines.includes(task) && (isEditor || isAdmin))) {
             disabled = false;
         }
 
+        const deadlineLabels = {
+            "Interview Contact": "Email Professor for Interview",
+            "Interview Scheduled": "Interview Date",
+            "Interview Complete": "Interview Complete By", 
+            "Article Writing Complete": "Article Writing Complete By",
+            "Review Complete": "Review Complete By",
+            "Suggestions Reviewed": "Review Suggestions By"
+        };
+
+        const label = deadlineLabels[task] || task;
+
         container.innerHTML += `
             <div class="form-group">
-                <label for="deadline-${task.replace(/\s+/g, '-')}">${task}</label>
+                <label for="deadline-${task.replace(/\s+/g, '-')}">${label}</label>
                 <input type="date" id="deadline-${task.replace(/\s+/g, '-')}" value="${val}" ${disabled ? 'disabled' : ''}>
             </div>`;
     });
-    document.getElementById('update-deadlines-button').style.display = canUpdate ? 'block' : 'none';
 }
 
 function populateEditorDropdown(currentEditorId) {
@@ -451,10 +507,13 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
 
     timelineTasks.forEach(task => {
         let canEditTask = false;
-        if (task.includes("Review") && !task.includes("Reviewed")) {
-             canEditTask = isEditor || isAdmin;
+        
+        if (task === "Topic Proposal Complete") {
+            canEditTask = false; // Only changed by admin approval
+        } else if (task.includes("Review") && !task.includes("Reviewed")) {
+            canEditTask = isEditor || isAdmin;
         } else {
-             canEditTask = isAuthor || isAdmin;
+            canEditTask = isAuthor || isAdmin;
         }
 
         const completed = project.timeline[task];
@@ -464,13 +523,14 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
         taskEl.innerHTML = `<input type="checkbox" id="${taskId}" ${completed ? 'checked' : ''} ${!canEditTask ? 'disabled' : ''}><label for="${taskId}">${task}</label>`;
         
         if (canEditTask) {
-            taskEl.querySelector('input').addEventListener('change', (e) => updateTaskStatus(project.id, task, e.target.checked));
+            taskEl.querySelector('input').addEventListener('change', async (e) => {
+                await updateTaskStatus(project.id, task, e.target.checked);
+            });
         }
         
         timelineContainer.appendChild(taskEl);
     });
 }
-
 
 function renderInterviewStatus(project) {
     const statusDisplay = document.getElementById('interview-status-display');
@@ -503,7 +563,9 @@ async function addActivity(projectId, text) {
 }
 
 async function updateTaskStatus(projectId, task, isCompleted) {
-    await db.collection('projects').doc(projectId).update({ [`timeline.${task}`]: isCompleted });
+    const updateData = { [`timeline.${task}`]: isCompleted };
+    
+    await db.collection('projects').doc(projectId).update(updateData);
     addActivity(projectId, `${isCompleted ? 'completed' : 'un-completed'} the task: "${task}"`);
 }
 
@@ -518,10 +580,12 @@ async function handleAddComment() {
 async function updateProposalStatus(newStatus) {
     if (!currentlyViewedProjectId || currentUserRole !== 'admin') return;
     try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
+        const updateData = {
             proposalStatus: newStatus,
             'timeline.Topic Proposal Complete': newStatus === 'approved'
-        });
+        };
+        
+        await db.collection('projects').doc(currentlyViewedProjectId).update(updateData);
         await addActivity(currentlyViewedProjectId, `${newStatus} the proposal.`);
     } catch (error) { console.error("Error updating status:", error); }
 }
@@ -557,11 +621,11 @@ async function handleUpdateDeadlines() {
     const newDeadlines = project.deadlines || {};
 
     deadlineInputs.forEach(input => {
-        const task = input.id.replace('deadline-', '').replace(/-/g, ' ');
+        const taskKey = input.id.replace('deadline-', '').replace(/-/g, ' ');
         if(input.value) {
-            newDeadlines[task] = input.value;
+            newDeadlines[taskKey] = input.value;
         } else {
-            delete newDeadlines[task];
+            delete newDeadlines[taskKey];
         }
     });
 
