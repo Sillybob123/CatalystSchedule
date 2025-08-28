@@ -1364,3 +1364,67 @@ body {
     break-inside: avoid;
   }
 }
+
+/* Red status for rejected proposals */
+.kanban-card.status-danger {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-left: 4px solid var(--danger-color);
+}
+
+/* Enhanced status colors for better visibility */
+.kanban-card.status-yellow::before {
+  content: '🟡';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.kanban-card.status-blue::before {
+  content: '🔵';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.kanban-card.status-green::before {
+  content: '🟢';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.kanban-card.status-danger::before {
+  content: '🔴';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Enhanced hover effects for status cards */
+.kanban-card.status-yellow:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 40px rgba(255, 149, 0, 0.15), 0 4px 16px rgba(255, 149, 0, 0.1);
+}
+
+.kanban-card.status-blue:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 40px rgba(90, 200, 250, 0.15), 0 4px 16px rgba(90, 200, 250, 0.1);
+}
+
+.kanban-card.status-green:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 40px rgba(52, 199, 89, 0.15), 0 4px 16px rgba(52, 199, 89, 0.1);
+}
+
+.kanban-card.status-danger:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 40px rgba(255, 59, 48, 0.15), 0 4px 16px rgba(255, 59, 48, 0.1);
+}
