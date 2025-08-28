@@ -366,13 +366,17 @@ document.getElementById('update-deadline-button').addEventListener('click', asyn
     const project = currentProjects.find(p => p.id === currentlyViewedProjectId);
     const historyEntry = { newDeadline, reason, changedAt: new Date() };
 
-    await db.collection('projects').doc(currentlyViewedProjectId).update({
-        deadline: newDeadline,
-        originalDeadline: project.originalDeadline || project.deadline,
-        deadlineHistory: firebase.firestore.FieldValue.arrayUnion(historyEntry)
-    });
-    await addActivity(currentlyViewedProjectId, `changed the deadline to ${newDeadline} for reason: "${reason}"`);
-    closeAllModals();
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            deadline: newDeadline,
+            originalDeadline: project.originalDeadline || project.deadline,
+            deadlineHistory: firebase.firestore.FieldValue.arrayUnion(historyEntry)
+        });
+        await addActivity(currentlyViewedProjectId, `changed the deadline to ${newDeadline} for reason: "${reason}"`);
+        closeAllModals();
+    } catch (error) {
+        console.error("Error updating deadline: ", error);
+    }
 });
 
 
