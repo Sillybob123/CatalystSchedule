@@ -418,13 +418,14 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 20, 30, 0.5); /* Darker overlay */
   display: none; /* Initially hidden */
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: var(--space-6);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .modal-content {
@@ -437,6 +438,12 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--muted-border);
+}
+
+#project-modal .modal-content {
+    max-width: 560px;
+    width: 100%;
 }
 
 .modal-content.large {
@@ -448,14 +455,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-6) var(--space-8);
-  border-bottom: 1px solid var(--border-color);
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--muted-border);
   background: #fafbfc;
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 600;
   color: var(--text-color);
   margin: 0;
 }
@@ -526,7 +534,7 @@
 .details-main hr {
   border: none;
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, var(--border-color) 50%, transparent 100%);
+  background-color: var(--border-color);
   margin: var(--space-8) 0;
 }
 
@@ -606,18 +614,20 @@
 
 /* === FORM STYLES === */
 #project-form {
-  padding: var(--space-6);
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  flex: 1;
+  overflow-y: auto;
 }
 
 .input-group {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .input-group label {
   display: block;
-  font-weight: 600;
-  color: var(--text-color);
-  margin-bottom: var(--space-2);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-3);
   font-size: 14px;
 }
 
@@ -627,11 +637,12 @@
   width: 100%;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  font-size: 15px;
-  background: var(--surface-color);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  background: var(--background-color);
   color: var(--text-color);
   transition: all 0.2s ease;
+  box-shadow: var(--shadow-xs);
 }
 
 .input-group input:focus,
@@ -640,21 +651,93 @@
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px var(--primary-light);
+  background: var(--surface-color);
 }
 
 .input-group textarea {
   resize: vertical;
-  min-height: 120px;
+  min-height: 140px;
 }
 
 .modal-footer {
     padding: var(--space-4) var(--space-6);
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--muted-border);
     display: flex;
     justify-content: flex-end;
     gap: var(--space-3);
-    background: #fafbfc;
+    background: var(--background-color);
+    flex-shrink: 0;
 }
+
+/* === Comment & Activity Feed Styles (Details Modal) === */
+.comment-box {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+}
+
+.comment-box textarea {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    background: var(--background-color);
+    color: var(--text-color);
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-xs);
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.comment-box textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-light);
+    background: var(--surface-color);
+}
+
+.comment-box button {
+    align-self: flex-end;
+}
+
+.activity-feed {
+    margin-top: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+.feed-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+}
+
+.feed-item .user-avatar {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.feed-content p {
+    margin: 0 0 var(--space-1) 0;
+    color: var(--text-color);
+    line-height: 1.5;
+}
+
+.feed-content .author {
+    font-weight: 600;
+}
+
+.feed-content .timestamp {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
 
 /* === LOGIN PAGE === */
 .login-page-body {
