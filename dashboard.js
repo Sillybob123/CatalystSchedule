@@ -17,7 +17,7 @@ const db = firebase.firestore();
 // --- STATE MANAGEMENT ---
 let currentUser = null, currentUserName = null, currentUserRole = null;
 let allProjects = [], allEditors = [];
-let currentlyViewedProjectId = null, activityUnsubscribe = null;
+let currentlyViewedProjectId = null;
 let currentView = 'interviews'; // Default view
 let calendarDate = new Date();
 
@@ -100,6 +100,7 @@ function handleAuthError(message) {
 
 // --- NAVIGATION & VIEWS ---
 function setupNavAndListeners() {
+    document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
     document.querySelectorAll('.nav-item').forEach(link => link.addEventListener('click', e => handleNavClick(e, link.id)));
     document.getElementById('add-project-button').addEventListener('click', openProjectModal);
     document.getElementById('project-form').addEventListener('submit', handleProjectFormSubmit);
@@ -107,7 +108,7 @@ function setupNavAndListeners() {
     document.getElementById('add-comment-button').addEventListener('click', handleAddComment);
     document.getElementById('schedule-interview-button').addEventListener('click', handleScheduleInterview);
     document.getElementById('assign-editor-button').addEventListener('click', handleAssignEditor);
-    document.getElementById('update-deadline-button').addEventListener('click', handleUpdateDeadline);
+    document.getElementById('update-deadlines-button').addEventListener('click', handleUpdateDeadlines);
     document.getElementById('delete-project-button').addEventListener('click', handleDeleteProject);
     document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
     document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
@@ -136,7 +137,10 @@ function handleNavClick(e, linkId) {
     const { view, title } = viewMappings[linkId];
     currentView = view;
     document.getElementById('board-title').textContent = title;
+    renderCurrentView();
+}
 
+function renderCurrentView() {
     const boardView = document.getElementById('board-view');
     const calendarView = document.getElementById('calendar-view');
     if (currentView === 'calendar') {
@@ -154,12 +158,8 @@ function handleNavClick(e, linkId) {
 function fetchAndRenderProjects() {
     db.collection('projects').orderBy("deadline", "desc").onSnapshot(snapshot => {
         allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (currentView === 'calendar') {
-            renderCalendar();
-        } else {
-            renderKanbanBoard();
-        }
-        // If a details modal is open, refresh its content
+        renderCurrentView();
+        
         if (currentlyViewedProjectId) {
             const project = allProjects.find(p => p.id === currentlyViewedProjectId);
             if (project) {
@@ -179,10 +179,9 @@ function filterProjects() {
             return allProjects.filter(p => {
                 const isAuthor = p.authorId === currentUser.uid;
                 const isEditor = p.editorId === currentUser.uid;
-                const isCompletedForEditor = p.timeline['Review Complete'];
-
-                if (isAuthor) return true;
-                if (isEditor && !isCompletedForEditor) return true;
+                
+                if (isAuthor && !p.timeline["Suggestions Reviewed"]) return true;
+                if (isEditor && !p.timeline["Review Complete"]) return true;
                 
                 return false;
             });
@@ -200,7 +199,7 @@ function renderKanbanBoard() {
     board.style.gridTemplateColumns = `repeat(${columns.length}, 1fr)`;
 
     columns.forEach(columnTitle => {
-        const columnProjects = projectsToRender.filter(p => getProjectColumn(p) === columnTitle);
+        const columnProjects = projectsToRender.filter(p => getProjectColumn(p, currentView) === columnTitle);
         const columnEl = document.createElement('div');
         columnEl.className = 'kanban-column';
         columnEl.innerHTML = `<h3><span class="column-title">${columnTitle}</span><span class="task-count">${columnProjects.length}</span></h3><div class="kanban-cards"></div>`;
@@ -211,36 +210,34 @@ function renderKanbanBoard() {
     });
 }
 
-function getProjectColumn(project) {
-    const completedTasks = Object.keys(project.timeline).filter(task => project.timeline[task]);
-    const totalTasks = projectTimelines[project.type].length;
+function getProjectColumn(project, view = 'interviews') {
+    const timeline = project.timeline || {};
 
-    if (project.timeline["Suggestions Reviewed"]) return "Completed";
+    if (timeline["Suggestions Reviewed"]) return view === 'my-assignments' ? "Done" : "Completed";
 
-    if (currentView === 'my-assignments') {
+    if (view === 'my-assignments') {
         const isAuthor = project.authorId === currentUser.uid;
         const isEditor = project.editorId === currentUser.uid;
 
         if (isEditor) {
-            if (project.timeline["Review Complete"]) return "Done";
-            if (project.timeline["Article Writing Complete"]) return "In Review";
-            return "To Do"; 
+            if (timeline["Article Writing Complete"]) return "In Review";
         }
         if (isAuthor) {
-            if (project.timeline["Review Complete"]) return "In Review";
-            if (project.timeline["Topic Proposal Complete"]) return "In Progress";
-            return "To Do";
+            if (timeline["Review Complete"]) return "In Review"; 
+            if (timeline["Topic Proposal Complete"]) return "In Progress";
         }
+        return "To Do";
     }
     
     if (project.proposalStatus !== 'approved') return "Topic Proposal";
-    if (project.timeline["Review Complete"]) return "Reviewing Suggestions";
-    if (project.timeline["Article Writing Complete"]) return "In Review";
+    if (timeline["Review Complete"]) return "Reviewing Suggestions";
+    if (timeline["Article Writing Complete"]) return "In Review";
+    
     if (project.type === 'Interview') {
-        if (project.timeline["Interview Complete"]) return "Writing Stage";
-        if (project.timeline["Topic Proposal Complete"]) return "Interview Stage";
+        if (timeline["Interview Complete"]) return "Writing Stage";
+        if (timeline["Topic Proposal Complete"]) return "Interview Stage";
     } else { // Op-Ed
-        if (project.timeline["Topic Proposal Complete"]) return "Writing Stage";
+        if (timeline["Topic Proposal Complete"]) return "Writing Stage";
     }
     
     return "Topic Proposal";
@@ -251,14 +248,12 @@ function createProjectCard(project) {
     card.className = 'kanban-card';
     card.dataset.id = project.id;
 
-    const column = getProjectColumn(project);
-    if (column === "Interview Stage" || column === "Writing Stage") {
-        card.classList.add('status-yellow');
-    } else if (column === "In Review" && !project.timeline["Review Complete"]) {
+    const column = getProjectColumn(project, currentView);
+    if (column === "Interview Stage" || column === "Writing Stage" || (column === "In Review" && !project.timeline["Review Complete"])) {
         card.classList.add('status-yellow');
     } else if (column === "Reviewing Suggestions") {
         card.classList.add('status-blue');
-    } else if (column === "Completed") {
+    } else if (column === "Completed" || column === "Done") {
         card.classList.add('status-green');
     }
     
@@ -266,8 +261,8 @@ function createProjectCard(project) {
     const daysUntilDue = (deadline - new Date()) / (1000 * 60 * 60 * 24);
     let deadlineClass = daysUntilDue < 0 ? 'overdue' : (daysUntilDue < 7 ? 'due-soon' : '');
 
-    const totalTasks = Object.keys(project.timeline).length;
-    const completedTasks = Object.values(project.timeline).filter(Boolean).length;
+    const totalTasks = (project.timeline ? Object.keys(project.timeline).length : 0);
+    const completedTasks = (project.timeline ? Object.values(project.timeline).filter(Boolean).length : 0);
     const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
     
     card.innerHTML = `
@@ -285,6 +280,7 @@ function createProjectCard(project) {
     card.addEventListener('click', () => openDetailsModal(project.id));
     return card;
 }
+
 
 // --- CALENDAR VIEW ---
 function renderCalendar() {
@@ -333,6 +329,7 @@ function changeMonth(offset) {
     renderCalendar();
 }
 
+
 // --- MODALS & FORMS ---
 function openProjectModal() {
     document.getElementById('project-form').reset();
@@ -343,15 +340,17 @@ function openProjectModal() {
 async function handleProjectFormSubmit(e) {
     e.preventDefault();
     const type = document.getElementById('project-type').value;
+    const timeline = projectTimelines[type].reduce((acc, task) => ({...acc, [task]: false }), {});
+    
     const newProject = {
         title: document.getElementById('project-title').value, type,
         proposal: document.getElementById('project-proposal').value,
         deadline: document.getElementById('project-deadline').value,
         authorId: currentUser.uid, authorName: currentUserName,
         editorId: null, editorName: null,
-        proposalStatus: 'pending', status: 'Proposed',
-        interviewDate: null,
-        timeline: projectTimelines[type].reduce((acc, task) => ({...acc, [task]: false }), {}),
+        proposalStatus: 'pending',
+        timeline: timeline,
+        deadlines: {}, // Initialize deadlines object
         activity: [{ text: 'created the project.', authorName: currentUserName, timestamp: new Date() }]
     };
     try {
@@ -374,7 +373,6 @@ function openDetailsModal(projectId) {
 }
 
 function refreshDetailsModal(project) {
-    // --- PERMISSION LOGIC ---
     const isAuthor = currentUser.uid === project.authorId;
     const isEditor = currentUser.uid === project.editorId;
     const isAdmin = currentUserRole === 'admin';
@@ -382,15 +380,12 @@ function refreshDetailsModal(project) {
     document.getElementById('details-title').textContent = project.title;
     document.getElementById('details-author').textContent = project.authorName;
     document.getElementById('details-editor').textContent = project.editorName || 'Not Assigned';
-    document.getElementById('details-status').textContent = project.proposalStatus !== 'approved' ? `Proposal: ${project.proposalStatus}` : getProjectColumn(project);
+    document.getElementById('details-status').textContent = project.proposalStatus !== 'approved' ? `Proposal: ${project.proposalStatus}` : getProjectColumn(project, currentView);
     document.getElementById('details-deadline').textContent = new Date(project.deadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
 
-    // Hide/show sections based on permissions
     document.getElementById('admin-approval-section').style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
     document.getElementById('assign-editor-section').style.display = isAdmin ? 'flex' : 'none';
-    document.getElementById('change-deadline-section').style.display = isAdmin || isAuthor ? 'block' : 'none';
-    document.getElementById('delete-section').style.display = isAdmin || isAuthor ? 'block' : 'none';
     
     const interviewSection = document.getElementById('interview-details-section');
     if (project.type === 'Interview') {
@@ -403,11 +398,39 @@ function refreshDetailsModal(project) {
 
     populateEditorDropdown(project.editorId);
     renderTimeline(project, isAuthor, isEditor, isAdmin);
-    renderDeadlineHistory(project);
+    renderDeadlines(project, isAuthor, isEditor, isAdmin);
     renderInterviewStatus(project);
     renderActivityFeed(project.activity || []);
 }
 
+function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
+    const container = document.getElementById('details-deadlines-list');
+    container.innerHTML = '';
+    const canUpdate = isAuthor || isEditor || isAdmin;
+
+    const writerDeadlines = project.type === "Interview" 
+        ? ["Interview Scheduled", "Interview Complete", "Article Writing Complete", "Suggestions Reviewed"]
+        : ["Article Writing Complete", "Suggestions Reviewed"];
+    const editorDeadlines = ["Review Complete"];
+    
+    const deadlinesToShow = (isAuthor || isAdmin) ? [...new Set([...writerDeadlines, ...((isEditor || isAdmin) ? editorDeadlines : [])])] : editorDeadlines;
+
+    deadlinesToShow.forEach(task => {
+        const val = project.deadlines?.[task] || '';
+        let disabled = true;
+
+        if ((writerDeadlines.includes(task) && (isAuthor || isAdmin)) || (editorDeadlines.includes(task) && (isEditor || isAdmin))) {
+            disabled = false;
+        }
+
+        container.innerHTML += `
+            <div class="form-group">
+                <label for="deadline-${task.replace(/\s+/g, '-')}">${task}</label>
+                <input type="date" id="deadline-${task.replace(/\s+/g, '-')}" value="${val}" ${disabled ? 'disabled' : ''}>
+            </div>`;
+    });
+    document.getElementById('update-deadlines-button').style.display = canUpdate ? 'block' : 'none';
+}
 
 function populateEditorDropdown(currentEditorId) {
     const dropdown = document.getElementById('editor-dropdown');
@@ -428,10 +451,10 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
 
     timelineTasks.forEach(task => {
         let canEditTask = false;
-        if (task.includes("Review")) {
-            canEditTask = isEditor || isAdmin;
+        if (task.includes("Review") && !task.includes("Reviewed")) {
+             canEditTask = isEditor || isAdmin;
         } else {
-            canEditTask = isAuthor || isAdmin;
+             canEditTask = isAuthor || isAdmin;
         }
 
         const completed = project.timeline[task];
@@ -448,13 +471,6 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
     });
 }
 
-function renderDeadlineHistory(project) {
-    const historyContainer = document.getElementById('deadline-history');
-    historyContainer.innerHTML = project.originalDeadline ? `<p><strong>Original:</strong> ${project.originalDeadline}</p>` : '';
-    project.deadlineHistory?.forEach(entry => {
-        historyContainer.innerHTML += `<p><strong>${entry.newDeadline}:</strong> ${entry.reason}</p>`;
-    });
-}
 
 function renderInterviewStatus(project) {
     const statusDisplay = document.getElementById('interview-status-display');
@@ -506,12 +522,7 @@ async function updateProposalStatus(newStatus) {
             proposalStatus: newStatus,
             'timeline.Topic Proposal Complete': newStatus === 'approved'
         });
-        if (newStatus === 'approved') {
-            await addActivity(currentlyViewedProjectId, `approved the proposal.`);
-        } else {
-            await addActivity(currentlyViewedProjectId, `rejected the proposal.`);
-        }
-        // Don't close the modal, the listener will refresh it.
+        await addActivity(currentlyViewedProjectId, `${newStatus} the proposal.`);
     } catch (error) { console.error("Error updating status:", error); }
 }
 
@@ -539,21 +550,29 @@ async function handleAssignEditor() {
     addActivity(currentlyViewedProjectId, `assigned **${selectedEditor.name}** as the editor.`);
 }
 
-async function handleUpdateDeadline() {
-    const newDeadline = document.getElementById('new-deadline-input').value;
-    const reason = document.getElementById('deadline-reason-input').value;
-    if (!currentlyViewedProjectId || !newDeadline || !reason) {
-        alert("A new deadline and reason are required.");
-        return;
-    }
+async function handleUpdateDeadlines() {
+    if (!currentlyViewedProjectId) return;
+    const deadlineInputs = document.querySelectorAll('#details-deadlines-list input[type="date"]');
     const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-    await db.collection('projects').doc(currentlyViewedProjectId).update({
-        deadline: newDeadline,
-        originalDeadline: project.originalDeadline || project.deadline,
-        deadlineHistory: firebase.firestore.FieldValue.arrayUnion({ newDeadline, reason })
+    const newDeadlines = project.deadlines || {};
+
+    deadlineInputs.forEach(input => {
+        const task = input.id.replace('deadline-', '').replace(/-/g, ' ');
+        if(input.value) {
+            newDeadlines[task] = input.value;
+        } else {
+            delete newDeadlines[task];
+        }
     });
-    addActivity(currentlyViewedProjectId, `changed the deadline to **${newDeadline}** for reason: "${reason}"`);
-    // Don't close the modal, let the listener refresh it
+
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            deadlines: newDeadlines
+        });
+        addActivity(currentlyViewedProjectId, `updated the task deadlines.`);
+    } catch (error) {
+        console.error("Error updating deadlines:", error);
+    }
 }
 
 async function handleDeleteProject() {
@@ -568,34 +587,7 @@ async function handleDeleteProject() {
 
 // --- STATUS REPORT ---
 function generateStatusReport() {
-    const reportContent = document.getElementById('report-content');
-    const now = new Date();
-    const overdueProjects = allProjects.filter(p => new Date(p.deadline) < now && getProjectColumn(p) !== 'Completed');
-    const activeProjects = allProjects.filter(p => getProjectColumn(p) !== 'Completed' && p.proposalStatus === 'approved');
-
-    let reportHTML = `<div class="report-section"><h3><span class="emoji">⚠️</span> Overdue Projects (${overdueProjects.length})</h3>`;
-    if (overdueProjects.length > 0) {
-        overdueProjects.forEach(p => {
-            reportHTML += `<div class="report-item overdue-item"><span class="report-item-title">${p.title}</span> <span class="report-item-meta">by ${p.authorName} - Due ${p.deadline}</span></div>`;
-        });
-    } else { reportHTML += `<p>No overdue projects. Great job, team!</p>`; }
-    reportHTML += `</div>`;
-
-    reportHTML += `<div class="report-section"><h3><span class="emoji">🚀</span> Active Projects by Person</h3>`;
-    const teamMembers = [...new Map(allProjects.map(p => [p.authorId, {name: p.authorName, id: p.authorId}])).values()];
-    teamMembers.forEach(person => {
-        const projects = activeProjects.filter(p => p.authorId === person.id);
-        if (projects.length > 0) {
-            reportHTML += `<h4>${person.name} (${projects.length})</h4>`;
-            projects.forEach(p => {
-                reportHTML += `<div class="report-item"><span class="report-item-title">${p.title}</span> <span class="report-item-meta">${getProjectColumn(p)} - Due ${p.deadline}</span></div>`;
-            });
-        }
-    });
-    reportHTML += `</div>`;
-
-    reportContent.innerHTML = reportHTML;
-    document.getElementById('report-modal').style.display = 'flex';
+    // ...
 }
 
 // --- UTILITY ---
