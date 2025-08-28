@@ -12,7 +12,6 @@
   z-index: 100;
   overflow-y: auto;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
-  transition: transform 0.3s ease-in-out;
 }
 
 .sidebar-header {
@@ -456,9 +455,8 @@
 }
 
 .modal-content.large {
-  max-width: 1200px;
-  width: 95vw;
-  height: 90vh;
+  width: 1200px;
+  height: 800px;
 }
 
 .modal-header {
@@ -986,13 +984,6 @@
     font-size: 20px;
 }
 
-.report-user-role {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    text-transform: capitalize;
-}
-
 
 .report-item {
     padding: var(--space-4);
@@ -1055,129 +1046,4 @@
 .report-activity-list .timestamp {
     font-weight: 500;
     color: var(--text-color);
-}
-
-/* === MOBILE NAVIGATION & RESPONSIVENESS === */
-.menu-toggle-btn {
-    display: none;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: var(--space-2);
-    color: var(--text-color);
-}
-
-.sidebar-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 99;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-}
-
-.sidebar-overlay.active {
-    display: block;
-    opacity: 1;
-}
-
-
-@media (max-width: 1024px) {
-    .sidebar {
-        transform: translateX(-100%);
-        box-shadow: var(--shadow-xl);
-    }
-
-    .sidebar.open {
-        transform: translateX(0);
-    }
-
-    .main-content {
-        margin-left: 0;
-        padding: var(--space-6);
-    }
-
-    .menu-toggle-btn {
-        display: block;
-    }
-
-    .main-header {
-        gap: var(--space-4);
-    }
-
-    .main-header h1 {
-        flex: 1;
-    }
-
-    .kanban-board {
-        display: flex;
-        overflow-x: auto;
-        padding-bottom: var(--space-4);
-        scroll-snap-type: x mandatory;
-    }
-
-    .kanban-column {
-        min-width: 320px;
-        flex-shrink: 0;
-        scroll-snap-align: start;
-    }
-
-    .details-grid {
-        grid-template-columns: 1fr;
-        height: auto;
-    }
-
-    .details-main {
-        border-right: none;
-    }
-    
-    .details-sidebar {
-        border-top: 1px solid var(--border-color);
-    }
-}
-
-@media (max-width: 768px) {
-    .main-content {
-        padding: var(--space-4);
-    }
-    .main-header {
-        flex-wrap: wrap;
-        padding-bottom: var(--space-4);
-        row-gap: var(--space-4);
-    }
-    
-    .main-header h1 {
-        width: 100%;
-        order: -1; /* Puts title above buttons when wrapped */
-        font-size: 28px;
-    }
-
-    .header-actions {
-        flex-grow: 1;
-        gap: var(--space-2);
-    }
-
-    .header-actions .btn-secondary,
-    .header-actions .add-project-btn {
-        flex: 1; /* Make buttons take equal space */
-    }
-
-    .modal-overlay {
-        padding: var(--space-2);
-    }
-
-    .modal-content.large, #project-modal .modal-content {
-        width: 100%;
-        height: 100%;
-        max-height: 100vh;
-        border-radius: 0;
-    }
-    
-    .details-main, .details-sidebar, .report-content {
-        padding: var(--space-4);
-    }
 }
