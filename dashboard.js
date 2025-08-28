@@ -17,13 +17,14 @@ const db = firebase.firestore();
 let currentUser = null;
 let currentUserName = null;
 let currentUserRole = null;
-let currentProjects = [];
+let allProjects = [];
 let currentlyViewedProjectId = null;
+let currentView = 'all'; // 'all', 'interviews', 'opeds', 'editors'
 
 const projectTimelines = {
-    "Interview": ["Think of a topic", "Email professor", "Interview Professor", "Write Article", "Review edit suggestions and finalize article"],
-    "Op-Ed": ["Think of a topic", "Write Article", "Review edit suggestions and finalize article"],
-    "Editing": ["Talk to writer about their project", "Edit and fix story", "Finalize piece"]
+    "Interview": ["Think of a topic", "Write an email to professor", "Have an interview", "Write article", "Fix/Review editor's suggestions"],
+    "Op-Ed": ["Think of a topic", "Write article", "Fix/Review editor's suggestions"],
+    "Editing": ["Talk to writer about their project", "Edit and fix story", "Finalize piece"] // Retained for logic
 };
 
 // --- AUTHENTICATION ---
@@ -40,6 +41,7 @@ auth.onAuthStateChanged(user => {
                 currentUserRole = userData.role;
                 
                 setupUI();
+                setupNav();
                 fetchAndRenderProjects();
 
                 loader.style.display = 'none';
@@ -61,8 +63,8 @@ function setupUI() {
     document.getElementById('user-role').textContent = currentUserRole;
     document.getElementById('user-avatar').textContent = currentUserName.charAt(0);
     
-    if (currentUserRole !== 'writer' && currentUserRole !== 'admin') {
-        document.getElementById('add-project-button').style.display = 'none';
+    if (currentUserRole === 'admin') {
+        document.getElementById('status-report-button').style.display = 'block';
     }
     
     document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
@@ -81,6 +83,33 @@ function handleAuthError(message) {
     document.getElementById('error-logout-button').addEventListener('click', () => auth.signOut());
 }
 
+// --- NAVIGATION & VIEWS ---
+function setupNav() {
+    const navLinks = document.querySelectorAll('.nav-item');
+    const boardTitle = document.getElementById('board-title');
+
+    const views = {
+        'nav-all': { view: 'all', title: 'All Projects' },
+        'nav-interviews': { view: 'interviews', title: 'Catalyst in the Capital' },
+        'nav-opeds': { view: 'opeds', title: 'Op-Eds' },
+        'nav-editors': { view: 'editors', title: "Editors' View" }
+    };
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            navLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+            
+            const { view, title } = views[link.id];
+            currentView = view;
+            boardTitle.textContent = title;
+            renderKanbanBoard();
+        });
+    });
+}
+
+
 // --- KANBAN BOARD ---
 const KANBAN_COLUMNS = {
     PROPOSAL: "Topic Proposal",
@@ -91,17 +120,32 @@ const KANBAN_COLUMNS = {
 
 function fetchAndRenderProjects() {
     db.collection('projects').orderBy("deadline").onSnapshot(snapshot => {
-        currentProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderKanbanBoard(currentProjects);
+        allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderKanbanBoard();
     });
 }
 
-function renderKanbanBoard(projects) {
+function filterProjects() {
+    switch(currentView) {
+        case 'interviews':
+            return allProjects.filter(p => p.type === 'Interview');
+        case 'opeds':
+            return allProjects.filter(p => p.type === 'Op-Ed');
+        case 'editors':
+             return allProjects.filter(p => p.proposalStatus === 'approved' && p.status !== 'Proposed');
+        case 'all':
+        default:
+            return allProjects;
+    }
+}
+
+function renderKanbanBoard() {
+    const projectsToRender = filterProjects();
     const board = document.getElementById('kanban-board');
     board.innerHTML = ''; // Clear previous state
 
     Object.values(KANBAN_COLUMNS).forEach(columnTitle => {
-        const columnProjects = projects.filter(p => getProjectColumn(p) === columnTitle);
+        const columnProjects = projectsToRender.filter(p => getProjectColumn(p) === columnTitle);
         const columnEl = document.createElement('div');
         columnEl.className = 'kanban-column';
         columnEl.innerHTML = `
@@ -112,8 +156,7 @@ function renderKanbanBoard(projects) {
             <div class="kanban-cards"></div>
         `;
         columnProjects.forEach(project => {
-            const cardContainer = columnEl.querySelector('.kanban-cards');
-            cardContainer.appendChild(createProjectCard(project));
+            columnEl.querySelector('.kanban-cards').appendChild(createProjectCard(project));
         });
         board.appendChild(columnEl);
     });
@@ -121,6 +164,14 @@ function renderKanbanBoard(projects) {
 
 function getProjectColumn(project) {
     if (project.proposalStatus !== 'approved') return KANBAN_COLUMNS.PROPOSAL;
+    
+    // Custom logic for Editors' view to simplify columns
+    if (currentView === 'editors') {
+         const lastTask = Object.keys(project.timeline).pop();
+         if (project.timeline[lastTask] === true) return KANBAN_COLUMNS.PUBLICATION;
+         return KANBAN_COLUMNS.EDITING;
+    }
+
     if (project.status === 'Ready for Publication') return KANBAN_COLUMNS.PUBLICATION;
     if (project.status === 'In Editing') return KANBAN_COLUMNS.EDITING;
     return KANBAN_COLUMNS.IN_PROGRESS;
@@ -132,7 +183,7 @@ function createProjectCard(project) {
     card.dataset.id = project.id;
 
     // Deadline styling
-    const deadline = new Date(project.deadline + 'T23:59:59'); // Assume end of day
+    const deadline = new Date(project.deadline + 'T23:59:59');
     const now = new Date();
     const daysUntilDue = (deadline - now) / (1000 * 60 * 60 * 24);
     let deadlineClass = '';
@@ -166,37 +217,37 @@ function createProjectCard(project) {
 }
 
 
-// --- MODAL HANDLING (GENERIC) ---
+// --- MODAL HANDLING ---
 const modals = document.querySelectorAll('.modal-overlay');
 modals.forEach(modal => {
     modal.addEventListener('click', e => {
-        if (e.target === modal) closeAllModals();
+        if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('close-button')) {
+            closeAllModals();
+        }
     });
     modal.querySelectorAll('.close-button').forEach(btn => btn.addEventListener('click', closeAllModals));
 });
 
 function closeAllModals() {
     modals.forEach(modal => modal.style.display = 'none');
+    if (activityUnsubscribe) activityUnsubscribe();
     currentlyViewedProjectId = null;
 }
 
-// --- PROJECT MODAL (ADD/EDIT) ---
+// --- PROJECT MODAL (ADD) ---
 const projectModal = document.getElementById('project-modal');
 const projectForm = document.getElementById('project-form');
 
 document.getElementById('add-project-button').addEventListener('click', () => {
     projectForm.reset();
-    document.getElementById('project-id').value = '';
     document.getElementById('modal-title').textContent = 'Propose New Article';
     projectModal.style.display = 'flex';
 });
 
 projectForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const projectId = document.getElementById('project-id').value;
     const type = document.getElementById('project-type').value;
-
-    const projectData = {
+    const newProject = {
         title: document.getElementById('project-title').value,
         type: type,
         proposal: document.getElementById('project-proposal').value,
@@ -207,56 +258,48 @@ projectForm.addEventListener('submit', async (e) => {
         status: 'Proposed',
         timeline: projectTimelines[type].reduce((acc, task) => ({...acc, [task]: false }), {}),
         deadlineHistory: [],
-        activity: []
+        activity: [{
+            text: 'created the project.',
+            authorName: currentUserName,
+            timestamp: new Date()
+        }]
     };
-
     try {
-        if (projectId) {
-            await db.collection('projects').doc(projectId).update(projectData);
-        } else {
-            await db.collection('projects').add(projectData);
-        }
+        await db.collection('projects').add(newProject);
         closeAllModals();
     } catch (error) {
         console.error("Error saving project:", error);
-        alert("Could not save project.");
     }
 });
 
 
 // --- DETAILS MODAL ---
 const detailsModal = document.getElementById('details-modal');
-let activityUnsubscribe = null; // To stop listening for activity when modal closes
+let activityUnsubscribe = null;
 
-async function openDetailsModal(projectId) {
-    const project = currentProjects.find(p => p.id === projectId);
+function openDetailsModal(projectId) {
+    const project = allProjects.find(p => p.id === projectId);
     if (!project) return;
     currentlyViewedProjectId = projectId;
     
-    // Populate static fields
     document.getElementById('details-title').textContent = project.title;
     document.getElementById('details-author').textContent = project.authorName;
     document.getElementById('details-status').textContent = project.proposalStatus !== 'approved' ? `Proposal: ${project.proposalStatus}` : project.status;
     document.getElementById('details-deadline').textContent = new Date(project.deadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
 
-    // Admin section
-    const adminSection = document.getElementById('admin-approval-section');
-    adminSection.style.display = (currentUserRole === 'admin') ? 'block' : 'none';
+    document.getElementById('admin-approval-section').style.display = (currentUserRole === 'admin') ? 'block' : 'none';
     document.getElementById('proposal-feedback').value = project.proposalFeedback || '';
+    
+    // Show delete button only to author or admin
+    document.getElementById('delete-section').style.display = (currentUser.uid === project.authorId || currentUserRole === 'admin') ? 'block' : 'none';
 
-    // Timeline/Checklist
     renderTimeline(project);
-
-    // Deadline History
     renderDeadlineHistory(project);
-
-    // Activity Feed (with real-time updates)
-    if (activityUnsubscribe) activityUnsubscribe(); // Stop previous listener
-    const activityFeed = document.getElementById('details-activity-feed');
+    
+    if (activityUnsubscribe) activityUnsubscribe();
     activityUnsubscribe = db.collection('projects').doc(projectId).onSnapshot(doc => {
-        const projectData = doc.data();
-        if (projectData) renderActivityFeed(projectData.activity || []);
+        if (doc.exists) renderActivityFeed(doc.data().activity || []);
     });
     
     detailsModal.style.display = 'flex';
@@ -265,27 +308,21 @@ async function openDetailsModal(projectId) {
 function renderTimeline(project) {
     const timelineContainer = document.getElementById('details-timeline');
     timelineContainer.innerHTML = '';
-    Object.entries(project.timeline).forEach(([task, completed]) => {
+    const timeline = project.type === "Interview" ? projectTimelines.Interview : projectTimelines["Op-Ed"];
+    timeline.forEach(task => {
+        const completed = project.timeline[task] || false;
         const isEditable = (currentUser.uid === project.authorId || currentUserRole === 'admin');
         const taskEl = document.createElement('div');
         taskEl.className = 'task';
-        taskEl.innerHTML = `
-            <input type="checkbox" id="task-${task.replace(/\s+/g, '-')}" ${completed ? 'checked' : ''} ${!isEditable ? 'disabled' : ''}>
-            <label for="task-${task.replace(/\s+/g, '-')}">${task}</label>
-        `;
-        taskEl.querySelector('input').addEventListener('change', (e) => {
-            updateTaskStatus(project.id, task, e.target.checked);
-        });
+        taskEl.innerHTML = `<input type="checkbox" id="task-${task.replace(/\s+/g, '-')}" ${completed ? 'checked' : ''} ${!isEditable ? 'disabled' : ''}><label for="task-${task.replace(/\s+/g, '-')}">${task}</label>`;
+        taskEl.querySelector('input').addEventListener('change', (e) => updateTaskStatus(project.id, task, e.target.checked));
         timelineContainer.appendChild(taskEl);
     });
 }
 
 function renderDeadlineHistory(project) {
     const historyContainer = document.getElementById('deadline-history');
-    historyContainer.innerHTML = '';
-    if (project.originalDeadline) {
-        historyContainer.innerHTML += `<p><strong>Original:</strong> ${project.originalDeadline}</p>`;
-    }
+    historyContainer.innerHTML = project.originalDeadline ? `<p><strong>Original:</strong> ${project.originalDeadline}</p>` : '';
     project.deadlineHistory?.forEach(entry => {
         historyContainer.innerHTML += `<p><strong>${entry.newDeadline}:</strong> ${entry.reason}</p>`;
     });
@@ -302,28 +339,57 @@ function renderActivityFeed(activity) {
             <div class="feed-content">
                 <p><span class="author">${item.authorName}</span> ${item.text}</p>
                 <span class="timestamp">${new Date(item.timestamp.seconds * 1000).toLocaleString()}</span>
-            </div>
-        `;
+            </div>`;
         activityFeed.appendChild(itemEl);
     });
 }
 
+// --- STATUS REPORT MODAL ---
+const reportModal = document.getElementById('report-modal');
+document.getElementById('status-report-button').addEventListener('click', () => {
+    const reportContent = document.getElementById('report-content');
+    const now = new Date();
+    
+    const overdueProjects = allProjects.filter(p => new Date(p.deadline) < now && p.proposalStatus === 'approved' && p.status !== 'Ready for Publication');
+    const activeProjectsByPerson = allProjects.reduce((acc, p) => {
+        if (p.proposalStatus === 'approved' && p.status !== 'Ready for Publication') {
+            if (!acc[p.authorName]) acc[p.authorName] = [];
+            acc[p.authorName].push(p);
+        }
+        return acc;
+    }, {});
+
+    let reportHTML = `<div class="report-section"><h3><span class="emoji">⚠️</span> Overdue Projects (${overdueProjects.length})</h3>`;
+    if (overdueProjects.length > 0) {
+        overdueProjects.forEach(p => {
+            reportHTML += `<div class="report-item overdue-item"><span class="report-item-title">${p.title}</span> <span class="report-item-meta">by ${p.authorName} - Due ${p.deadline}</span></div>`;
+        });
+    } else {
+        reportHTML += `<p>No overdue projects. Great job, team!</p>`;
+    }
+    reportHTML += `</div>`;
+
+    reportHTML += `<div class="report-section"><h3><span class="emoji">🚀</span> Active Projects by Person</h3>`;
+    Object.entries(activeProjectsByPerson).forEach(([name, projects]) => {
+        reportHTML += `<h4>${name} (${projects.length})</h4>`;
+        projects.forEach(p => {
+            reportHTML += `<div class="report-item"><span class="report-item-title">${p.title}</span> <span class="report-item-meta">Due ${p.deadline}</span></div>`;
+        });
+    });
+    reportHTML += `</div>`;
+
+    reportContent.innerHTML = reportHTML;
+    reportModal.style.display = 'flex';
+});
+
 // --- ACTIONS & UPDATES ---
 async function addActivity(projectId, text) {
-    const activity = {
-        text: text,
-        authorName: currentUserName,
-        timestamp: new Date()
-    };
-    const projectRef = db.collection('projects').doc(projectId);
-    await projectRef.update({
-        activity: firebase.firestore.FieldValue.arrayUnion(activity)
-    });
+    const activity = { text, authorName: currentUserName, timestamp: new Date() };
+    await db.collection('projects').doc(projectId).update({ activity: firebase.firestore.FieldValue.arrayUnion(activity) });
 }
 
 async function updateTaskStatus(projectId, task, isCompleted) {
-    const updatePath = `timeline.${task}`;
-    await db.collection('projects').doc(projectId).update({ [updatePath]: isCompleted });
+    await db.collection('projects').doc(projectId).update({ [`timeline.${task}`]: isCompleted });
     addActivity(projectId, `${isCompleted ? 'completed' : 'un-completed'} the task: "${task}"`);
 }
 
@@ -335,9 +401,9 @@ document.getElementById('add-comment-button').addEventListener('click', async ()
     }
 });
 
-document.getElementById('approve-button').addEventListener('click', () => updateProposalStatus('approved'));
-document.getElementById('reject-button').addEventListener('click', () => updateProposalStatus('rejected'));
-document.getElementById('hold-button').addEventListener('click', () => updateProposalStatus('on-hold'));
+['approve-button', 'reject-button', 'hold-button'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => updateProposalStatus(id.split('-')[0]));
+});
 
 async function updateProposalStatus(newStatus) {
     if (!currentlyViewedProjectId || currentUserRole !== 'admin') return;
@@ -348,44 +414,45 @@ async function updateProposalStatus(newStatus) {
             status: newStatus === 'approved' ? 'In Progress' : 'On Hold/Rejected',
             proposalFeedback: feedback
         });
-        await addActivity(currentlyViewedProjectId, `set the proposal status to ${newStatus}.`);
+        await addActivity(currentlyViewedProjectId, `set the proposal status to **${newStatus}**.`);
         closeAllModals();
-    } catch (error) {
-        console.error("Error updating proposal status:", error);
-    }
+    } catch (error) { console.error("Error updating status:", error); }
 }
 
 document.getElementById('update-deadline-button').addEventListener('click', async () => {
     const newDeadline = document.getElementById('new-deadline-input').value;
     const reason = document.getElementById('deadline-reason-input').value;
-    if (!currentlyViewedProjectId || !newDeadline || !reason) {
-        alert("Please provide a new deadline and a reason.");
-        return;
-    }
+    if (!currentlyViewedProjectId || !newDeadline || !reason) return;
     
-    const project = currentProjects.find(p => p.id === currentlyViewedProjectId);
-    const historyEntry = { newDeadline, reason, changedAt: new Date() };
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    const historyEntry = { newDeadline, reason };
 
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            deadline: newDeadline,
-            originalDeadline: project.originalDeadline || project.deadline,
-            deadlineHistory: firebase.firestore.FieldValue.arrayUnion(historyEntry)
-        });
-        await addActivity(currentlyViewedProjectId, `changed the deadline to ${newDeadline} for reason: "${reason}"`);
-        closeAllModals();
-    } catch (error) {
-        console.error("Error updating deadline: ", error);
+    await db.collection('projects').doc(currentlyViewedProjectId).update({
+        deadline: newDeadline,
+        originalDeadline: project.originalDeadline || project.deadline,
+        deadlineHistory: firebase.firestore.FieldValue.arrayUnion(historyEntry)
+    });
+    await addActivity(currentlyViewedProjectId, `changed the deadline to **${newDeadline}** for reason: "${reason}"`);
+    closeAllModals();
+});
+
+document.getElementById('delete-project-button').addEventListener('click', async () => {
+    if (!currentlyViewedProjectId) return;
+    if (confirm("Are you sure you want to permanently delete this project? This action cannot be undone.")) {
+        try {
+            await db.collection('projects').doc(currentlyViewedProjectId).delete();
+            closeAllModals();
+        } catch (error) {
+            console.error("Error deleting project:", error);
+            alert("Could not delete the project.");
+        }
     }
 });
 
-
-// --- UTILITY FUNCTIONS ---
+// --- UTILITY ---
 function stringToColor(str) {
     let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
     let color = '#';
     for (let i = 0; i < 3; i++) {
         let value = (hash >> (i * 8)) & 0xFF;
