@@ -64,9 +64,22 @@ auth.onAuthStateChanged(user => {
                 mainContent.style.display = 'block';
 
             } else {
-                console.error("User data not found in Firestore! Signing out.");
-                auth.signOut(); // This will trigger the 'else' block
+                // *** IMPROVED ERROR HANDLING ***
+                // This block runs if the user exists in Authentication, but not in the Firestore database.
+                console.error("User data not found in Firestore!");
+                loader.innerHTML = `
+                    <div style="text-align: center; color: var(--secondary-color); padding: 20px;">
+                        <h2>Account Setup Incomplete</h2>
+                        <p>Your user profile could not be found in the database.</p>
+                        <p>Please contact an administrator to ensure your account is set up correctly in the Firestore 'users' collection.</p>
+                        <button id="error-logout-button" style="width: auto; padding: 10px 20px; margin-top: 15px;">Logout</button>
+                    </div>
+                `;
+                document.getElementById('error-logout-button').addEventListener('click', () => auth.signOut());
             }
+        }).catch(error => {
+            console.error("Error fetching user data:", error);
+            loader.innerHTML = `<div style="text-align: center; color: red;">Error connecting to the database. Check console for details.</div>`;
         });
     } else {
         // If not logged in after check, redirect to login page
@@ -78,7 +91,7 @@ document.getElementById('logout-button').addEventListener('click', () => {
     auth.signOut();
 });
 
-// --- KANBAN BOARD RENDERING ---
+// --- KANBAN BOARD RENDERING (No changes below this line) ---
 const KANBAN_COLUMNS = {
     PROPOSAL: "Topic Proposal",
     IN_PROGRESS: "In Progress",
@@ -178,11 +191,11 @@ projectForm.addEventListener('submit', async (e) => {
         proposal: document.getElementById('project-proposal').value,
         deadline: document.getElementById('project-deadline').value,
         authorId: currentUser.uid,
-        authorName: currentUserName, // FIXED: Use the fetched name
-        proposalStatus: 'pending', // 'pending', 'approved', 'rejected', 'on-hold'
+        authorName: currentUserName,
+        proposalStatus: 'pending',
         status: 'Proposed',
         timeline: projectTimelines[document.getElementById('project-type').value].reduce((acc, task) => {
-            acc[task] = false; // Initialize all tasks as not completed
+            acc[task] = false;
             return acc;
         }, {}),
         deadlineHistory: []
@@ -190,10 +203,8 @@ projectForm.addEventListener('submit', async (e) => {
 
     try {
         if (projectId) {
-            // Update logic can be expanded here if needed
             await db.collection('projects').doc(projectId).update(projectData);
         } else {
-            // Create new project
             await db.collection('projects').add(projectData);
         }
         projectModal.style.display = 'none';
@@ -224,13 +235,11 @@ function openDetailsModal(projectId) {
     document.getElementById('details-status').textContent = project.status;
     document.getElementById('details-deadline').textContent = project.deadline;
     
-    // Proposal section
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
     const adminSection = document.getElementById('admin-approval-section');
     adminSection.style.display = (currentUserRole === 'admin') ? 'block' : 'none';
     document.getElementById('proposal-feedback').value = project.proposalFeedback || '';
 
-    // Timeline/Checklist
     const timelineContainer = document.getElementById('details-timeline');
     timelineContainer.innerHTML = '';
     Object.entries(project.timeline).forEach(([task, completed]) => {
@@ -247,7 +256,6 @@ function openDetailsModal(projectId) {
         timelineContainer.appendChild(taskEl);
     });
 
-    // Deadline History
     const historyContainer = document.getElementById('deadline-history');
     historyContainer.innerHTML = '';
     if (project.originalDeadline) {
@@ -316,7 +324,7 @@ document.getElementById('update-deadline-button').addEventListener('click', asyn
             deadlineHistory: firebase.firestore.FieldValue.arrayUnion(historyEntry)
         });
         detailsModal.style.display = 'none';
-    } catch (error)
+    } catch (error) {
         console.error("Error updating deadline: ", error);
     }
 });
