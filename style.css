@@ -50,7 +50,7 @@ button[type="submit"]:hover { background-color: var(--primary-hover); }
 .sidebar-header h2 { margin: 0; font-size: 20px; }
 .sidebar-nav { flex-grow: 1; }
 .nav-heading { font-size: 12px; font-weight: 600; color: var(--sidebar-heading); text-transform: uppercase; padding: 0 12px; margin: 24px 0 8px 0; }
-.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 4px; border-radius: var(--border-radius); color: var(--sidebar-text); text-decoration: none; font-weight: 500; transition: background-color 0.2s, color 0.2s; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 4px; border-radius: 8px; color: var(--sidebar-text); text-decoration: none; font-weight: 500; transition: background-color 0.2s, color 0.2s; }
 .nav-item:hover { background-color: var(--sidebar-active-bg); }
 .nav-item.active { background-color: var(--primary-color); color: var(--surface-color); }
 .sidebar-footer { padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--sidebar-active-bg); }
@@ -58,11 +58,12 @@ button[type="submit"]:hover { background-color: var(--primary-hover); }
 .user-avatar { width: 36px; height: 36px; font-size: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; flex-shrink: 0;}
 .user-details { display: flex; flex-direction: column; }
 #user-role { text-transform: capitalize; color: var(--text-secondary); font-size: 12px; }
-.logout-btn { width: 100%; justify-content: flex-start; background: none; border: none; font-size: 15px; cursor: pointer; color: var(--sidebar-text); }
+.logout-btn { width: 100%; justify-content: flex-start; background: none; border: none; font-size: 15px; cursor: pointer; color: var(--sidebar-text); display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; }
+.logout-btn:hover { background-color: var(--sidebar-active-bg); }
 
 /* Main Content */
-.main-content { flex-grow: 1; padding: 24px 40px; overflow-y: auto; }
-.main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.main-content { flex-grow: 1; padding: 24px 40px; overflow-y: auto; display: flex; flex-direction: column;}
+.main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-shrink: 0; }
 .main-header h1 { margin: 0; font-size: 28px; }
 .header-actions { display: flex; gap: 12px; align-items: center; }
 .add-project-btn, .btn-primary, .btn-secondary, .btn-success, .btn-danger { padding: 10px 16px; border-radius: var(--border-radius); border: 1px solid transparent; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px; white-space: nowrap; }
@@ -71,8 +72,8 @@ button[type="submit"]:hover { background-color: var(--primary-hover); }
 .admin-only { display: none; }
 
 /* Kanban Board */
-.kanban-board { display: grid; gap: 24px; }
-.kanban-column { background-color: transparent; padding: 0; }
+.kanban-board { display: grid; gap: 24px; flex-grow: 1;}
+.kanban-column { background-color: transparent; padding: 0; display: flex; flex-direction: column;}
 .kanban-column h3 { margin: 0 0 16px 0; padding: 0 8px; font-size: 16px; font-weight: 600; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; }
 .task-count { font-size: 12px; background-color: var(--border-color); padding: 2px 8px; border-radius: 10px; }
 .kanban-cards { display: flex; flex-direction: column; gap: 16px; min-height: 100px; }
@@ -85,7 +86,6 @@ button[type="submit"]:hover { background-color: var(--primary-hover); }
 .card-deadline.overdue { color: var(--danger-color); font-weight: 600; }
 .progress-bar-container { background-color: #E5E7EB; border-radius: 99px; height: 6px; margin-top: 12px; overflow: hidden; }
 .progress-bar { background-color: var(--primary-color); height: 100%; border-radius: 99px; transition: width 0.3s ease; }
-
 
 /* Calendar View */
 #calendar-view { background-color: var(--surface-color); border-radius: var(--border-radius); padding: 20px; box-shadow: var(--shadow-lg); }
@@ -105,10 +105,11 @@ button[type="submit"]:hover { background-color: var(--primary-hover); }
 .modal-content { background-color: var(--surface-color); margin: 5% auto; border-radius: 16px; width: 90%; max-width: 560px; box-shadow: var(--shadow-lg); animation: slideIn 0.3s ease-out; }
 .modal-content.large { max-width: 900px; }
 @keyframes slideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-header { padding: 24px 32px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
 .modal-header h2 { font-size: 20px; margin: 0; }
 .close-button { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary); }
 #project-form { padding: 32px; }
-.modal-footer { padding: 16px 32px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; }
+.modal-footer { padding: 16px 32px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; background-color: #FBFBFB; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;}
 .btn-secondary { background-color: #E5E5EA; color: var(--text-color); border: none; }
 .btn-secondary:hover { background-color: #D1D1D6; }
 .btn-success { background-color: var(--success-color); color: white; }
@@ -119,7 +120,7 @@ button[type="submit"]:hover { background-color: var(--primary-hover); }
 .details-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; padding: 32px; }
 hr { border: none; border-top: 1px solid var(--border-color); margin: 24px 0; }
 .details-form { display: flex; flex-direction: column; gap: 8px; }
-.details-form input, .details-form select, .details-form textarea { width: 100%; font-size: 14px; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--border-radius); box-sizing: border-box; }
+.details-form input, .details-form select, .details-form textarea { width: 100%; font-size: 14px; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; }
 .details-form button { align-self: flex-end; }
 #interview-details-section { background: var(--background-color); padding: 16px; border-radius: var(--border-radius); }
 #interview-form { flex-direction: row; align-items: center; }
@@ -131,3 +132,9 @@ hr { border: none; border-top: 1px solid var(--border-color); margin: 24px 0; }
 .report-content { padding: 32px; max-height: 70vh; overflow-y: auto; }
 .report-section h3 { margin: 0 0 16px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
 .overdue-item .report-item-title, .overdue-item .report-item-meta { color: var(--danger-color); }
+.report-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+
+/* --- Loader --- */
+.loader-container { display: flex; justify-content: center; align-items: center; height: 100vh; }
+.loader { border: 5px solid var(--border-color); border-top: 5px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
