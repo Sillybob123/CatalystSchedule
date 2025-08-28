@@ -392,9 +392,22 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
     const timelineContainer = document.getElementById('details-timeline');
     timelineContainer.innerHTML = '';
     const timeline = project.timeline || {};
-    const timelineTasks = Object.keys(timeline);
+    
+    // Define the correct order of tasks
+    const orderedTasks = [
+        "Topic Proposal Complete",
+        "Interview Scheduled",
+        "Interview Complete",
+        "Article Writing Complete",
+        "Review In Progress",
+        "Review Complete",
+        "Suggestions Reviewed"
+    ];
 
-    timelineTasks.forEach(task => {
+    orderedTasks.forEach(task => {
+        // If a task from the ordered list doesn't exist in the project's timeline, skip it
+        if (timeline[task] === undefined) return;
+
         let canEditTask = false;
         const authorTasks = ["Interview Scheduled", "Interview Complete", "Article Writing Complete", "Suggestions Reviewed"];
         const editorTasks = ["Review In Progress", "Review Complete"];
@@ -440,7 +453,6 @@ function renderDeadlines(project, isAdmin) {
     ];
 
     deadlineFields.forEach(field => {
-        // Hide interview-specific deadlines for Op-Eds
         if (project.type === 'Op-Ed' && (field.key === 'contact' || field.key === 'interview')) {
             return;
         }
@@ -648,14 +660,21 @@ async function handleAssignEditor() {
 
 async function handleUpdateDeadlines() {
     if (!currentlyViewedProjectId) return;
+
+    const currentProject = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!currentProject) return;
+
     const newDeadlines = {
-        contact: document.getElementById('deadline-contact').value,
-        interview: document.getElementById('deadline-interview').value,
-        draft: document.getElementById('deadline-draft').value,
-        review: document.getElementById('deadline-review').value,
-        edits: document.getElementById('deadline-edits').value,
-        publication: allProjects.find(p => p.id === currentlyViewedProjectId).deadlines.publication,
+        publication: currentProject.deadlines.publication,
     };
+
+    const deadlineFields = ['contact', 'interview', 'draft', 'review', 'edits'];
+    deadlineFields.forEach(field => {
+        const input = document.getElementById(`deadline-${field}`);
+        if (input) {
+            newDeadlines[field] = input.value;
+        }
+    });
 
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
