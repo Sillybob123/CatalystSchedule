@@ -697,11 +697,17 @@ textarea {
 }
 
 /* --- Details Modal Layout & Forms --- */
+.details-container {
+  background: var(--surface-color);
+  min-height: 400px;
+}
+
 .details-grid {
   display: flex;
   align-items: flex-start;
   gap: 32px;
   padding: 28px 32px;
+  min-height: 500px;
 }
 .details-main {
   flex: 1;
@@ -771,6 +777,14 @@ textarea {
 }
 
 /* Timeline checklist */
+#details-timeline {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 16px 0;
+}
+
 #details-timeline .task {
   display: flex;
   align-items: center;
@@ -780,9 +794,13 @@ textarea {
   transition: background 0.2s;
   border: 1px solid #f1f3f5;
   margin-bottom: 8px;
+  background: #fff;
 }
 #details-timeline .task:hover {
   background: #f8f9fa;
+}
+#details-timeline .task:last-child {
+  margin-bottom: 0;
 }
 #details-timeline input[type='checkbox'] {
   width: 20px;
@@ -801,6 +819,10 @@ textarea {
   gap: 12px;
   align-items: flex-start;
   margin: 8px 0 16px;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
 }
 .comment-box textarea {
   flex: 1;
@@ -812,7 +834,10 @@ textarea {
   margin-top: 8px;
   max-height: 400px;
   overflow-y: auto;
-  padding-right: 8px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
 }
 .feed-item {
   display: flex;
