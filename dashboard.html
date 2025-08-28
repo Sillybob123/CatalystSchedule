@@ -20,9 +20,21 @@
                 <h2>Catalyst Tracker</h2>
             </div>
             <nav class="sidebar-nav">
-                <a href="#" class="nav-item active">
+                <a href="#" id="nav-all" class="nav-item active">
                     <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-                    <span>Board</span>
+                    <span>All Projects</span>
+                </a>
+                 <a href="#" id="nav-interviews" class="nav-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                    <span>In The Capital</span>
+                </a>
+                <a href="#" id="nav-opeds" class="nav-item">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                    <span>Op-Eds</span>
+                </a>
+                <a href="#" id="nav-editors" class="nav-item">
+                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    <span>Editors' View</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -42,8 +54,11 @@
 
         <main class="main-content">
             <header class="main-header">
-                <h1>Projects Board</h1>
-                <button id="add-project-button" class="add-project-btn">+ Propose New Article</button>
+                <h1 id="board-title">All Projects</h1>
+                <div class="header-actions">
+                    <button id="status-report-button" class="btn-secondary admin-only">Generate Status Report</button>
+                    <button id="add-project-button" class="add-project-btn">+ Propose New Article</button>
+                </div>
             </header>
             <div id="kanban-board" class="kanban-board">
                 </div>
@@ -65,9 +80,8 @@
                 <div class="form-group">
                     <label for="project-type">Project Type</label>
                     <select id="project-type" required>
-                        <option value="Interview">Writer: Interviewing a Professor</option>
-                        <option value="Op-Ed">Writer: Writing an Op-Ed</option>
-                        <option value="Editing">Editor: Editing a Piece</option>
+                        <option value="Interview">Catalyst in the Capital (Interview)</option>
+                        <option value="Op-Ed">Op-Ed</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -134,8 +148,23 @@
                         <textarea id="deadline-reason-input" placeholder="Reason for changing..."></textarea>
                         <button id="update-deadline-button" class="btn-secondary">Update</button>
                     </div>
+                     <div id="delete-section" class="sidebar-section">
+                        <h4>Delete Project</h4>
+                        <button id="delete-project-button" class="btn-danger">Delete Forever</button>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="report-modal" class="modal-overlay">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2>Overall Status Report</h2>
+                <button class="close-button">&times;</button>
+            </div>
+            <div id="report-content" class="report-content">
+                </div>
         </div>
     </div>
 
