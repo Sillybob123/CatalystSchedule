@@ -7,23 +7,30 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <div class="header-container">
-            <h1>Catalyst Project Dashboard</h1>
-            <div class="user-info">
-                <span id="user-name"></span>
-                <button id="logout-button">Logout</button>
-            </div>
-        </div>
-    </header>
 
-    <main class="dashboard-container">
-        <div class="controls">
-             <button id="add-project-button" class="add-project-btn">Propose New Article</button>
-        </div>
-        <div id="kanban-board" class="kanban-board">
+    <div id="loader" class="loader-container">
+        <div class="loader"></div>
+    </div>
+
+    <div id="main-content" style="display: none;">
+        <header>
+            <div class="header-container">
+                <h1>Catalyst Project Dashboard</h1>
+                <div class="user-info">
+                    <span id="user-name"></span>
+                    <button id="logout-button">Logout</button>
+                </div>
             </div>
-    </main>
+        </header>
+
+        <main class="dashboard-container">
+            <div class="controls">
+                 <button id="add-project-button" class="add-project-btn">Propose New Article</button>
+            </div>
+            <div id="kanban-board" class="kanban-board">
+                </div>
+        </main>
+    </div>
 
     <div id="project-modal" class="modal">
         <div class="modal-content">
