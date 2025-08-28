@@ -100,7 +100,7 @@ body {
 .btn-secondary {
   background: var(--input-bg-color);
   color: var(--text-color);
-  border-color: var(--muted-border);
+  border: 1px solid var(--muted-border);
 }
 .btn-secondary:hover {
   background: #e9ecef;
@@ -615,7 +615,7 @@ body {
   margin: 0;
   font-weight: 600;
 }
-.close-button {
+.modal-header .close-button {
   background: none;
   border: none;
   font-size: 28px;
@@ -623,7 +623,7 @@ body {
   color: #6c757d;
   line-height: 1;
 }
-.close-button:hover {
+.modal-header .close-button:hover {
   color: #212529;
 }
 
