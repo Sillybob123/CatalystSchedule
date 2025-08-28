@@ -705,7 +705,7 @@ textarea {
 }
 .details-main {
   flex: 1;
-  min-width: 0;
+  min-width: 0; /* Prevents flexbox overflow */
 }
 .details-sidebar {
   width: 320px;
@@ -716,6 +716,9 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.details-form .form-group {
+    margin-bottom: 8px;
 }
 .details-form button {
   align-self: flex-start;
@@ -747,11 +750,6 @@ textarea {
     font-weight: 600;
     color: #495057;
 }
-.deadline-history p {
-  margin: 0.2rem 0;
-  color: #6c757d;
-  font-size: 14px;
-}
 
 #interview-details-section {
   background: #f0f2f5;
@@ -766,14 +764,6 @@ textarea {
   gap: 12px;
 }
 
-.admin-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.admin-controls h4 {
-    margin: 0;
-}
 .admin-controls .button-group {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -820,6 +810,9 @@ textarea {
   flex-direction: column;
   gap: 12px;
   margin-top: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
 }
 .feed-item {
   display: flex;
@@ -917,7 +910,6 @@ textarea {
         padding: 24px;
     }
     .kanban-board {
-        /* On tablets, allow horizontal scrolling for the board */
         display: flex;
         overflow-x: auto;
         padding-bottom: 16px;
@@ -928,12 +920,11 @@ textarea {
         flex: 1;
     }
     .details-grid {
-        /* Stack the details view earlier on tablets */
-        flex-direction: column; /* Use flex-direction for stacking */
+        flex-direction: column;
         gap: 32px;
     }
     .details-sidebar {
-        width: 100%; /* Allow sidebar to take full width when stacked */
+        width: 100%;
     }
 }
 
@@ -943,13 +934,12 @@ textarea {
         font-size: 14px;
     }
     .app-container {
-        /* Stack sidebar on top of content on mobile */
         flex-direction: column;
     }
     .sidebar {
         width: 100%;
         height: auto;
-        position: relative; /* Override sticky position from old styles */
+        position: relative;
     }
     .main-content {
         padding: 24px 16px;
@@ -963,7 +953,6 @@ textarea {
         font-size: 24px;
     }
     .kanban-board {
-        /* Stack columns vertically on mobile */
         display: block;
         overflow-x: hidden;
     }
@@ -971,8 +960,6 @@ textarea {
         min-width: 100%;
         margin-bottom: 24px;
     }
-
-    /* Modal adjustments for small screens */
     .modal-content {
         margin: 16px auto;
         width: calc(100% - 24px);
