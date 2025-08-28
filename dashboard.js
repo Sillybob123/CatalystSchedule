@@ -251,26 +251,27 @@ function renderKanbanBoard() {
 function getProjectColumn(project, view = 'interviews') {
     const timeline = project.timeline || {};
 
-    // If suggestions reviewed, it's completed
+    // Final state: Completed
     if (timeline["Suggestions Reviewed"]) {
         return view === 'my-assignments' ? "Done" : "Completed";
     }
 
+    // "My Assignments" view has its own simplified logic
     if (view === 'my-assignments') {
         const isAuthor = project.authorId === currentUser.uid;
         const isEditor = project.editorId === currentUser.uid;
 
         if (isEditor && timeline["Article Writing Complete"] && !timeline["Review Complete"]) {
-            return "In Review";
+            return "In Review"; // Editor's main task
         }
         if (isAuthor) {
-            if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return "In Review";
+            if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) return "In Review"; // Author reviewing suggestions
             if (project.proposalStatus === 'approved' && !timeline["Article Writing Complete"]) return "In Progress";
         }
-        return "To Do";
+        return "To Do"; // Default for anything else in this view
     }
 
-    // Main workflow logic
+    // Main Workflow Logic (for 'interviews' and 'opeds')
     if (project.proposalStatus !== 'approved') {
         return "Topic Proposal";
     }
@@ -280,11 +281,7 @@ function getProjectColumn(project, view = 'interviews') {
     }
 
     if (timeline["Article Writing Complete"]) {
-        if(project.editorId) {
-            return "In Review";
-        } else {
-            return "Reviewing Suggestions"; // Admin needs to assign an editor.
-        }
+        return project.editorId ? "In Review" : "Reviewing Suggestions"; // Moves to "In Review" ONLY after an editor is assigned.
     }
 
     if (project.type === 'Interview') {
@@ -294,12 +291,13 @@ function getProjectColumn(project, view = 'interviews') {
         if (timeline["Topic Proposal Complete"]) {
             return "Interview Stage";
         }
-    } else { // Op-Ed
+    } else { // Op-Ed Logic
         if (timeline["Topic Proposal Complete"]) {
             return "Writing Stage";
         }
     }
 
+    // Default catch-all
     return "Topic Proposal";
 }
 
