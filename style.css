@@ -1,0 +1,321 @@
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --background-color: #f4f5f7;
+    --surface-color: #ffffff;
+    --text-color: #333;
+    --border-color: #dee2e6;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1);
+    --border-radius: 5px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+/* --- Login Page Styles --- */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.login-box {
+    background: var(--surface-color);
+    padding: 40px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-box h1 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.login-box p {
+    margin-bottom: 25px;
+    color: var(--secondary-color);
+}
+
+.input-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-sizing: border-box;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.error-message {
+    color: #d9534f;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+
+/* --- Dashboard Styles --- */
+header {
+    background-color: var(--surface-color);
+    padding: 0 20px;
+    box-shadow: var(--shadow);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1400px;
+    margin: 0 auto;
+    height: 60px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+}
+
+#user-name {
+    margin-right: 15px;
+    font-weight: 500;
+}
+
+#logout-button {
+    width: auto;
+    padding: 8px 15px;
+    background-color: var(--secondary-color);
+}
+
+#logout-button:hover {
+     background-color: #5a6268;
+}
+
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.controls {
+    margin-bottom: 20px;
+}
+
+.add-project-btn {
+    width: auto;
+    padding: 10px 20px;
+    font-size: 15px;
+}
+
+/* Kanban Board */
+.kanban-board {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.kanban-column {
+    flex: 1 1 300px;
+    min-width: 300px;
+    background-color: var(--background-color);
+    border-radius: var(--border-radius);
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+}
+
+.kanban-column h3 {
+    padding: 0 10px;
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    text-transform: uppercase;
+    color: var(--secondary-color);
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.kanban-cards {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.kanban-card {
+    background-color: var(--surface-color);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+
+.kanban-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card-title {
+    font-weight: 600;
+    margin: 0 0 10px 0;
+}
+
+.card-meta {
+    font-size: 13px;
+    color: var(--secondary-color);
+}
+
+.card-author {
+    margin-bottom: 5px;
+}
+
+.card-deadline {
+    font-weight: 500;
+}
+.card-deadline.overdue {
+    color: #d9534f;
+}
+
+
+/* --- Modal Styles --- */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: var(--surface-color);
+    margin: 10% auto;
+    padding: 30px;
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+}
+
+.modal-content label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.modal-content input[type="text"],
+.modal-content input[type="date"],
+.modal-content select,
+.modal-content textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-sizing: border-box;
+}
+
+.modal-buttons {
+    margin-top: 25px;
+    text-align: right;
+}
+
+.modal-buttons button {
+    width: auto;
+    padding: 10px 20px;
+}
+
+/* Details Modal Specifics */
+#details-modal .modal-content {
+    max-width: 700px;
+}
+#details-timeline .task {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+#details-timeline input[type="checkbox"] {
+    margin-right: 10px;
+}
+#admin-approval-section, #change-deadline-section {
+    background-color: #f9f9f9;
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: var(--border-radius);
+}
+#admin-approval-section button, #update-deadline-button {
+    width: auto;
+    padding: 8px 12px;
+    margin-right: 10px;
+    margin-top: 10px;
+}
+
+#approve-button { background-color: #28a745; }
+#approve-button:hover { background-color: #218838; }
+#reject-button { background-color: #dc3545; }
+#reject-button:hover { background-color: #c82333; }
+#hold-button { background-color: #ffc107; color: black; }
+#hold-button:hover { background-color: #e0a800; }
+
+.deadline-history {
+    font-size: 13px;
+    color: var(--secondary-color);
+    margin-top: 5px;
+    padding-left: 15px;
+}
+.deadline-history p { margin: 2px 0; }
