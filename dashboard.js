@@ -8,90 +8,80 @@ const firebaseConfig = {
     appId: "1:394311851220:web:86e4939b7d5a085b46d75d"
 };
 
-// Initialize Firebase
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
-
 const auth = firebase.auth();
 const db = firebase.firestore();
 
 let currentUser = null;
+let currentUserName = null;
 let currentUserRole = null;
-let currentUserName = null; // Variable to store the user's name
 let currentProjects = [];
+let currentlyViewedProjectId = null;
 
-// --- TIMELINE TEMPLATES ---
 const projectTimelines = {
-    "Interview": [
-        "Think of a topic", "Email professor", "Interview Professor",
-        "Write Article", "Review edit suggestions and finalize article"
-    ],
-    "Op-Ed": [
-        "Think of a topic", "Write Article", "Review edit suggestions and finalize article"
-    ],
-    "Editing": [
-        "Talk to writer about their project", "Edit and fix story", "Finalize piece"
-    ]
+    "Interview": ["Think of a topic", "Email professor", "Interview Professor", "Write Article", "Review edit suggestions and finalize article"],
+    "Op-Ed": ["Think of a topic", "Write Article", "Review edit suggestions and finalize article"],
+    "Editing": ["Talk to writer about their project", "Edit and fix story", "Finalize piece"]
 };
-
 
 // --- AUTHENTICATION ---
 auth.onAuthStateChanged(user => {
     const loader = document.getElementById('loader');
-    const mainContent = document.getElementById('main-content');
+    const appContainer = document.getElementById('app-container');
 
     if (user) {
         currentUser = user;
-        // Fetch user's role and name from Firestore
         db.collection('users').doc(user.uid).get().then(doc => {
             if (doc.exists) {
                 const userData = doc.data();
-                currentUserName = userData.name; // Store the user's name
+                currentUserName = userData.name;
                 currentUserRole = userData.role;
                 
-                document.getElementById('user-name').textContent = `Welcome, ${currentUserName}`;
-                
-                // Hide 'Propose Article' button if user is not a writer or admin
-                if (currentUserRole !== 'writer' && currentUserRole !== 'admin') {
-                    document.getElementById('add-project-button').style.display = 'none';
-                }
-                
+                setupUI();
                 fetchAndRenderProjects();
 
-                // Show main content and hide loader
                 loader.style.display = 'none';
-                mainContent.style.display = 'block';
-
+                appContainer.style.display = 'flex';
             } else {
-                // *** IMPROVED ERROR HANDLING ***
-                // This block runs if the user exists in Authentication, but not in the Firestore database.
-                console.error("User data not found in Firestore!");
-                loader.innerHTML = `
-                    <div style="text-align: center; color: var(--secondary-color); padding: 20px;">
-                        <h2>Account Setup Incomplete</h2>
-                        <p>Your user profile could not be found in the database.</p>
-                        <p>Please contact an administrator to ensure your account is set up correctly in the Firestore 'users' collection.</p>
-                        <button id="error-logout-button" style="width: auto; padding: 10px 20px; margin-top: 15px;">Logout</button>
-                    </div>
-                `;
-                document.getElementById('error-logout-button').addEventListener('click', () => auth.signOut());
+                handleAuthError("Your user profile could not be found in the database.");
             }
         }).catch(error => {
             console.error("Error fetching user data:", error);
-            loader.innerHTML = `<div style="text-align: center; color: red;">Error connecting to the database. Check console for details.</div>`;
+            handleAuthError("Error connecting to the database.");
         });
     } else {
-        // If not logged in after check, redirect to login page
         window.location.href = 'index.html';
     }
 });
 
-document.getElementById('logout-button').addEventListener('click', () => {
-    auth.signOut();
-});
+function setupUI() {
+    document.getElementById('user-name').textContent = currentUserName;
+    document.getElementById('user-role').textContent = currentUserRole;
+    document.getElementById('user-avatar').textContent = currentUserName.charAt(0);
+    
+    if (currentUserRole !== 'writer' && currentUserRole !== 'admin') {
+        document.getElementById('add-project-button').style.display = 'none';
+    }
+    
+    document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+}
 
-// --- KANBAN BOARD RENDERING (No changes below this line) ---
+function handleAuthError(message) {
+    const loader = document.getElementById('loader');
+    loader.innerHTML = `
+        <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
+            <h2>Account Setup Incomplete</h2>
+            <p>${message}</p>
+            <p>Please contact an administrator.</p>
+            <button id="error-logout-button" class="btn-primary" style="margin-top: 15px;">Logout</button>
+        </div>
+    `;
+    document.getElementById('error-logout-button').addEventListener('click', () => auth.signOut());
+}
+
+// --- KANBAN BOARD ---
 const KANBAN_COLUMNS = {
     PROPOSAL: "Topic Proposal",
     IN_PROGRESS: "In Progress",
@@ -100,105 +90,124 @@ const KANBAN_COLUMNS = {
 };
 
 function fetchAndRenderProjects() {
-    db.collection('projects').onSnapshot(snapshot => {
-        currentProjects = [];
-        snapshot.forEach(doc => {
-            currentProjects.push({ id: doc.id, ...doc.data() });
-        });
+    db.collection('projects').orderBy("deadline").onSnapshot(snapshot => {
+        currentProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderKanbanBoard(currentProjects);
     });
 }
 
 function renderKanbanBoard(projects) {
     const board = document.getElementById('kanban-board');
-    board.innerHTML = '';
+    board.innerHTML = ''; // Clear previous state
 
     Object.values(KANBAN_COLUMNS).forEach(columnTitle => {
+        const columnProjects = projects.filter(p => getProjectColumn(p) === columnTitle);
         const columnEl = document.createElement('div');
         columnEl.className = 'kanban-column';
-        columnEl.innerHTML = `<h3>${columnTitle}</h3><div class="kanban-cards"></div>`;
+        columnEl.innerHTML = `
+            <h3>
+                <span class="column-title">${columnTitle}</span>
+                <span class="task-count">${columnProjects.length}</span>
+            </h3>
+            <div class="kanban-cards"></div>
+        `;
+        columnProjects.forEach(project => {
+            const cardContainer = columnEl.querySelector('.kanban-cards');
+            cardContainer.appendChild(createProjectCard(project));
+        });
         board.appendChild(columnEl);
     });
+}
 
-    projects.forEach(project => {
-        let projectColumn;
-        if (project.proposalStatus !== 'approved') {
-            projectColumn = KANBAN_COLUMNS.PROPOSAL;
-        } else if (project.status === 'Ready for Publication') {
-            projectColumn = KANBAN_COLUMNS.PUBLICATION;
-        } else if (project.status === 'In Editing') {
-             projectColumn = KANBAN_COLUMNS.EDITING;
-        } else {
-            projectColumn = KANBAN_COLUMNS.IN_PROGRESS;
-        }
-
-        const columnEl = Array.from(board.querySelectorAll('h3')).find(h => h.textContent === projectColumn)?.nextElementSibling;
-        if (columnEl) {
-            columnEl.appendChild(createProjectCard(project));
-        }
-    });
+function getProjectColumn(project) {
+    if (project.proposalStatus !== 'approved') return KANBAN_COLUMNS.PROPOSAL;
+    if (project.status === 'Ready for Publication') return KANBAN_COLUMNS.PUBLICATION;
+    if (project.status === 'In Editing') return KANBAN_COLUMNS.EDITING;
+    return KANBAN_COLUMNS.IN_PROGRESS;
 }
 
 function createProjectCard(project) {
     const card = document.createElement('div');
     card.className = 'kanban-card';
     card.dataset.id = project.id;
-    
-    const deadline = new Date(project.deadline);
-    const isOverdue = new Date() > deadline && project.status !== "Ready for Publication";
+
+    // Deadline styling
+    const deadline = new Date(project.deadline + 'T23:59:59'); // Assume end of day
+    const now = new Date();
+    const daysUntilDue = (deadline - now) / (1000 * 60 * 60 * 24);
+    let deadlineClass = '';
+    if (daysUntilDue < 0) deadlineClass = 'overdue';
+    else if (daysUntilDue < 7) deadlineClass = 'due-soon';
+
+    // Progress bar
+    const totalTasks = Object.keys(project.timeline).length;
+    const completedTasks = Object.values(project.timeline).filter(Boolean).length;
+    const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
     let proposalBadge = '';
-    if (project.proposalStatus === 'pending') proposalBadge = `<span style="color: orange;">[Pending Approval]</span>`;
-    if (project.proposalStatus === 'rejected') proposalBadge = `<span style="color: red;">[Rejected]</span>`;
-    if (project.proposalStatus === 'on-hold') proposalBadge = `<span style="color: #6c757d;">[On Hold]</span>`;
+    if (project.proposalStatus === 'pending') proposalBadge = `<span style="color: orange; font-weight: 500;">[Pending]</span>`;
+    if (project.proposalStatus === 'rejected') proposalBadge = `<span style="color: var(--danger-color); font-weight: 500;">[Rejected]</span>`;
 
     card.innerHTML = `
         <h4 class="card-title">${project.title} ${proposalBadge}</h4>
         <div class="card-meta">
-            <p class="card-author"><strong>By:</strong> ${project.authorName}</p>
-            <p class="card-deadline ${isOverdue ? 'overdue' : ''}"><strong>Deadline:</strong> ${project.deadline}</p>
+            <div class="card-author">
+                <div class="user-avatar" style="background-color: ${stringToColor(project.authorName)}">${project.authorName.charAt(0)}</div>
+                <span>${project.authorName}</span>
+            </div>
+            <span class="card-deadline ${deadlineClass}">${new Date(project.deadline + 'T00:00:00').toLocaleDateString()}</span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" style="width: ${progress}%;"></div>
         </div>
     `;
-
     card.addEventListener('click', () => openDetailsModal(project.id));
     return card;
 }
 
 
+// --- MODAL HANDLING (GENERIC) ---
+const modals = document.querySelectorAll('.modal-overlay');
+modals.forEach(modal => {
+    modal.addEventListener('click', e => {
+        if (e.target === modal) closeAllModals();
+    });
+    modal.querySelectorAll('.close-button').forEach(btn => btn.addEventListener('click', closeAllModals));
+});
+
+function closeAllModals() {
+    modals.forEach(modal => modal.style.display = 'none');
+    currentlyViewedProjectId = null;
+}
+
 // --- PROJECT MODAL (ADD/EDIT) ---
 const projectModal = document.getElementById('project-modal');
 const projectForm = document.getElementById('project-form');
-const addProjectButton = document.getElementById('add-project-button');
 
-addProjectButton.addEventListener('click', () => {
+document.getElementById('add-project-button').addEventListener('click', () => {
     projectForm.reset();
     document.getElementById('project-id').value = '';
     document.getElementById('modal-title').textContent = 'Propose New Article';
-    projectModal.style.display = 'block';
-});
-
-projectModal.querySelector('.close-button').addEventListener('click', () => {
-    projectModal.style.display = 'none';
+    projectModal.style.display = 'flex';
 });
 
 projectForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const projectId = document.getElementById('project-id').value;
-    
+    const type = document.getElementById('project-type').value;
+
     const projectData = {
         title: document.getElementById('project-title').value,
-        type: document.getElementById('project-type').value,
+        type: type,
         proposal: document.getElementById('project-proposal').value,
         deadline: document.getElementById('project-deadline').value,
         authorId: currentUser.uid,
         authorName: currentUserName,
         proposalStatus: 'pending',
         status: 'Proposed',
-        timeline: projectTimelines[document.getElementById('project-type').value].reduce((acc, task) => {
-            acc[task] = false;
-            return acc;
-        }, {}),
-        deadlineHistory: []
+        timeline: projectTimelines[type].reduce((acc, task) => ({...acc, [task]: false }), {}),
+        deadlineHistory: [],
+        activity: []
     };
 
     try {
@@ -207,39 +216,53 @@ projectForm.addEventListener('submit', async (e) => {
         } else {
             await db.collection('projects').add(projectData);
         }
-        projectModal.style.display = 'none';
+        closeAllModals();
     } catch (error) {
-        console.error("Error saving project: ", error);
-        alert("Could not save project. See console for details.");
+        console.error("Error saving project:", error);
+        alert("Could not save project.");
     }
 });
 
 
 // --- DETAILS MODAL ---
 const detailsModal = document.getElementById('details-modal');
-let currentlyViewedProjectId = null;
+let activityUnsubscribe = null; // To stop listening for activity when modal closes
 
-detailsModal.querySelector('.close-button').addEventListener('click', () => {
-    detailsModal.style.display = 'none';
-    currentlyViewedProjectId = null;
-});
-
-function openDetailsModal(projectId) {
+async function openDetailsModal(projectId) {
     const project = currentProjects.find(p => p.id === projectId);
     if (!project) return;
-    
     currentlyViewedProjectId = projectId;
     
+    // Populate static fields
     document.getElementById('details-title').textContent = project.title;
     document.getElementById('details-author').textContent = project.authorName;
-    document.getElementById('details-status').textContent = project.status;
-    document.getElementById('details-deadline').textContent = project.deadline;
-    
+    document.getElementById('details-status').textContent = project.proposalStatus !== 'approved' ? `Proposal: ${project.proposalStatus}` : project.status;
+    document.getElementById('details-deadline').textContent = new Date(project.deadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
+
+    // Admin section
     const adminSection = document.getElementById('admin-approval-section');
     adminSection.style.display = (currentUserRole === 'admin') ? 'block' : 'none';
     document.getElementById('proposal-feedback').value = project.proposalFeedback || '';
 
+    // Timeline/Checklist
+    renderTimeline(project);
+
+    // Deadline History
+    renderDeadlineHistory(project);
+
+    // Activity Feed (with real-time updates)
+    if (activityUnsubscribe) activityUnsubscribe(); // Stop previous listener
+    const activityFeed = document.getElementById('details-activity-feed');
+    activityUnsubscribe = db.collection('projects').doc(projectId).onSnapshot(doc => {
+        const projectData = doc.data();
+        if (projectData) renderActivityFeed(projectData.activity || []);
+    });
+    
+    detailsModal.style.display = 'flex';
+}
+
+function renderTimeline(project) {
     const timelineContainer = document.getElementById('details-timeline');
     timelineContainer.innerHTML = '';
     Object.entries(project.timeline).forEach(([task, completed]) => {
@@ -251,36 +274,67 @@ function openDetailsModal(projectId) {
             <label for="task-${task.replace(/\s+/g, '-')}">${task}</label>
         `;
         taskEl.querySelector('input').addEventListener('change', (e) => {
-            updateTaskStatus(projectId, task, e.target.checked);
+            updateTaskStatus(project.id, task, e.target.checked);
         });
         timelineContainer.appendChild(taskEl);
     });
+}
 
+function renderDeadlineHistory(project) {
     const historyContainer = document.getElementById('deadline-history');
     historyContainer.innerHTML = '';
     if (project.originalDeadline) {
-        historyContainer.innerHTML += `<p><strong>Original Deadline:</strong> ${project.originalDeadline}</p>`;
+        historyContainer.innerHTML += `<p><strong>Original:</strong> ${project.originalDeadline}</p>`;
     }
     project.deadlineHistory?.forEach(entry => {
-        historyContainer.innerHTML += `<p>Changed to ${entry.newDeadline} on ${new Date(entry.changedAt.seconds * 1000).toLocaleDateString()}: "${entry.reason}"</p>`;
+        historyContainer.innerHTML += `<p><strong>${entry.newDeadline}:</strong> ${entry.reason}</p>`;
     });
+}
 
-    detailsModal.style.display = 'block';
+function renderActivityFeed(activity) {
+    const activityFeed = document.getElementById('details-activity-feed');
+    activityFeed.innerHTML = '';
+    activity.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds).forEach(item => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'feed-item';
+        itemEl.innerHTML = `
+            <div class="user-avatar" style="background-color: ${stringToColor(item.authorName)}">${item.authorName.charAt(0)}</div>
+            <div class="feed-content">
+                <p><span class="author">${item.authorName}</span> ${item.text}</p>
+                <span class="timestamp">${new Date(item.timestamp.seconds * 1000).toLocaleString()}</span>
+            </div>
+        `;
+        activityFeed.appendChild(itemEl);
+    });
+}
+
+// --- ACTIONS & UPDATES ---
+async function addActivity(projectId, text) {
+    const activity = {
+        text: text,
+        authorName: currentUserName,
+        timestamp: new Date()
+    };
+    const projectRef = db.collection('projects').doc(projectId);
+    await projectRef.update({
+        activity: firebase.firestore.FieldValue.arrayUnion(activity)
+    });
 }
 
 async function updateTaskStatus(projectId, task, isCompleted) {
-    const projectRef = db.collection('projects').doc(projectId);
     const updatePath = `timeline.${task}`;
-    
-    try {
-        await projectRef.update({ [updatePath]: isCompleted });
-        console.log(`Task '${task}' status updated.`);
-    } catch (error) {
-        console.error("Error updating task: ", error);
-    }
+    await db.collection('projects').doc(projectId).update({ [updatePath]: isCompleted });
+    addActivity(projectId, `${isCompleted ? 'completed' : 'un-completed'} the task: "${task}"`);
 }
 
-// --- ADMIN & DEADLINE ACTIONS in DETAILS MODAL ---
+document.getElementById('add-comment-button').addEventListener('click', async () => {
+    const commentInput = document.getElementById('comment-input');
+    if (commentInput.value.trim() && currentlyViewedProjectId) {
+        await addActivity(currentlyViewedProjectId, `commented: "${commentInput.value.trim()}"`);
+        commentInput.value = '';
+    }
+});
+
 document.getElementById('approve-button').addEventListener('click', () => updateProposalStatus('approved'));
 document.getElementById('reject-button').addEventListener('click', () => updateProposalStatus('rejected'));
 document.getElementById('hold-button').addEventListener('click', () => updateProposalStatus('on-hold'));
@@ -294,9 +348,10 @@ async function updateProposalStatus(newStatus) {
             status: newStatus === 'approved' ? 'In Progress' : 'On Hold/Rejected',
             proposalFeedback: feedback
         });
-        detailsModal.style.display = 'none';
+        await addActivity(currentlyViewedProjectId, `set the proposal status to ${newStatus}.`);
+        closeAllModals();
     } catch (error) {
-        console.error("Error updating proposal status: ", error);
+        console.error("Error updating proposal status:", error);
     }
 }
 
@@ -304,38 +359,33 @@ document.getElementById('update-deadline-button').addEventListener('click', asyn
     const newDeadline = document.getElementById('new-deadline-input').value;
     const reason = document.getElementById('deadline-reason-input').value;
     if (!currentlyViewedProjectId || !newDeadline || !reason) {
-        alert("Please provide a new deadline and a reason for the change.");
+        alert("Please provide a new deadline and a reason.");
         return;
     }
     
-    const projectRef = db.collection('projects').doc(currentlyViewedProjectId);
     const project = currentProjects.find(p => p.id === currentlyViewedProjectId);
+    const historyEntry = { newDeadline, reason, changedAt: new Date() };
 
-    const historyEntry = {
-        newDeadline: newDeadline,
-        reason: reason,
-        changedAt: new Date()
-    };
-
-    try {
-        await projectRef.update({
-            deadline: newDeadline,
-            originalDeadline: project.originalDeadline || project.deadline,
-            deadlineHistory: firebase.firestore.FieldValue.arrayUnion(historyEntry)
-        });
-        detailsModal.style.display = 'none';
-    } catch (error) {
-        console.error("Error updating deadline: ", error);
-    }
+    await db.collection('projects').doc(currentlyViewedProjectId).update({
+        deadline: newDeadline,
+        originalDeadline: project.originalDeadline || project.deadline,
+        deadlineHistory: firebase.firestore.FieldValue.arrayUnion(historyEntry)
+    });
+    await addActivity(currentlyViewedProjectId, `changed the deadline to ${newDeadline} for reason: "${reason}"`);
+    closeAllModals();
 });
 
 
-// Close modals if clicked outside
-window.onclick = function(event) {
-    if (event.target == projectModal) {
-        projectModal.style.display = "none";
+// --- UTILITY FUNCTIONS ---
+function stringToColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
-    if (event.target == detailsModal) {
-        detailsModal.style.display = "none";
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+        let value = (hash >> (i * 8)) & 0xFF;
+        color += ('00' + value.toString(16)).substr(-2);
     }
+    return color;
 }
