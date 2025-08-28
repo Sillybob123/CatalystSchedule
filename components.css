@@ -15,12 +15,20 @@
 }
 
 .sidebar-header {
-  padding: var(--space-8) var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.sidebar-header h1 {
-  font-size: 24px;
+.logo-img {
+    width: 32px;
+    height: 32px;
+}
+
+.sidebar-header h2 {
+  font-size: 22px;
   font-weight: 700;
   color: var(--sidebar-text);
   letter-spacing: -0.5px;
@@ -773,8 +781,9 @@
   margin-bottom: var(--space-8);
 }
 
-.login-header .logo {
-  color: var(--primary-color);
+.login-header .logo-img {
+    width: 40px;
+    height: 40px;
 }
 
 .login-header h1 {
@@ -813,7 +822,12 @@
   background: #fee2e2;
   border-radius: var(--radius);
   border: 1px solid #fecaca;
-  min-height: 2.5em; /* Reserve space for error message */
+  min-height: 2.5em;
+  visibility: hidden; /* Hide by default */
+}
+
+.error-message:not(:empty) {
+    visibility: visible; /* Show only when it has content */
 }
 
 /* === CALENDAR STYLES === */
