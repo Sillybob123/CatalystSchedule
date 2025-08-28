@@ -619,11 +619,11 @@
   overflow-y: auto;
 }
 
-.input-group {
+.form-group {
   margin-bottom: var(--space-6);
 }
 
-.input-group label {
+.form-group label {
   display: block;
   font-weight: 500;
   color: var(--text-secondary);
@@ -631,9 +631,9 @@
   font-size: 14px;
 }
 
-.input-group input,
-.input-group textarea,
-.input-group select {
+.form-group input,
+.form-group textarea,
+.form-group select {
   width: 100%;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-color);
@@ -645,16 +645,16 @@
   box-shadow: var(--shadow-xs);
 }
 
-.input-group input:focus,
-.input-group textarea:focus,
-.input-group select:focus {
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px var(--primary-light);
   background: var(--surface-color);
 }
 
-.input-group textarea {
+.form-group textarea {
   resize: vertical;
   min-height: 140px;
 }
@@ -877,4 +877,9 @@
   background-color: #fee2e2;
   color: #991b1b;
   border-left-color: var(--danger-color);
+}
+
+/* === UTILITY CLASSES === */
+.admin-only {
+  display: none;
 }
