@@ -256,96 +256,82 @@
     </div>
 
     <div id="details-modal" class="modal-overlay" role="dialog" aria-modal="true">
-      <div class="modal-content large">
-        <div class="modal-header">
-          <h2 id="details-title"></h2>
-          <button class="close-button" aria-label="Close">×</button>
-        </div>
-        <div class="details-grid">
-          <div class="details-main">
-            <h4><span class="emoji">📝</span> Proposal</h4>
-            <p id="details-proposal"></p>
-
-            <div id="interview-details-section" style="display: none">
-              <hr />
-              <h4><span class="emoji">🗓️</span> Interview Status</h4>
-              <div id="interview-status-display"></div>
-              <div id="interview-form" class="details-form">
-                <input type="datetime-local" id="interview-date" />
-                <button id="schedule-interview-button" class="btn-secondary">
-                  Schedule
-                </button>
-              </div>
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 id="details-title"></h2>
+                <button class="close-button" aria-label="Close">×</button>
             </div>
-
-            <hr />
-            <h4><span class="emoji">✅</span> Progress Checklist</h4>
-            <div id="details-timeline"></div>
-
-            <hr />
-            <h4><span class="emoji">💬</span> Comments & Activity</h4>
-            <div class="comment-box">
-              <textarea
-                id="comment-input"
-                placeholder="Add a comment or update..."
-              ></textarea>
-              <button id="add-comment-button" class="btn-primary">Post</button>
-            </div>
-            <div id="details-activity-feed" class="activity-feed"></div>
-          </div>
-
-          <aside class="details-sidebar">
-            <div class="sidebar-section">
-              <h4>Status</h4>
-              <p id="details-status"></p>
-            </div>
-
-            <div class="sidebar-section">
-                <h4>Key People</h4>
-                <p><strong>Author:</strong> <span id="details-author"></span></p>
-                <p><strong>Editor:</strong> <span id="details-editor">Not Assigned</span></p>
-                <div
-                  id="assign-editor-section"
-                  class="admin-only details-form"
-                  style="margin-top: 12px"
-                >
-                  <select id="editor-dropdown"></select>
-                  <button id="assign-editor-button" class="btn-secondary">
-                    Assign
-                  </button>
-                </div>
-              </div>
-
-            <div class="sidebar-section">
-                <h4>Publication Deadline</h4>
-                <p id="details-deadline"></p>
-            </div>
-
-            <div id="deadlines-section" class="sidebar-section">
-                <h4>Task Deadlines</h4>
-                <div id="details-deadlines-list" class="details-form">
+            <div class="details-grid">
+                <div class="details-main">
+                    <h4><span class="emoji">📝</span> Proposal</h4>
+                    <p id="details-proposal"></p>
+    
+                    <div id="interview-details-section" style="display: none;">
+                        <hr>
+                        <h4><span class="emoji">🗓️</span> Interview Status</h4>
+                        <div id="interview-status-display"></div>
+                        <div id="interview-form" class="details-form">
+                            <input type="datetime-local" id="interview-date" />
+                            <button id="schedule-interview-button" class="btn-secondary">Schedule</button>
+                        </div>
                     </div>
-                <button id="update-deadlines-button" class="btn-secondary" style="width: 100%; margin-top: 12px;">Update Deadlines</button>
+    
+                    <hr>
+                    <h4><span class="emoji">✅</span> Progress Checklist</h4>
+                    <div id="details-timeline"></div>
+    
+                    <hr>
+                    <h4><span class="emoji">💬</span> Comments & Activity</h4>
+                    <div class="comment-box">
+                        <textarea id="comment-input" placeholder="Add a comment or update..."></textarea>
+                        <button id="add-comment-button" class="btn-primary">Post</button>
+                    </div>
+                    <div id="details-activity-feed" class="activity-feed"></div>
+                </div>
+    
+                <aside class="details-sidebar">
+                    <div class="sidebar-section">
+                        <h4>Status</h4>
+                        <p id="details-status"></p>
+                    </div>
+    
+                    <div class="sidebar-section">
+                        <h4>Key People</h4>
+                        <p><strong>Author:</strong> <span id="details-author"></span></p>
+                        <p><strong>Editor:</strong> <span id="details-editor">Not Assigned</span></p>
+                        <div id="assign-editor-section" class="admin-only details-form" style="margin-top: 12px;">
+                            <select id="editor-dropdown"></select>
+                            <button id="assign-editor-button" class="btn-secondary">Assign</button>
+                        </div>
+                    </div>
+    
+                    <div class="sidebar-section">
+                        <h4>Publication Deadline</h4>
+                        <p id="details-deadline"></p>
+                    </div>
+    
+                    <div id="deadlines-section" class="sidebar-section">
+                        <h4>Task Deadlines</h4>
+                        <div id="details-deadlines-list" class="details-form">
+                            </div>
+                        <button id="update-deadlines-button" class="btn-secondary" style="width: 100%; margin-top: 12px;">Update Deadlines</button>
+                    </div>
+    
+                    <div id="admin-approval-section" class="sidebar-section admin-controls">
+                        <h4>Admin Actions</h4>
+                        <div class="button-group">
+                            <button id="approve-button" class="btn-success">Approve</button>
+                            <button id="reject-button" class="btn-danger">Reject</button>
+                        </div>
+                    </div>
+    
+                    <div id="delete-section" class="sidebar-section">
+                        <h4>Delete Project</h4>
+                        <button id="delete-project-button" class="btn-danger">Delete Forever</button>
+                    </div>
+                </aside>
             </div>
-
-
-            <div id="admin-approval-section" class="sidebar-section admin-controls">
-              <h4>Admin Actions</h4>
-              <div class="button-group">
-                <button id="approve-button" class="btn-success">Approve</button>
-                <button id="reject-button" class="btn-danger">Reject</button>
-              </div>
-            </div>
-
-            <div id="delete-section" class="sidebar-section">
-              <h4>Delete Project</h4>
-              <button id="delete-project-button" class="btn-danger">
-                Delete Forever
-              </button>
-            </div>
-          </aside>
         </div>
-      </div>
     </div>
 
     <div id="report-modal" class="modal-overlay" role="dialog" aria-modal="true">
