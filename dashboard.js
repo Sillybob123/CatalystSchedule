@@ -48,7 +48,7 @@ auth.onAuthStateChanged(async user => {
             await fetchEditors();
             setupUI();
             setupNavAndListeners();
-            fetchAndRenderProjects(); // Initial fetch
+            fetchAndRenderProjects();
 
             document.getElementById('loader').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
@@ -179,26 +179,28 @@ function renderKanbanBoard() {
 }
 
 function getProjectColumn(project) {
-    const completedTasks = Object.keys(project.timeline).filter(task => project.timeline[task]);
-    
     if (project.proposalStatus !== 'approved') return "Topic Proposal";
+    
+    const completedTasks = Object.keys(project.timeline).filter(task => project.timeline[task]);
+    const totalTasks = Object.keys(project.timeline).length;
+
+    if (completedTasks.length === totalTasks) return "Completed";
 
     if (currentView === 'my-assignments') {
-        if (completedTasks.length === Object.keys(project.timeline).length) return "Done";
-        if (project.status === 'In Editing') return "In Review"; // Simplified for personal view
+        if (project.editorId === currentUser.uid) return "In Review";
         if (completedTasks.length > 0) return "In Progress";
         return "To Do";
     }
     
     if (project.type === 'Interview') {
-        if (completedTasks.length === 5) return "Completed";
-        if (completedTasks.length === 4) return "Reviewing Suggestions";
-        if (completedTasks.length >= 3) return "Writing Stage"; // Writing is after interview is complete
-        if (completedTasks.length >= 1) return "Interview Stage"; // Proposal complete is first step
+        if (completedTasks.includes("Suggestions Reviewed")) return "Completed";
+        if (completedTasks.includes("Article Writing Complete")) return "Reviewing Suggestions";
+        if (completedTasks.includes("Interview Complete")) return "Writing Stage";
+        if (completedTasks.includes("Topic Proposal Complete")) return "Interview Stage";
     } else { // Op-Ed
-        if (completedTasks.length === 3) return "Completed";
-        if (completedTasks.length === 2) return "Reviewing Suggestions";
-        if (completedTasks.length >= 1) return "Writing Stage";
+        if (completedTasks.includes("Suggestions Reviewed")) return "Completed";
+        if (completedTasks.includes("Article Writing Complete")) return "Reviewing Suggestions";
+        if (completedTasks.includes("Topic Proposal Complete")) return "Writing Stage";
     }
     return "Topic Proposal";
 }
@@ -232,8 +234,7 @@ function createProjectCard(project) {
     return card;
 }
 
-// --- CALENDAR VIEW & MODALS... (Rest of the functions remain largely the same, but are included for completeness)
-
+// --- CALENDAR VIEW ---
 function renderCalendar() {
     const calendarGrid = document.getElementById('calendar-grid');
     const monthYear = document.getElementById('month-year');
@@ -281,6 +282,7 @@ function changeMonth(offset) {
     renderCalendar();
 }
 
+// --- MODALS & FORMS ---
 function openProjectModal() {
     document.getElementById('project-form').reset();
     document.getElementById('modal-title').textContent = 'Propose New Article';
@@ -447,6 +449,7 @@ async function handleScheduleInterview() {
 async function handleAssignEditor() {
     const dropdown = document.getElementById('editor-dropdown');
     const editorId = dropdown.value;
+    if (!editorId) return; // No editor selected
     const selectedEditor = allEditors.find(e => e.id === editorId);
     if (!selectedEditor || !currentlyViewedProjectId) return;
     await db.collection('projects').doc(currentlyViewedProjectId).update({
@@ -459,7 +462,10 @@ async function handleAssignEditor() {
 async function handleUpdateDeadline() {
     const newDeadline = document.getElementById('new-deadline-input').value;
     const reason = document.getElementById('deadline-reason-input').value;
-    if (!currentlyViewedProjectId || !newDeadline || !reason) return;
+    if (!currentlyViewedProjectId || !newDeadline || !reason) {
+        alert("A new deadline and reason are required.");
+        return;
+    }
     const project = allProjects.find(p => p.id === currentlyViewedProjectId);
     await db.collection('projects').doc(currentlyViewedProjectId).update({
         deadline: newDeadline,
@@ -480,6 +486,7 @@ async function handleDeleteProject() {
     }
 }
 
+// --- STATUS REPORT ---
 function generateStatusReport() {
     const reportContent = document.getElementById('report-content');
     const now = new Date();
@@ -511,6 +518,7 @@ function generateStatusReport() {
     document.getElementById('report-modal').style.display = 'flex';
 }
 
+// --- UTILITY ---
 function stringToColor(str) {
     if (!str) return '#cccccc';
     let hash = 0;
