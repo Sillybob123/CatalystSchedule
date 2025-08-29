@@ -186,6 +186,7 @@ function updateNavCounts() {
 // ==================
 //  Kanban Board
 // ==================
+
 function renderKanbanBoard(projects) {
     console.log(`[RENDER] Rendering ${projects.length} projects`);
     const board = document.getElementById('kanban-board');
@@ -206,12 +207,18 @@ function renderKanbanBoard(projects) {
 
         const columnEl = document.createElement('div');
         columnEl.className = 'kanban-column';
+        
+        // FIXED: Proper column header structure
         columnEl.innerHTML = `
-            <h3>
-                <span class="column-title">${columnTitle}</span>
-                <span class="task-count">${columnProjects.length}</span>
-            </h3>
-            <div class="kanban-cards"></div>
+            <div class="column-header">
+                <div class="column-title">
+                    <span class="column-title-text">${columnTitle}</span>
+                    <span class="task-count">${columnProjects.length}</span>
+                </div>
+            </div>
+            <div class="column-content">
+                <div class="kanban-cards"></div>
+            </div>
         `;
         
         const cardsContainer = columnEl.querySelector('.kanban-cards');
