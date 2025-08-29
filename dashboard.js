@@ -776,7 +776,394 @@ function renderInterviewStatus(project) {
 }
 
 function renderActivityFeed(activity) {
-    const activityFeed = document.getElementById('details-// ===============================
+    const activityFeed = document.getElementById('details-activity-feed');
+    activityFeed.innerHTML = '';
+    if (!activity || !Array.isArray(activity)) return;
+    
+    [...activity].sort((a, b) => b.timestamp.seconds - a.timestamp.seconds).forEach(item => {
+        activityFeed.innerHTML += `<div class="feed-item">
+            <div class="user-avatar" style="background-color: ${stringToColor(item.authorName)}">${item.authorName.charAt(0)}</div>
+            <div class="feed-content">
+                <p><span class="author">${item.authorName}</span> ${item.text}</p>
+                <span class="timestamp">${new Date(item.timestamp.seconds * 1000).toLocaleString()}</span>
+            </div>
+        </div>`;
+    });
+}
+
+function populateEditorDropdown(currentEditorId) {
+    const dropdown = document.getElementById('editor-dropdown');
+    dropdown.innerHTML = '<option value="">Assign an Editor</option>';
+    allEditors.forEach(editor => {
+        const option = document.createElement('option');
+        option.value = editor.id;
+        option.textContent = editor.name;
+        if (editor.id === currentEditorId) option.selected = true;
+        dropdown.appendChild(option);
+    });
+}
+
+// =================
+// Actions
+// =================
+async function handleProjectFormSubmit(e) {
+    e.preventDefault();
+    const type = document.getElementById('project-type').value;
+    const timeline = {};
+    const tasks = type === "Interview" 
+        ? ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete", "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"] 
+        : ["Topic Proposal Complete", "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"];
+    
+    tasks.forEach(task => timeline[task] = false);
+
+    const newProject = {
+        title: document.getElementById('project-title').value, 
+        type,
+        proposal: document.getElementById('project-proposal').value,
+        deadlines: {
+            publication: document.getElementById('project-deadline').value,
+            contact: '',
+            interview: '',
+            draft: '',
+            review: '',
+            edits: ''
+        },
+        authorId: currentUser.uid, 
+        authorName: currentUserName,
+        editorId: null, 
+        editorName: null,
+        proposalStatus: 'pending',
+        timeline: timeline,
+        activity: [{ text: 'created the project.', authorName: currentUserName, timestamp: new Date() }]
+    };
+    
+    try {
+        await db.collection('projects').add(newProject);
+        closeAllModals();
+    } catch (error) {
+        console.error("[PROJECT ERROR] Failed to create project:", error);
+        alert('Failed to create project. Please try again.');
+    }
+}
+
+async function addActivity(projectId, text) {
+    const activity = { text, authorName: currentUserName, timestamp: new Date() };
+    try {
+        await db.collection('projects').doc(projectId).update({ 
+            activity: firebase.firestore.FieldValue.arrayUnion(activity) 
+        });
+    } catch (error) {
+        console.error(`[ACTIVITY ERROR] Failed to add activity:`, error);
+    }
+}
+
+async function updateTaskStatus(projectId, taskName, isCompleted) {
+    const updates = {
+        [`timeline.${taskName}`]: isCompleted
+    };
+    
+    try {
+        await db.collection('projects').doc(projectId).update(updates);
+        
+        const activityText = `${isCompleted ? 'completed' : 'un-completed'} the task: "${taskName}"`;
+        await addActivity(projectId, activityText);
+        
+    } catch (error) {
+        console.error('[TASK UPDATE ERROR]', error);
+        alert('Failed to update task. Please try again.');
+    }
+}
+
+async function handleAddComment() {
+    const commentInput = document.getElementById('comment-input');
+    if (commentInput.value.trim() && currentlyViewedProjectId) {
+        await addActivity(currentlyViewedProjectId, `commented: "${commentInput.value.trim()}"`);
+        commentInput.value = '';
+    }
+}
+
+async function approveProposal(projectId) {
+    if (!projectId) return;
+    try {
+        await db.collection('projects').doc(projectId).update({
+            proposalStatus: 'approved',
+            'timeline.Topic Proposal Complete': true
+        });
+        
+        await addActivity(projectId, 'approved the proposal.');
+        
+    } catch (error) {
+        console.error('[APPROVAL ERROR]', error);
+        alert('Failed to approve proposal. Please try again.');
+    }
+}
+
+async function updateProposalStatus(newStatus) {
+    if (!currentlyViewedProjectId || newStatus !== 'rejected') return;
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            proposalStatus: newStatus
+        });
+        await addActivity(currentlyViewedProjectId, `rejected the proposal.`);
+    } catch (error) {
+        console.error(`[REJECTION ERROR] Failed to reject proposal:`, error);
+        alert(`Failed to reject proposal. Please try again.`);
+    }
+}
+
+async function handleScheduleInterview() {
+    const dateInput = document.getElementById('interview-date').value;
+    if (!dateInput || !currentlyViewedProjectId) return;
+    
+    try {
+        const interviewDate = new Date(dateInput);
+        await db.collection('projects').doc(currentlyViewedProjectId).update({ 
+            interviewDate: interviewDate,
+            'timeline.Interview Scheduled': true
+        });
+        
+        await addActivity(currentlyViewedProjectId, `scheduled the interview for ${interviewDate.toLocaleString()}`);
+        
+    } catch (error) {
+        console.error(`[INTERVIEW ERROR] Failed to schedule interview:`, error);
+        alert('Failed to schedule interview. Please try again.');
+    }
+}
+
+async function handleAssignEditor() {
+    const dropdown = document.getElementById('editor-dropdown');
+    const editorId = dropdown.value;
+    if (!editorId) return;
+    
+    const selectedEditor = allEditors.find(e => e.id === editorId);
+    if (!selectedEditor || !currentlyViewedProjectId) return;
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            editorId: editorId,
+            editorName: selectedEditor.name
+        });
+        
+        await addActivity(currentlyViewedProjectId, `assigned **${selectedEditor.name}** as the editor.`);
+        
+    } catch (error) {
+        console.error(`[EDITOR ERROR] Failed to assign editor:`, error);
+        alert('Failed to assign editor. Please try again.');
+    }
+}
+
+async function handleUpdateDeadlines() {
+    if (!currentlyViewedProjectId) return;
+
+    const currentProject = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!currentProject) return;
+
+    const newDeadlines = {
+        publication: currentProject.deadlines.publication,
+    };
+    
+    let changes = [];
+    const deadlineFields = ['contact', 'interview', 'draft', 'review', 'edits'];
+    deadlineFields.forEach(field => {
+        const input = document.getElementById(`deadline-${field}`);
+        if (input) {
+            const oldValue = currentProject.deadlines[field] || '';
+            const newValue = input.value;
+            if (oldValue !== newValue) {
+                changes.push(`${field} deadline from ${oldValue || 'none'} to ${newValue}`);
+            }
+            newDeadlines[field] = newValue;
+        }
+    });
+
+    if (changes.length > 0) {
+        try {
+            await db.collection('projects').doc(currentlyViewedProjectId).update({
+                deadlines: newDeadlines
+            });
+            await addActivity(currentlyViewedProjectId, `updated deadlines: ${changes.join(', ')}.`);
+            alert('Deadlines updated successfully!');
+        } catch (error) {
+            console.error('[DEADLINE UPDATE ERROR]', error);
+            alert('Failed to update deadlines. Please try again.');
+        }
+    }
+}
+
+async function handleDeleteProject() {
+    if (!currentlyViewedProjectId) return;
+    if (confirm("Are you sure you want to permanently delete this project? This action cannot be undone.")) {
+        try {
+            await db.collection('projects').doc(currentlyViewedProjectId).delete();
+            closeAllModals();
+        } catch (error) {
+            console.error(`[DELETE ERROR] Failed to delete project:`, error);
+            alert('Failed to delete project. Please try again.');
+        }
+    }
+}
+
+function generateStatusReport() {
+    const reportModal = document.getElementById('report-modal');
+    const reportContent = document.getElementById('report-content');
+    reportContent.innerHTML = ''; // Clear previous report
+
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // 1. General Alerts
+    const overdueProjects = allProjects.filter(p => {
+        const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
+        return new Date(finalDeadline) < now && getProjectState(p).column !== 'Completed';
+    });
+
+    const completedThisWeek = allProjects.filter(p => {
+        const state = getProjectState(p);
+        if (state.column !== 'Completed') return false;
+        const completionActivity = (p.activity || []).find(a => a.text.includes('Suggestions Reviewed'));
+        if (!completionActivity) return false;
+        return completionActivity.timestamp.toDate() >= oneWeekAgo;
+    });
+    
+    // Deadline requests needing attention
+    const pendingDeadlineRequests = allProjects.filter(p => 
+        p.deadlineRequest && p.deadlineRequest.status === 'pending'
+    );
+    
+    let reportHTML = `<div class="report-container">`;
+
+    reportHTML += `
+        <div class="report-section">
+            <h2><span class="emoji">🚨</span> Weekly Alerts</h2>
+            ${overdueProjects.length > 0 ? 
+                `<h3>Overdue Projects (${overdueProjects.length})</h3>` + overdueProjects.map(p => `
+                    <div class="report-item overdue-item" data-id="${p.id}">
+                        <span class="report-item-title">${p.title}</span>
+                        <span class="report-item-meta">Due: ${new Date(p.deadlines.publication).toLocaleDateString()} | Author: ${p.authorName}</span>
+                    </div>
+                `).join('') : '<p>No overdue projects. Great job!</p>'}
+                
+            ${pendingDeadlineRequests.length > 0 ? 
+                `<h3>Pending Deadline Requests (${pendingDeadlineRequests.length})</h3>` + pendingDeadlineRequests.map(p => `
+                    <div class="report-item" data-id="${p.id}" style="background-color: #fffbeb; border-color: #f59e0b;">
+                        <span class="report-item-title">${p.title}</span>
+                        <span class="report-item-meta">Requested by: ${p.deadlineRequest.requestedBy} | New deadline: ${new Date(p.deadlineRequest.newDeadline).toLocaleDateString()}</span>
+                        <div style="margin-top: 4px; font-size: 11px; color: #92400e;">Reason: ${p.deadlineRequest.reason}</div>
+                    </div>
+                `).join('') : ''}
+        </div>`;
+
+    reportHTML += `
+        <div class="report-section">
+            <h2><span class="emoji">🎉</span> Recently Completed (Last 7 Days)</h2>
+            ${completedThisWeek.length > 0 ? completedThisWeek.map(p => `
+                 <div class="report-item" data-id="${p.id}">
+                    <span class="report-item-title">${p.title}</span>
+                    <span class="report-item-meta">Author: ${p.authorName}</span>
+                </div>
+            `).join('') : '<p>No projects completed in the last week.</p>'}
+        </div>
+    `;
+
+    // 2. Per-member breakdown
+    reportHTML += `<div class="report-section"><h2><span class="emoji">👥</span> Team Progress</h2></div>`;
+
+    const teamMembers = allEditors.reduce((acc, user) => {
+        acc[user.id] = { name: user.name, projects: [] };
+        return acc;
+    }, {});
+    
+    const authors = allProjects.reduce((acc, p) => {
+        if (!acc[p.authorId]) {
+            acc[p.authorId] = { name: p.authorName, projects: [] };
+        }
+        return acc;
+    }, {});
+
+    const allTeamMembers = {...teamMembers, ...authors};
+
+    allProjects.forEach(p => {
+        if (getProjectState(p).column === 'Completed') return; // Skip completed
+        if (allTeamMembers[p.authorId]) {
+            allTeamMembers[p.authorId].projects.push(p);
+        }
+        if (p.editorId && allTeamMembers[p.editorId]) {
+             // Avoid duplicating project if user is both author and editor
+            if (p.authorId !== p.editorId) {
+                allTeamMembers[p.editorId].projects.push(p);
+            }
+        }
+    });
+
+    for (const memberId in allTeamMembers) {
+        const member = allTeamMembers[memberId];
+        if (member.projects.length === 0) continue;
+
+        reportHTML += `<div class="report-user-section">
+            <h3 class="report-user-header">${member.name}</h3>`;
+
+        member.projects.forEach(p => {
+            const state = getProjectState(p);
+            const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
+            const recentActivities = (p.activity || [])
+                .filter(a => a.timestamp.toDate() >= oneWeekAgo)
+                .map(a => `<li><span class="timestamp">${a.timestamp.toDate().toLocaleDateString()}</span> - ${a.text}</li>`)
+                .join('');
+
+            reportHTML += `
+                <div class="report-item" data-id="${p.id}">
+                    <div class="report-item-main">
+                        <span class="report-item-title">${p.title}</span>
+                        <span class="report-item-meta">
+                            Status: <strong>${state.statusText}</strong> | Deadline: ${new Date(finalDeadline).toLocaleDateString()}
+                        </span>
+                    </div>
+                    ${recentActivities ? `<ul class="report-activity-list">${recentActivities}</ul>` : ''}
+                </div>
+            `;
+        });
+        reportHTML += `</div>`;
+    }
+
+    reportHTML += '</div>'; // close report-container
+
+    reportContent.innerHTML = reportHTML;
+
+    // Add event listeners to make items clickable
+    reportContent.querySelectorAll('.report-item').forEach(item => {
+        item.style.cursor = 'pointer';
+        item.addEventListener('click', () => {
+            closeAllModals();
+            openDetailsModal(item.dataset.id);
+        });
+    });
+
+    reportModal.style.display = 'flex';
+}
+
+// =================
+// Utils
+// =================
+function stringToColor(str) {
+    if (!str) return '#cccccc';
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+        let value = (hash >> (i * 8)) & 0xFF;
+        color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+}
+
+function calculateProgress(timeline) {
+    if (!timeline) return 0;
+    const totalTasks = Object.keys(timeline).length;
+    const completedTasks = Object.values(timeline).filter(Boolean).length;
+    return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+}// ===============================
 // Catalyst Tracker - Enhanced Dashboard JS
 // ===============================
 
