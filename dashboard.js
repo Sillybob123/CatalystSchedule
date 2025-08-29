@@ -1,5 +1,5 @@
 // ===============================
-// Catalyst Tracker - UPDATED Dashboard JS with Deadline Requests & Proposal Editing
+// Catalyst Tracker - FIXED Dashboard JS with Better Error Handling
 // ===============================
 
 // ---- Firebase Configuration ----
@@ -24,7 +24,7 @@ let currentView = 'interviews';
 let calendarDate = new Date();
 
 // ======================
-//  Initialization
+//  Initialization with Better Error Handling
 // ======================
 auth.onAuthStateChanged(async (user) => {
     if (!user) {
@@ -34,12 +34,34 @@ auth.onAuthStateChanged(async (user) => {
     currentUser = user;
 
     try {
+        console.log("[INIT] User authenticated:", user.uid);
+        
+        // Try to get user document
         const userDoc = await db.collection('users').doc(user.uid).get();
-        if (!userDoc.exists) throw new Error("User profile not found in Firestore.");
-
-        const userData = userDoc.data();
-        currentUserName = userData.name;
-        currentUserRole = userData.role;
+        
+        if (!userDoc.exists) {
+            console.warn("[INIT] User document not found, creating default profile");
+            
+            // Create a default user profile
+            const defaultUserData = {
+                name: user.displayName || user.email.split('@')[0],
+                email: user.email,
+                role: 'writer', // Default role
+                createdAt: new Date()
+            };
+            
+            await db.collection('users').doc(user.uid).set(defaultUserData);
+            currentUserName = defaultUserData.name;
+            currentUserRole = defaultUserData.role;
+            
+            console.log("[INIT] Created default user profile:", defaultUserData);
+        } else {
+            const userData = userDoc.data();
+            currentUserName = userData.name || user.displayName || user.email.split('@')[0];
+            currentUserRole = userData.role || 'writer';
+            
+            console.log("[INIT] Loaded existing user profile:", userData);
+        }
 
         await fetchEditors();
         setupUI();
@@ -48,15 +70,47 @@ auth.onAuthStateChanged(async (user) => {
 
         document.getElementById('loader').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
+        
+        console.log("[INIT] Initialization completed successfully");
+        
     } catch (error) {
         console.error("Initialization Error:", error);
-        alert("Could not load your profile. Please try again.");
+        
+        // More detailed error handling
+        let errorMessage = "Could not load your profile. ";
+        
+        if (error.code === 'permission-denied') {
+            errorMessage += "You don't have permission to access this resource. Please contact an administrator.";
+        } else if (error.code === 'unavailable') {
+            errorMessage += "The service is currently unavailable. Please try again later.";
+        } else if (error.message.includes('network')) {
+            errorMessage += "Please check your internet connection and try again.";
+        } else {
+            errorMessage += "Please refresh the page and try again.";
+        }
+        
+        alert(errorMessage);
+        
+        // Try to sign out the user so they can try logging in again
+        try {
+            await auth.signOut();
+        } catch (signOutError) {
+            console.error("Error signing out:", signOutError);
+        }
     }
 });
 
 async function fetchEditors() {
-    const editorsSnapshot = await db.collection('users').where('role', 'in', ['admin', 'editor']).get();
-    allEditors = editorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    try {
+        console.log("[INIT] Fetching editors...");
+        const editorsSnapshot = await db.collection('users').where('role', 'in', ['admin', 'editor']).get();
+        allEditors = editorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("[INIT] Found", allEditors.length, "editors");
+    } catch (error) {
+        console.error("Error fetching editors:", error);
+        // Continue with empty editors array
+        allEditors = [];
+    }
 }
 
 function setupUI() {
@@ -97,13 +151,20 @@ function setupNavAndListeners() {
     document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
     document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
 
-    // NEW: Deadline request and proposal editing listeners
-    document.getElementById('request-deadline-button').addEventListener('click', handleRequestDeadlineChange);
-    document.getElementById('approve-deadline-button').addEventListener('click', handleApproveDeadlineRequest);
-    document.getElementById('reject-deadline-button').addEventListener('click', handleRejectDeadlineRequest);
-    document.getElementById('edit-proposal-button').addEventListener('click', enableProposalEditing);
-    document.getElementById('save-proposal-button').addEventListener('click', handleSaveProposal);
-    document.getElementById('cancel-proposal-button').addEventListener('click', disableProposalEditing);
+    // NEW: Deadline request and proposal editing listeners (with null checks)
+    const requestDeadlineBtn = document.getElementById('request-deadline-button');
+    const approveDeadlineBtn = document.getElementById('approve-deadline-button');
+    const rejectDeadlineBtn = document.getElementById('reject-deadline-button');
+    const editProposalBtn = document.getElementById('edit-proposal-button');
+    const saveProposalBtn = document.getElementById('save-proposal-button');
+    const cancelProposalBtn = document.getElementById('cancel-proposal-button');
+
+    if (requestDeadlineBtn) requestDeadlineBtn.addEventListener('click', handleRequestDeadlineChange);
+    if (approveDeadlineBtn) approveDeadlineBtn.addEventListener('click', handleApproveDeadlineRequest);
+    if (rejectDeadlineBtn) rejectDeadlineBtn.addEventListener('click', handleRejectDeadlineRequest);
+    if (editProposalBtn) editProposalBtn.addEventListener('click', enableProposalEditing);
+    if (saveProposalBtn) saveProposalBtn.addEventListener('click', handleSaveProposal);
+    if (cancelProposalBtn) cancelProposalBtn.addEventListener('click', disableProposalEditing);
 
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', e => {
@@ -393,7 +454,8 @@ function refreshDetailsModal(project) {
     
     // Show edit button if user can edit (author or admin)
     const canEditProposal = isAuthor || isAdmin;
-    document.getElementById('edit-proposal-button').style.display = canEditProposal ? 'inline-block' : 'none';
+    const editBtn = document.getElementById('edit-proposal-button');
+    if (editBtn) editBtn.style.display = canEditProposal ? 'inline-block' : 'none';
 
     document.getElementById('admin-approval-section').style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
     
@@ -421,6 +483,7 @@ function refreshDetailsModal(project) {
 // NEW: Deadline Request Management
 function renderDeadlineRequestSection(project, isAuthor, isAdmin) {
     const deadlineSection = document.getElementById('deadline-request-section');
+    if (!deadlineSection) return; // Safety check
     
     if (project.deadlineRequest) {
         const request = project.deadlineRequest;
@@ -440,6 +503,14 @@ function renderDeadlineRequestSection(project, isAuthor, isAdmin) {
                 ` : '<p style="font-style: italic; color: var(--warning-color);">Awaiting admin approval...</p>'}
             `;
             deadlineSection.style.display = 'block';
+            
+            // Re-attach event listeners for dynamically created buttons
+            if (isAdmin) {
+                const approveBtn = document.getElementById('approve-deadline-button');
+                const rejectBtn = document.getElementById('reject-deadline-button');
+                if (approveBtn) approveBtn.addEventListener('click', handleApproveDeadlineRequest);
+                if (rejectBtn) rejectBtn.addEventListener('click', handleRejectDeadlineRequest);
+            }
         } else {
             deadlineSection.style.display = 'none';
         }
@@ -449,10 +520,12 @@ function renderDeadlineRequestSection(project, isAuthor, isAdmin) {
     
     // Show request button for authors
     const requestButton = document.getElementById('request-deadline-button');
-    if (isAuthor && (!project.deadlineRequest || project.deadlineRequest.status !== 'pending')) {
-        requestButton.style.display = 'inline-block';
-    } else {
-        requestButton.style.display = 'none';
+    if (requestButton) {
+        if (isAuthor && (!project.deadlineRequest || project.deadlineRequest.status !== 'pending')) {
+            requestButton.style.display = 'inline-block';
+        } else {
+            requestButton.style.display = 'none';
+        }
     }
 }
 
@@ -480,9 +553,13 @@ function enableProposalEditing() {
     proposalElement.replaceWith(proposalTextarea);
     
     // Show save/cancel buttons, hide edit button
-    document.getElementById('edit-proposal-button').style.display = 'none';
-    document.getElementById('save-proposal-button').style.display = 'inline-block';
-    document.getElementById('cancel-proposal-button').style.display = 'inline-block';
+    const editBtn = document.getElementById('edit-proposal-button');
+    const saveBtn = document.getElementById('save-proposal-button');
+    const cancelBtn = document.getElementById('cancel-proposal-button');
+    
+    if (editBtn) editBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'inline-block';
+    if (cancelBtn) cancelBtn.style.display = 'inline-block';
 }
 
 function disableProposalEditing() {
@@ -512,9 +589,13 @@ function disableProposalEditing() {
     const isAdmin = currentUserRole === 'admin';
     const canEditProposal = isAuthor || isAdmin;
     
-    document.getElementById('edit-proposal-button').style.display = canEditProposal ? 'inline-block' : 'none';
-    document.getElementById('save-proposal-button').style.display = 'none';
-    document.getElementById('cancel-proposal-button').style.display = 'none';
+    const editBtn = document.getElementById('edit-proposal-button');
+    const saveBtn = document.getElementById('save-proposal-button');
+    const cancelBtn = document.getElementById('cancel-proposal-button');
+    
+    if (editBtn) editBtn.style.display = canEditProposal ? 'inline-block' : 'none';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
 }
 
 async function handleSaveProposal() {
