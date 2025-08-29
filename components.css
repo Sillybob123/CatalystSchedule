@@ -1548,3 +1548,299 @@
     font-weight: 500;
     color: var(--text-color);
 }
+
+/* === NEW FEATURE STYLES === */
+
+/* Deadline Request Indicator on Cards */
+.deadline-request-indicator {
+  font-size: 14px;
+  margin-left: 6px;
+  opacity: 0.8;
+  animation: pulse-gentle 2s ease-in-out infinite;
+}
+
+@keyframes pulse-gentle {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.4; }
+}
+
+/* Proposal Editing Styles */
+.edit-title-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--primary-color);
+  border-radius: var(--radius);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-color);
+  background: #ffffff;
+  margin-bottom: var(--space-4);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.edit-title-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.edit-proposal-textarea {
+  width: 100%;
+  padding: var(--space-4);
+  border: 2px solid var(--primary-color);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--text-color);
+  background: #ffffff;
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.edit-proposal-textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-light);
+  transform: translateY(-1px);
+}
+
+/* Deadline Request Section Styles */
+#deadline-request-section {
+  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+  border: 2px solid var(--warning-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+#deadline-request-section::before {
+  content: '⏰';
+  position: absolute;
+  top: -8px;
+  right: 12px;
+  font-size: 20px;
+  background: var(--surface-color);
+  padding: 4px 8px;
+  border-radius: 50%;
+  border: 2px solid var(--warning-color);
+}
+
+#deadline-request-section h4 {
+  color: #92400e;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 var(--space-3) 0;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+#deadline-request-section p {
+  margin: var(--space-2) 0;
+  color: #92400e;
+  line-height: 1.4;
+  font-size: 12px;
+}
+
+#deadline-request-section .button-group {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+#deadline-request-section .button-group button {
+  flex: 1;
+  font-size: 11px;
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Button Group Styles */
+.button-group {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.button-group button {
+  flex: 1;
+}
+
+/* Request Deadline Button */
+#request-deadline-button {
+  background: linear-gradient(135deg, #fef3c7, #fbbf24);
+  color: #92400e;
+  border: 1px solid var(--warning-color);
+  font-weight: 600;
+  font-size: 12px;
+  padding: var(--space-3);
+  transition: all 0.2s ease;
+}
+
+#request-deadline-button:hover {
+  background: linear-gradient(135deg, #fed7aa, #f59e0b);
+  color: #78350f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* Enhanced Status Report Styles */
+.deadline-request-item {
+  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+  border-color: var(--warning-color);
+}
+
+.deadline-request-item:hover {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fed7aa 0%, #fbbf24 100%);
+}
+
+.deadline-request-item .report-item-title {
+  color: #92400e;
+}
+
+.deadline-request-item .report-item-meta {
+  color: #78350f;
+  font-weight: 500;
+}
+
+/* Enhanced Modal Button Styles */
+.modal-header button + button {
+  margin-left: var(--space-2);
+}
+
+.details-main h4 button {
+  font-size: 11px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+/* Improved Form Validation */
+.form-group input:invalid,
+.form-group textarea:invalid,
+.form-group select:invalid {
+  border-color: var(--danger-color);
+}
+
+.form-group input:invalid:focus,
+.form-group textarea:invalid:focus,
+.form-group select:invalid:focus {
+  box-shadow: 
+    0 4px 12px rgba(239, 68, 68, 0.15),
+    0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Enhanced Card Hover Effects */
+.kanban-card.has-deadline-request {
+  border-left: 4px solid var(--warning-color);
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.kanban-card.has-deadline-request:hover {
+  border-left-color: #f59e0b;
+  background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+}
+
+/* Loading States for New Features */
+.edit-proposal-button:disabled,
+.request-deadline-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.edit-proposal-button.loading::after,
+.request-deadline-button.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive Adjustments for New Features */
+@media (max-width: 768px) {
+  .edit-title-input {
+    font-size: 18px;
+  }
+  
+  .details-main h4 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  
+  .details-main h4 button {
+    align-self: flex-start;
+    margin-left: 0 !important;
+  }
+  
+  #deadline-request-section .button-group {
+    flex-direction: column;
+  }
+  
+  .button-group {
+    flex-direction: column;
+  }
+  
+  .button-group button {
+    width: 100%;
+  }
+}
+
+/* Accessibility Enhancements */
+.deadline-request-indicator[aria-label]::after {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-color);
+  color: var(--surface-color);
+  font-size: 11px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.deadline-request-indicator:hover[aria-label]::after {
+  opacity: 1;
+}
+
+/* Enhanced Animation for Status Changes */
+@keyframes statusChange {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.kanban-card.status-updating {
+  animation: statusChange 0.5s ease-out;
+}
+
+/* Print-friendly Styles for New Features */
+@media print {
+  .deadline-request-indicator,
+  .edit-proposal-button,
+  .request-deadline-button,
+  #deadline-request-section {
+    display: none !important;
+  }
+  
+  .edit-title-input,
+  .edit-proposal-textarea {
+    border: 1px solid #ccc !important;
+    background: white !important;
+  }
+}
