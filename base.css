@@ -97,8 +97,8 @@ body {
 
 .sidebar {
   width: var(--sidebar-width);
-  min-width: 200px;
-  max-width: 280px;
+  min-width: 240px;
+  max-width: 320px;
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
   display: flex;
@@ -234,7 +234,7 @@ body {
 /* Large Desktops (1920px+) */
 @media (min-width: 1920px) {
   :root {
-    --sidebar-width: 260px;
+    --sidebar-width: 320px;
   }
   
   .kanban-board {
@@ -247,7 +247,7 @@ body {
 /* Standard Desktops (1200px - 1919px) */
 @media (max-width: 1919px) and (min-width: 1200px) {
   :root {
-    --sidebar-width: 220px;
+    --sidebar-width: 280px;
   }
   
   .kanban-board {
@@ -258,7 +258,7 @@ body {
 /* Small Desktops (1024px - 1199px) */
 @media (max-width: 1199px) and (min-width: 1024px) {
   :root {
-    --sidebar-width: 200px;
+    --sidebar-width: 260px;
   }
   
   .main-content {
@@ -277,7 +277,7 @@ body {
 /* Compact Desktops (900px - 1023px) */
 @media (max-width: 1023px) and (min-width: 900px) {
   :root {
-    --sidebar-width: 200px;
+    --sidebar-width: 240px;
   }
   
   .main-content {
@@ -304,7 +304,7 @@ body {
 /* Very Small Desktops/Large Tablets (768px - 899px) */
 @media (max-width: 899px) {
   .sidebar {
-    width: 200px;
+    width: 240px;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
   }
