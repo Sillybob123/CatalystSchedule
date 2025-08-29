@@ -30,28 +30,28 @@
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0,0,0,0.1);
 
-  /* Dynamic Border Radius - Scales with screen size */
-  --radius-xs: clamp(4px, 0.5vw, 8px);
-  --radius-sm: clamp(6px, 0.6vw, 10px);
-  --radius: clamp(8px, 0.8vw, 14px);
-  --radius-lg: clamp(12px, 1vw, 18px);
-  --radius-xl: clamp(16px, 1.2vw, 24px);
+  /* Compact Border Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
-  /* Dynamic Spacing - Scales with screen size */
-  --space-1: clamp(0.2rem, 0.3vw, 0.3rem);
-  --space-2: clamp(0.4rem, 0.5vw, 0.6rem);
-  --space-3: clamp(0.6rem, 0.7vw, 0.9rem);
-  --space-4: clamp(0.8rem, 1vw, 1.2rem);
-  --space-5: clamp(1rem, 1.2vw, 1.5rem);
-  --space-6: clamp(1.2rem, 1.5vw, 1.8rem);
-  --space-8: clamp(1.6rem, 2vw, 2.4rem);
-  --space-10: clamp(2rem, 2.5vw, 3rem);
-  --space-12: clamp(2.4rem, 3vw, 3.6rem);
-  --space-16: clamp(3.2rem, 4vw, 4.8rem);
-  --space-20: clamp(4rem, 5vw, 6rem);
+  /* Compact Spacing */
+  --space-1: 0.15rem;   /* 2.4px */
+  --space-2: 0.25rem;   /* 4px */
+  --space-3: 0.4rem;    /* 6.4px */
+  --space-4: 0.6rem;    /* 9.6px */
+  --space-5: 0.75rem;   /* 12px */
+  --space-6: 0.9rem;    /* 14.4px */
+  --space-8: 1.2rem;    /* 19.2px */
+  --space-10: 1.5rem;   /* 24px */
+  --space-12: 1.8rem;   /* 28.8px */
+  --space-16: 2.4rem;   /* 38.4px */
+  --space-20: 3rem;     /* 48px */
 
-  /* Dynamic Sidebar Width */
-  --sidebar-width: clamp(240px, 20vw, 320px);
+  /* Compact Sidebar Width */
+  --sidebar-width: 220px;
 
   /* Status Colors */
   --success-color: #10b981;
@@ -68,15 +68,15 @@
 }
 
 html {
-  font-size: clamp(14px, 1vw, 18px);
+  font-size: 13px;  /* Reduced from 14px */
   scroll-behavior: smooth;
   height: 100%;
 }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
-  font-size: clamp(13px, 0.9vw, 16px);
-  line-height: 1.5;
+  font-size: 12px;  /* Reduced from 13px */
+  line-height: 1.4;  /* Reduced from 1.5 */
   color: var(--text-color);
   background-color: var(--background-color);
   -webkit-font-smoothing: antialiased;
@@ -97,8 +97,8 @@ body {
 
 .sidebar {
   width: var(--sidebar-width);
-  min-width: 240px;
-  max-width: 320px;
+  min-width: 180px;
+  max-width: 240px;
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
   display: flex;
@@ -115,7 +115,7 @@ body {
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);
-  padding: var(--space-6);
+  padding: var(--space-5);  /* Reduced from var(--space-6) */
   height: 100vh;
   overflow-y: auto;
   background: var(--background-color);
@@ -128,14 +128,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-6);
-  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);  /* Reduced from var(--space-6) */
+  padding-bottom: var(--space-3);  /* Reduced from var(--space-4) */
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
 .main-header h1 {
-  font-size: clamp(20px, 2.5vw, 36px);
+  font-size: 22px;  /* Reduced from clamp(20px, 2.5vw, 36px) */
   font-weight: 700;
   color: var(--text-color);
   letter-spacing: -0.02em;
@@ -162,8 +162,8 @@ body {
 
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(clamp(280px, 25vw, 350px), 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));  /* Reduced from 280px */
+  gap: var(--space-3);  /* Reduced from var(--space-4) */
   height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
@@ -178,12 +178,12 @@ body {
   display: flex;
   flex-direction: column;
   height: fit-content;
-  max-height: calc(100vh - 200px);
-  min-height: 300px;
+  max-height: calc(100vh - 140px);  /* Reduced from 200px */
+  min-height: 250px;  /* Reduced from 300px */
 }
 
 .column-header {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-3) var(--space-4);  /* Reduced from var(--space-4) var(--space-5) */
   border-bottom: 1px solid var(--border-color);
   background: #fafbfc;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -191,20 +191,20 @@ body {
 }
 
 .column-title {
-  font-size: clamp(14px, 1.1vw, 18px);
+  font-size: 14px;  /* Reduced from clamp(14px, 1.1vw, 18px) */
   font-weight: 600;
   color: var(--text-color);
   margin: 0;
 }
 
 .column-count {
-  font-size: clamp(12px, 0.9vw, 14px);
+  font-size: 11px;  /* Reduced from clamp(12px, 0.9vw, 14px) */
   color: var(--text-secondary);
   margin-top: var(--space-1);
 }
 
 .column-content {
-  padding: var(--space-4);
+  padding: var(--space-3);  /* Reduced from var(--space-4) */
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -221,8 +221,8 @@ body {
 }
 
 .loader {
-  width: clamp(32px, 3vw, 48px);
-  height: clamp(32px, 3vw, 48px);
+  width: 28px;  /* Reduced from clamp(32px, 3vw, 48px) */
+  height: 28px;
   border: 3px solid var(--border-color);
   border-top: 3px solid var(--primary-color);
   border-radius: 50%;
@@ -234,12 +234,12 @@ body {
 /* Large Desktops (1920px+) */
 @media (min-width: 1920px) {
   :root {
-    --sidebar-width: 320px;
+    --sidebar-width: 240px;
   }
   
   .kanban-board {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    max-width: 1800px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    max-width: 1600px;
     margin: 0 auto;
   }
 }
@@ -247,18 +247,18 @@ body {
 /* Standard Desktops (1200px - 1919px) */
 @media (max-width: 1919px) and (min-width: 1200px) {
   :root {
-    --sidebar-width: 280px;
+    --sidebar-width: 220px;
   }
   
   .kanban-board {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   }
 }
 
 /* Small Desktops (1024px - 1199px) */
 @media (max-width: 1199px) and (min-width: 1024px) {
   :root {
-    --sidebar-width: 260px;
+    --sidebar-width: 200px;
   }
   
   .main-content {
@@ -266,18 +266,18 @@ body {
   }
   
   .kanban-board {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
   
   .main-header h1 {
-    font-size: clamp(18px, 2.2vw, 28px);
+    font-size: 20px;
   }
 }
 
 /* Compact Desktops (900px - 1023px) */
 @media (max-width: 1023px) and (min-width: 900px) {
   :root {
-    --sidebar-width: 240px;
+    --sidebar-width: 180px;
   }
   
   .main-content {
@@ -285,7 +285,7 @@ body {
   }
   
   .kanban-board {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: var(--space-3);
   }
   
@@ -304,7 +304,7 @@ body {
 /* Very Small Desktops/Large Tablets (768px - 899px) */
 @media (max-width: 899px) {
   .sidebar {
-    width: 240px;
+    width: 180px;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
   }
@@ -323,7 +323,7 @@ body {
   }
   
   .kanban-column {
-    min-width: 280px;
+    min-width: 220px;
     flex-shrink: 0;
   }
   
@@ -372,8 +372,8 @@ body {
 
 /* === SCROLLBAR STYLING === */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;  /* Reduced from 6px */
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
