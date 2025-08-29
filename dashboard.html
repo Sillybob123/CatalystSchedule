@@ -11,68 +11,6 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <style>
-      /* Additional styles for editing and deadline features */
-      .editable-section {
-        position: relative;
-      }
-      
-      .edit-input {
-        font-family: inherit;
-        font-size: 14px;
-        border: 2px solid var(--primary-color);
-        border-radius: 8px;
-        padding: 8px;
-        background: #fffbeb;
-      }
-      
-      .edit-controls {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-      }
-      
-      .deadline-request-indicator {
-        font-size: 10px;
-        background: #fffbeb;
-        color: #f59e0b;
-        padding: 4px 8px;
-        border-radius: 12px;
-        border: 1px solid #f59e0b;
-        margin-bottom: 8px;
-        text-align: center;
-      }
-      
-      .deadline-request-section {
-        margin-bottom: 16px;
-      }
-      
-      .deadline-request {
-        padding: 12px;
-        border-radius: 8px;
-        margin: 8px 0;
-        font-size: 12px;
-        line-height: 1.4;
-      }
-      
-      .deadline-request.pending {
-        background: #fef3c7;
-        border: 1px solid #f59e0b;
-        color: #92400e;
-      }
-      
-      .deadline-request.approved {
-        background: #dcfce7;
-        border: 1px solid #10b981;
-        color: #065f46;
-      }
-      
-      .deadline-request.rejected {
-        background: #fee2e2;
-        border: 1px solid #ef4444;
-        color: #991b1b;
-      }
-    </style>
   </head>
   <body>
     <div id="loader" class="loader-container">
@@ -298,7 +236,7 @@
                 <div class="details-grid">
                     <div class="details-main">
                         <h4><span class="emoji">📝</span> Proposal</h4>
-                        <div id="details-proposal"></div>
+                        <p id="details-proposal"></p>
         
                         <div id="interview-details-section" style="display: none;">
                             <hr>
@@ -346,7 +284,6 @@
         
                         <div id="deadlines-section" class="sidebar-section">
                             <h4>Task Deadlines</h4>
-                            <!-- Deadline request section will be dynamically inserted here -->
                             <div id="details-deadlines-list"></div>
                             <button id="update-deadlines-button" class="btn-secondary admin-only" style="width: 100%; margin-top: 12px;">Update Deadlines</button>
                         </div>
