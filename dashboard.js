@@ -1,5 +1,5 @@
 // ===============================
-// Catalyst Tracker - FIXED Dashboard JS
+// Catalyst Tracker - UPDATED Dashboard JS with Deadline Requests & Proposal Editing
 // ===============================
 
 // ---- Firebase Configuration ----
@@ -97,6 +97,14 @@ function setupNavAndListeners() {
     document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
     document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
 
+    // NEW: Deadline request and proposal editing listeners
+    document.getElementById('request-deadline-button').addEventListener('click', handleRequestDeadlineChange);
+    document.getElementById('approve-deadline-button').addEventListener('click', handleApproveDeadlineRequest);
+    document.getElementById('reject-deadline-button').addEventListener('click', handleRejectDeadlineRequest);
+    document.getElementById('edit-proposal-button').addEventListener('click', enableProposalEditing);
+    document.getElementById('save-proposal-button').addEventListener('click', handleSaveProposal);
+    document.getElementById('cancel-proposal-button').addEventListener('click', disableProposalEditing);
+
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', e => {
             if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('close-button')) {
@@ -143,7 +151,6 @@ function renderCurrentView() {
         renderKanbanBoard(filterProjects());
     }
 }
-
 
 // ==================
 //  Data Handling
@@ -257,8 +264,12 @@ function createProjectCard(project) {
     const daysUntilDeadline = Math.ceil((new Date(finalDeadline) - new Date()) / (1000 * 60 * 60 * 24));
     const deadlineClass = daysUntilDeadline < 0 ? 'overdue' : daysUntilDeadline <= 3 ? 'due-soon' : '';
     
+    // NEW: Show deadline request indicator if pending
+    const deadlineRequestIndicator = project.deadlineRequest && project.deadlineRequest.status === 'pending' ? 
+        '<span class="deadline-request-indicator">📅</span>' : '';
+    
     card.innerHTML = `
-        <h4 class="card-title">${project.title}</h4>
+        <h4 class="card-title">${project.title} ${deadlineRequestIndicator}</h4>
         <div class="card-meta">
             <span class="card-type">${project.type}</span>
             <span class="card-status">${state.statusText}</span>
@@ -355,6 +366,9 @@ function openDetailsModal(projectId) {
 function closeAllModals() {
     document.querySelectorAll('.modal-overlay').forEach(modal => modal.style.display = 'none');
     currentlyViewedProjectId = null;
+    
+    // Reset proposal editing state
+    disableProposalEditing();
 }
 
 function refreshDetailsModal(project) {
@@ -371,7 +385,15 @@ function refreshDetailsModal(project) {
 
     const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
     document.getElementById('details-publication-deadline').textContent = new Date(finalDeadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    document.getElementById('details-proposal').textContent = project.proposal || 'No proposal provided.';
+    
+    // NEW: Set up proposal display/editing
+    const proposalElement = document.getElementById('details-proposal');
+    const titleElement = document.getElementById('details-title');
+    proposalElement.textContent = project.proposal || 'No proposal provided.';
+    
+    // Show edit button if user can edit (author or admin)
+    const canEditProposal = isAuthor || isAdmin;
+    document.getElementById('edit-proposal-button').style.display = canEditProposal ? 'inline-block' : 'none';
 
     document.getElementById('admin-approval-section').style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
     
@@ -392,7 +414,231 @@ function refreshDetailsModal(project) {
     populateEditorDropdown(project.editorId);
     renderTimeline(project, isAuthor, isEditor, isAdmin);
     renderDeadlines(project, isAdmin);
+    renderDeadlineRequestSection(project, isAuthor, isAdmin);
     renderActivityFeed(project.activity || []);
+}
+
+// NEW: Deadline Request Management
+function renderDeadlineRequestSection(project, isAuthor, isAdmin) {
+    const deadlineSection = document.getElementById('deadline-request-section');
+    
+    if (project.deadlineRequest) {
+        const request = project.deadlineRequest;
+        const requestDate = new Date(request.requestedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        
+        if (request.status === 'pending') {
+            deadlineSection.innerHTML = `
+                <h4>Pending Deadline Request</h4>
+                <p><strong>Requested by:</strong> ${request.requestedBy}</p>
+                <p><strong>New deadline:</strong> ${requestDate}</p>
+                <p><strong>Reason:</strong> ${request.reason}</p>
+                ${isAdmin ? `
+                    <div class="button-group" style="margin-top: 12px;">
+                        <button id="approve-deadline-button" class="btn-success">Approve</button>
+                        <button id="reject-deadline-button" class="btn-danger">Reject</button>
+                    </div>
+                ` : '<p style="font-style: italic; color: var(--warning-color);">Awaiting admin approval...</p>'}
+            `;
+            deadlineSection.style.display = 'block';
+        } else {
+            deadlineSection.style.display = 'none';
+        }
+    } else {
+        deadlineSection.style.display = 'none';
+    }
+    
+    // Show request button for authors
+    const requestButton = document.getElementById('request-deadline-button');
+    if (isAuthor && (!project.deadlineRequest || project.deadlineRequest.status !== 'pending')) {
+        requestButton.style.display = 'inline-block';
+    } else {
+        requestButton.style.display = 'none';
+    }
+}
+
+// NEW: Proposal Editing Functions
+function enableProposalEditing() {
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!project) return;
+    
+    // Replace title with input
+    const titleElement = document.getElementById('details-title');
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.id = 'edit-title-input';
+    titleInput.value = project.title;
+    titleInput.className = 'edit-title-input';
+    titleElement.replaceWith(titleInput);
+    
+    // Replace proposal text with textarea
+    const proposalElement = document.getElementById('details-proposal');
+    const proposalTextarea = document.createElement('textarea');
+    proposalTextarea.id = 'edit-proposal-textarea';
+    proposalTextarea.value = project.proposal || '';
+    proposalTextarea.className = 'edit-proposal-textarea';
+    proposalTextarea.rows = 6;
+    proposalElement.replaceWith(proposalTextarea);
+    
+    // Show save/cancel buttons, hide edit button
+    document.getElementById('edit-proposal-button').style.display = 'none';
+    document.getElementById('save-proposal-button').style.display = 'inline-block';
+    document.getElementById('cancel-proposal-button').style.display = 'inline-block';
+}
+
+function disableProposalEditing() {
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!project) return;
+    
+    // Restore title
+    const titleInput = document.getElementById('edit-title-input');
+    if (titleInput) {
+        const titleElement = document.createElement('h2');
+        titleElement.id = 'details-title';
+        titleElement.textContent = project.title;
+        titleInput.replaceWith(titleElement);
+    }
+    
+    // Restore proposal text
+    const proposalTextarea = document.getElementById('edit-proposal-textarea');
+    if (proposalTextarea) {
+        const proposalElement = document.createElement('p');
+        proposalElement.id = 'details-proposal';
+        proposalElement.textContent = project.proposal || 'No proposal provided.';
+        proposalTextarea.replaceWith(proposalElement);
+    }
+    
+    // Show edit button, hide save/cancel buttons
+    const isAuthor = currentUser.uid === project.authorId;
+    const isAdmin = currentUserRole === 'admin';
+    const canEditProposal = isAuthor || isAdmin;
+    
+    document.getElementById('edit-proposal-button').style.display = canEditProposal ? 'inline-block' : 'none';
+    document.getElementById('save-proposal-button').style.display = 'none';
+    document.getElementById('cancel-proposal-button').style.display = 'none';
+}
+
+async function handleSaveProposal() {
+    if (!currentlyViewedProjectId) return;
+    
+    const titleInput = document.getElementById('edit-title-input');
+    const proposalTextarea = document.getElementById('edit-proposal-textarea');
+    
+    if (!titleInput || !proposalTextarea) return;
+    
+    const newTitle = titleInput.value.trim();
+    const newProposal = proposalTextarea.value.trim();
+    
+    if (!newTitle) {
+        alert('Title cannot be empty.');
+        return;
+    }
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            title: newTitle,
+            proposal: newProposal
+        });
+        
+        await addActivity(currentlyViewedProjectId, 'updated the project title and proposal.');
+        
+        // The modal will refresh automatically due to the subscription
+        
+    } catch (error) {
+        console.error('[PROPOSAL UPDATE ERROR]', error);
+        alert('Failed to update proposal. Please try again.');
+    }
+}
+
+// NEW: Deadline Request Functions
+async function handleRequestDeadlineChange() {
+    if (!currentlyViewedProjectId) return;
+    
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!project) return;
+    
+    const reason = prompt('Please provide a reason for the deadline change request:');
+    if (!reason || !reason.trim()) return;
+    
+    const newDate = prompt('Enter the new deadline (YYYY-MM-DD format):');
+    if (!newDate || !isValidDate(newDate)) {
+        alert('Please enter a valid date in YYYY-MM-DD format.');
+        return;
+    }
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            deadlineRequest: {
+                requestedBy: currentUserName,
+                requestedDate: newDate,
+                reason: reason.trim(),
+                status: 'pending',
+                requestedAt: new Date()
+            }
+        });
+        
+        await addActivity(currentlyViewedProjectId, `requested a deadline change to ${new Date(newDate).toLocaleDateString()}. Reason: ${reason.trim()}`);
+        
+    } catch (error) {
+        console.error('[DEADLINE REQUEST ERROR]', error);
+        alert('Failed to submit deadline request. Please try again.');
+    }
+}
+
+async function handleApproveDeadlineRequest() {
+    if (!currentlyViewedProjectId) return;
+    
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!project || !project.deadlineRequest) return;
+    
+    try {
+        const newDeadlines = {
+            ...project.deadlines,
+            publication: project.deadlineRequest.requestedDate
+        };
+        
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            deadlines: newDeadlines,
+            'deadlineRequest.status': 'approved',
+            'deadlineRequest.approvedBy': currentUserName,
+            'deadlineRequest.approvedAt': new Date()
+        });
+        
+        await addActivity(currentlyViewedProjectId, `approved the deadline change request. New deadline: ${new Date(project.deadlineRequest.requestedDate).toLocaleDateString()}`);
+        
+    } catch (error) {
+        console.error('[DEADLINE APPROVAL ERROR]', error);
+        alert('Failed to approve deadline request. Please try again.');
+    }
+}
+
+async function handleRejectDeadlineRequest() {
+    if (!currentlyViewedProjectId) return;
+    
+    const reason = prompt('Please provide a reason for rejecting this deadline request (optional):');
+    
+    try {
+        const updates = {
+            'deadlineRequest.status': 'rejected',
+            'deadlineRequest.rejectedBy': currentUserName,
+            'deadlineRequest.rejectedAt': new Date()
+        };
+        
+        if (reason && reason.trim()) {
+            updates['deadlineRequest.rejectionReason'] = reason.trim();
+        }
+        
+        await db.collection('projects').doc(currentlyViewedProjectId).update(updates);
+        
+        const activityText = reason ? 
+            `rejected the deadline change request. Reason: ${reason.trim()}` :
+            'rejected the deadline change request.';
+        
+        await addActivity(currentlyViewedProjectId, activityText);
+        
+    } catch (error) {
+        console.error('[DEADLINE REJECTION ERROR]', error);
+        alert('Failed to reject deadline request. Please try again.');
+    }
 }
 
 function renderTimeline(project, isAuthor, isEditor, isAdmin) {
@@ -475,7 +721,6 @@ function renderDeadlines(project, isAdmin) {
     });
      document.getElementById('update-deadlines-button').style.display = isAdmin ? 'block' : 'none';
 }
-
 
 function renderInterviewStatus(project) {
     const statusDisplay = document.getElementById('interview-status-display');
@@ -623,7 +868,6 @@ async function updateProposalStatus(newStatus) {
     }
 }
 
-
 async function handleScheduleInterview() {
     const dateInput = document.getElementById('interview-date').value;
     if (!dateInput || !currentlyViewedProjectId) return;
@@ -703,7 +947,6 @@ async function handleUpdateDeadlines() {
     }
 }
 
-
 async function handleDeleteProject() {
     if (!currentlyViewedProjectId) return;
     if (confirm("Are you sure you want to permanently delete this project? This action cannot be undone.")) {
@@ -731,6 +974,11 @@ function generateStatusReport() {
         return new Date(finalDeadline) < now && getProjectState(p).column !== 'Completed';
     });
 
+    // NEW: Pending deadline requests for admin attention
+    const pendingDeadlineRequests = allProjects.filter(p => 
+        p.deadlineRequest && p.deadlineRequest.status === 'pending'
+    );
+
     const completedThisWeek = allProjects.filter(p => {
         const state = getProjectState(p);
         if (state.column !== 'Completed') return false;
@@ -751,6 +999,14 @@ function generateStatusReport() {
                         <span class="report-item-meta">Due: ${new Date(p.deadlines.publication).toLocaleDateString()} | Author: ${p.authorName}</span>
                     </div>
                 `).join('') : '<p>No overdue projects. Great job!</p>'}
+                
+            ${pendingDeadlineRequests.length > 0 ? 
+                `<h3>Pending Deadline Requests (${pendingDeadlineRequests.length})</h3>` + pendingDeadlineRequests.map(p => `
+                    <div class="report-item deadline-request-item" data-id="${p.id}">
+                        <span class="report-item-title">${p.title}</span>
+                        <span class="report-item-meta">Requested by: ${p.deadlineRequest.requestedBy} | New deadline: ${new Date(p.deadlineRequest.requestedDate).toLocaleDateString()}</span>
+                    </div>
+                `).join('') : ''}
         </div>`;
 
     reportHTML += `
@@ -863,4 +1119,9 @@ function calculateProgress(timeline) {
     const totalTasks = Object.keys(timeline).length;
     const completedTasks = Object.values(timeline).filter(Boolean).length;
     return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+}
+
+function isValidDate(dateString) {
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
 }
