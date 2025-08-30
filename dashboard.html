@@ -15,6 +15,7 @@
   <body>
     <div id="loader" class="loader-container">
       <div class="loader" role="status" aria-label="Loading"></div>
+      <p style="margin-top: 20px; color: #64748b;">Loading Catalyst Tracker...</p>
     </div>
 
     <div id="app-container" class="app-container" style="display: none">
@@ -126,10 +127,10 @@
 
         <div class="sidebar-footer">
           <div class="user-profile">
-            <div class="user-avatar" id="user-avatar" aria-hidden="true"></div>
+            <div class="user-avatar" id="user-avatar" aria-hidden="true">U</div>
             <div class="user-details">
-              <span id="user-name"></span>
-              <span id="user-role"></span>
+              <span id="user-name">Loading...</span>
+              <span id="user-role">writer</span>
             </div>
           </div>
           <button id="logout-button" class="logout-btn">
@@ -151,6 +152,7 @@
             <button
               id="status-report-button"
               class="btn-secondary admin-only"
+              style="display: none;"
             >
               Generate Status Report
             </button>
@@ -161,7 +163,11 @@
         </header>
 
         <div id="board-view">
-          <div id="kanban-board" class="kanban-board" aria-live="polite"></div>
+          <div id="kanban-board" class="kanban-board" aria-live="polite">
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
+              <p>Loading projects...</p>
+            </div>
+          </div>
         </div>
 
         <div id="calendar-view" style="display: none">
@@ -169,7 +175,7 @@
             <button id="prev-month" class="icon-btn" aria-label="Previous month">
               ‹
             </button>
-            <h2 id="month-year"></h2>
+            <h2 id="month-year">Calendar</h2>
             <button id="next-month" class="icon-btn" aria-label="Next month">
               ›
             </button>
@@ -179,7 +185,8 @@
       </main>
     </div>
 
-    <div id="project-modal" class="modal-overlay" role="dialog" aria-modal="true">
+    <!-- Modals -->
+    <div id="project-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
       <div class="modal-content">
         <div class="modal-header">
           <h2 id="modal-title">Propose New Article</h2>
@@ -226,10 +233,10 @@
       </div>
     </div>
 
-    <div id="details-modal" class="modal-overlay" role="dialog" aria-modal="true">
+    <div id="details-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
         <div class="modal-content large">
             <div class="modal-header">
-                <h2 id="details-title"></h2>
+                <h2 id="details-title">Project Details</h2>
                 <button class="close-button" aria-label="Close">×</button>
             </div>
             <div class="details-container">
@@ -240,11 +247,13 @@
                             <button id="save-proposal-button" class="btn-success" style="display: none; margin-left: 12px;">Save</button>
                             <button id="cancel-proposal-button" class="btn-secondary" style="display: none; margin-left: 6px;">Cancel</button>
                         </h4>
-                        <p id="details-proposal"></p>
+                        <p id="details-proposal">No proposal provided.</p>
         
                         <hr>
                         <h4>✅ Progress Checklist</h4>
-                        <div id="details-timeline"></div>
+                        <div id="details-timeline">
+                          <p>No tasks available.</p>
+                        </div>
         
                         <hr>
                         <h4>💬 Comments & Activity</h4>
@@ -252,37 +261,162 @@
                             <textarea id="comment-input" placeholder="Add a comment or update..."></textarea>
                             <button id="add-comment-button" class="btn-primary">Post</button>
                         </div>
-                        <div id="details-activity-feed" class="activity-feed"></div>
+                        <div id="details-activity-feed" class="activity-feed">
+                          <p>No activity yet.</p>
+                        </div>
                     </div>
         
                     <aside class="details-sidebar">
                         <div class="sidebar-section">
                             <h4>Status</h4>
-                            <p id="details-status"></p>
+                            <p id="details-status">Loading...</p>
                         </div>
         
                         <div class="sidebar-section">
                             <h4>Key People</h4>
-                            <p><strong>Author:</strong> <span id="details-author"></span></p>
+                            <p><strong>Author:</strong> <span id="details-author">Unknown</span></p>
                             <p><strong>Editor:</strong> <span id="details-editor">Not Assigned</span></p>
-                            <div id="assign-editor-section" class="admin-only details-form" style="margin-top: 12px;">
-                                <select id="editor-dropdown"></select>
+                            <div id="assign-editor-section" class="admin-only details-form" style="margin-top: 12px; display: none;">
+                                <select id="editor-dropdown">
+                                  <option value="">Select Editor</option>
+                                </select>
                                 <button id="assign-editor-button" class="btn-secondary">Assign</button>
                             </div>
                         </div>
         
                         <div class="sidebar-section">
                             <h4>Publication Deadline</h4>
-                            <p id="details-publication-deadline"></p>
+                            <p id="details-publication-deadline">Not set</p>
                         </div>
 
-                        <!-- Enhanced: Deadline Change Request Section -->
                         <div id="deadline-request-section" class="sidebar-section" style="display: none;">
                             <!-- Content will be populated dynamically -->
                         </div>
         
                         <div id="deadlines-section" class="sidebar-section">
                             <h4>Task Deadlines</h4>
+                            <div id="details-deadlines-list">
+                              <p>No deadlines set.</p>
+                            </div>
+                            <button id="set-deadlines-button" class="btn-secondary" style="width: 100%; margin-top: 12px; display: none;">Set Remaining Deadlines</button>
+                            <button id="request-deadline-change-button" class="btn-secondary" style="width: 100%; margin-top: 8px; display: none;">Request Deadline Changes</button>
+                        </div>
+        
+                        <div id="admin-approval-section" class="sidebar-section admin-only" style="display: none;">
+                            <h4>Admin Actions</h4>
+                            <div class="button-group">
+                                <button id="approve-button" class="btn-success">Approve</button>
+                                <button id="reject-button" class="btn-danger">Reject</button>
+                            </div>
+                        </div>
+        
+                        <div id="delete-section" class="sidebar-section">
+                            <h4>Delete Project</h4>
+                            <button id="delete-project-button" class="btn-danger" style="display: none;">Delete Forever</button>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="report-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+      <div class="modal-content large">
+        <div class="modal-header">
+          <h2>Overall Status Report</h2>
+          <button class="close-button" aria-label="Close">×</button>
+        </div>
+        <div id="report-content" class="report-content">
+          <p>Loading report...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Handler Script -->
+    <script>
+    window.addEventListener('error', function(e) {
+        console.error('[GLOBAL ERROR]', e.error || e.message);
+        
+        // Show user-friendly error if app fails to load
+        const loader = document.getElementById('loader');
+        if (loader && loader.style.display !== 'none') {
+            setTimeout(() => {
+                if (loader.style.display !== 'none') {
+                    loader.innerHTML = `
+                        <div style="text-align: center; padding: 40px;">
+                            <h3 style="color: #ef4444; margin-bottom: 16px;">Loading Error</h3>
+                            <p style="color: #64748b; margin-bottom: 20px;">There was an issue loading the application.</p>
+                            <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007AFF; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 10px;">
+                                Refresh Page
+                            </button>
+                            <button onclick="window.location.href = 'index.html'" style="padding: 10px 20px; background: #64748b; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                                Back to Login
+                            </button>
+                        </div>
+                    `;
+                }
+            }, 3000);
+        }
+    });
+    
+    // Check if Firebase loads properly
+    setTimeout(() => {
+        if (typeof firebase === 'undefined') {
+            console.error('[FIREBASE ERROR] Firebase not loaded after 3 seconds');
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <h3 style="color: #ef4444; margin-bottom: 16px;">Connection Error</h3>
+                        <p style="color: #64748b; margin-bottom: 20px;">Unable to connect to the database. Please check your internet connection.</p>
+                        <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007AFF; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }, 3000);
+    </script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <!-- App Scripts -->
+    <script>
+        // Debug mode - use simplified dashboard
+        const useDebugMode = true;
+        
+        if (useDebugMode) {
+            console.log('[DEBUG] Using debug dashboard');
+        }
+    </script>
+    
+    <script src="projectState.js"></script>
+    <script>
+      // Load dashboard script based on mode
+      const script = document.createElement('script');
+      script.src = window.useDebugMode ? 'debug_dashboard.js' : 'dashboard.js';
+      script.onload = () => console.log('[SCRIPT] Dashboard script loaded');
+      script.onerror = (e) => {
+        console.error('[SCRIPT] Dashboard script failed to load', e);
+        // Fallback to inline basic functionality
+        document.getElementById('loader').innerHTML = `
+          <div style="text-align: center; padding: 40px;">
+            <h3 style="color: #ef4444;">Script Loading Error</h3>
+            <p style="color: #64748b; margin: 20px 0;">Dashboard script could not load.</p>
+            <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007AFF; color: white; border: none; border-radius: 8px; cursor: pointer;">
+              Refresh Page
+            </button>
+          </div>
+        `;
+      };
+      document.head.appendChild(script);
+    </script>
+  </body>
+</html>dlines</h4>
                             <div id="details-deadlines-list"></div>
                             <!-- New: Individual deadline setting buttons -->
                             <button id="set-deadlines-button" class="btn-secondary" style="width: 100%; margin-top: 12px; display: none;">Set Remaining Deadlines</button>
