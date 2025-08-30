@@ -12,9 +12,34 @@ const firebaseConfig = {
     appId: "1:394311851220:web:86e4939b7d5a085b46d75d"
 };
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+// Initialize Firebase with error handling
+try {
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log("[FIREBASE] Firebase initialized successfully");
+    }
+} catch (initError) {
+    console.error("[FIREBASE] Firebase initialization failed:", initError);
+    alert("Failed to connect to the database. Please refresh the page and try again.");
+}
+
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+// Test Firebase connection
+async function testFirebaseConnection() {
+    try {
+        console.log("[FIREBASE] Testing connection...");
+        
+        // Simple connection test
+        const testDoc = await db.collection('_test').limit(1).get();
+        console.log("[FIREBASE] Connection test successful");
+        return true;
+    } catch (error) {
+        console.error("[FIREBASE] Connection test failed:", error);
+        return false;
+    }
+}
 
 // ---- App State ----
 let currentUser = null, currentUserName = null, currentUserRole = null;
@@ -36,66 +61,160 @@ auth.onAuthStateChanged(async (user) => {
     try {
         console.log("[INIT] User authenticated:", user.uid);
         
-        // Try to get user document
-        const userDoc = await db.collection('users').doc(user.uid).get();
+        // Test Firebase connection first
+        const connectionWorks = await testFirebaseConnection();
+        if (!connectionWorks) {
+            console.warn("[INIT] Firebase connection test failed, proceeding with limited functionality");
+        }
         
-        if (!userDoc.exists) {
-            console.warn("[INIT] User document not found, creating default profile");
-            
-            // Create a default user profile
-            const defaultUserData = {
-                name: user.displayName || user.email.split('@')[0],
-                email: user.email,
-                role: 'writer', // Default role
-                createdAt: new Date()
-            };
-            
-            await db.collection('users').doc(user.uid).set(defaultUserData);
-            currentUserName = defaultUserData.name;
-            currentUserRole = defaultUserData.role;
-            
-            console.log("[INIT] Created default user profile:", defaultUserData);
-        } else {
+        // Set basic user info immediately from auth object
+        currentUserName = user.displayName || user.email.split('@')[0] || 'User';
+        currentUserRole = 'writer'; // Default role
+        
+        // Try to get user document with timeout
+        let userDoc = null;
+        if (connectionWorks) {
+            try {
+                console.log("[INIT] Attempting to fetch user profile...");
+                
+                // Add a timeout to prevent hanging
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+                );
+                
+                const fetchPromise = db.collection('users').doc(user.uid).get();
+                userDoc = await Promise.race([fetchPromise, timeoutPromise]);
+                
+                console.log("[INIT] User document fetched successfully");
+            } catch (docError) {
+                console.warn("[INIT] Could not fetch user document:", docError.message);
+                // Continue with default values - don't fail here
+            }
+        }
+        
+        if (userDoc && userDoc.exists) {
             const userData = userDoc.data();
-            currentUserName = userData.name || user.displayName || user.email.split('@')[0];
+            currentUserName = userData.name || currentUserName;
             currentUserRole = userData.role || 'writer';
-            
             console.log("[INIT] Loaded existing user profile:", userData);
+        } else {
+            console.log("[INIT] Using default user profile - will create document in background");
+            
+            // Try to create user document in background (don't wait for it)
+            if (connectionWorks) {
+                setTimeout(async () => {
+                    try {
+                        const defaultUserData = {
+                            name: currentUserName,
+                            email: user.email,
+                            role: 'writer',
+                            createdAt: new Date()
+                        };
+                        await db.collection('users').doc(user.uid).set(defaultUserData, { merge: true });
+                        console.log("[BACKGROUND] Created user profile:", defaultUserData);
+                    } catch (bgError) {
+                        console.warn("[BACKGROUND] Failed to create user profile:", bgError);
+                    }
+                }, 1000);
+            }
         }
 
-        await fetchEditors();
+        // Continue initialization with fallback values
+        console.log("[INIT] Proceeding with user:", currentUserName, currentUserRole);
+        
+        // Fetch editors with error handling
+        if (connectionWorks) {
+            try {
+                await fetchEditors();
+            } catch (editorError) {
+                console.warn("[INIT] Could not fetch editors:", editorError.message);
+                allEditors = []; // Continue with empty editors array
+            }
+        } else {
+            allEditors = [];
+        }
+        
         setupUI();
         setupNavAndListeners();
-        subscribeToProjects();
+        
+        // Subscribe to projects with error handling
+        if (connectionWorks) {
+            try {
+                subscribeToProjects();
+            } catch (projectError) {
+                console.warn("[INIT] Could not subscribe to projects:", projectError.message);
+                allProjects = [];
+                renderCurrentView();
+            }
+        } else {
+            allProjects = [];
+            renderCurrentView();
+        }
 
         document.getElementById('loader').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
+        
+        if (!connectionWorks) {
+            setTimeout(() => {
+                alert("Warning: Connection to database is limited. Some features may not work properly. Please refresh the page to try again.");
+            }, 1000);
+        }
         
         console.log("[INIT] Initialization completed successfully");
         
     } catch (error) {
         console.error("Initialization Error:", error);
         
-        // More detailed error handling
-        let errorMessage = "Could not load your profile. ";
+        // More detailed error handling with better fallbacks
+        let errorMessage = "There was an issue loading the app. ";
+        let shouldSignOut = false;
         
         if (error.code === 'permission-denied') {
             errorMessage += "You don't have permission to access this resource. Please contact an administrator.";
+            shouldSignOut = true;
         } else if (error.code === 'unavailable') {
             errorMessage += "The service is currently unavailable. Please try again later.";
         } else if (error.message.includes('network')) {
             errorMessage += "Please check your internet connection and try again.";
+        } else if (error.message.includes('timeout')) {
+            errorMessage += "The request timed out. Please check your connection and try again.";
         } else {
             errorMessage += "Please refresh the page and try again.";
         }
         
-        alert(errorMessage);
+        // Show error but try to continue with minimal functionality
+        console.error("[INIT] Showing error message:", errorMessage);
         
-        // Try to sign out the user so they can try logging in again
+        // Try to at least show the UI with basic info
         try {
-            await auth.signOut();
-        } catch (signOutError) {
-            console.error("Error signing out:", signOutError);
+            currentUserName = user.displayName || user.email.split('@')[0] || 'User';
+            currentUserRole = 'writer';
+            allEditors = [];
+            allProjects = [];
+            setupUI();
+            setupNavAndListeners();
+            renderCurrentView();
+            
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('app-container').style.display = 'flex';
+            
+            // Show warning instead of blocking error
+            setTimeout(() => {
+                alert("Warning: " + errorMessage + " The app is running in limited mode.");
+            }, 500);
+            
+        } catch (fallbackError) {
+            console.error("[INIT] Complete fallback failed:", fallbackError);
+            alert(errorMessage);
+            
+            if (shouldSignOut) {
+                try {
+                    await auth.signOut();
+                } catch (signOutError) {
+                    console.error("Error signing out:", signOutError);
+                    window.location.href = 'index.html';
+                }
+            }
         }
     }
 });
@@ -103,13 +222,22 @@ auth.onAuthStateChanged(async (user) => {
 async function fetchEditors() {
     try {
         console.log("[INIT] Fetching editors...");
-        const editorsSnapshot = await db.collection('users').where('role', 'in', ['admin', 'editor']).get();
+        
+        // Add timeout for editors fetch
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Editors fetch timeout')), 8000)
+        );
+        
+        const fetchPromise = db.collection('users').where('role', 'in', ['admin', 'editor']).get();
+        const editorsSnapshot = await Promise.race([fetchPromise, timeoutPromise]);
+        
         allEditors = editorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         console.log("[INIT] Found", allEditors.length, "editors");
     } catch (error) {
         console.error("Error fetching editors:", error);
-        // Continue with empty editors array
+        // Continue with empty editors array - this shouldn't crash the app
         allEditors = [];
+        console.log("[INIT] Continuing with empty editors array");
     }
 }
 
@@ -219,25 +347,66 @@ function renderCurrentView() {
 function subscribeToProjects() {
     console.log("[FIREBASE] Setting up projects subscription...");
     
-    db.collection('projects').onSnapshot(snapshot => {
-        console.log("[FIREBASE] Projects updated, processing...");
+    try {
+        const unsubscribe = db.collection('projects').onSnapshot(snapshot => {
+            try {
+                console.log("[FIREBASE] Projects updated, processing...");
+                
+                allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                renderCurrentView();
+                updateNavCounts();
+
+                if (currentlyViewedProjectId) {
+                    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+                    if (project) {
+                        refreshDetailsModal(project);
+                    } else {
+                        closeAllModals();
+                    }
+                }
+            } catch (processingError) {
+                console.error("[FIREBASE] Error processing project updates:", processingError);
+                // Continue with existing data rather than crashing
+            }
+        }, error => {
+            console.error("[FIREBASE ERROR] Projects subscription failed:", error);
+            
+            // Don't crash the app - show a warning and retry
+            console.log("[FIREBASE] Attempting to reconnect in 5 seconds...");
+            setTimeout(() => {
+                try {
+                    subscribeToProjects();
+                } catch (retryError) {
+                    console.error("[FIREBASE] Retry failed:", retryError);
+                }
+            }, 5000);
+        });
         
+        // Store unsubscribe function for cleanup if needed
+        window.projectsUnsubscribe = unsubscribe;
+        
+    } catch (subscriptionError) {
+        console.error("[FIREBASE] Failed to set up subscription:", subscriptionError);
+        // Try to load projects once as fallback
+        loadProjectsOnce();
+    }
+}
+
+// Fallback function to load projects once if subscription fails
+async function loadProjectsOnce() {
+    try {
+        console.log("[FIREBASE] Loading projects once as fallback...");
+        const snapshot = await db.collection('projects').get();
         allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
         renderCurrentView();
         updateNavCounts();
-
-        if (currentlyViewedProjectId) {
-            const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-            if (project) {
-                refreshDetailsModal(project);
-            } else {
-                closeAllModals();
-            }
-        }
-    }, error => {
-        console.error("[FIREBASE ERROR] Projects subscription failed:", error);
-    });
+        console.log("[FIREBASE] Loaded", allProjects.length, "projects");
+    } catch (error) {
+        console.error("[FIREBASE] Failed to load projects:", error);
+        allProjects = [];
+        renderCurrentView();
+    }
 }
 
 function updateNavCounts() {
