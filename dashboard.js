@@ -1,5 +1,5 @@
 // ===============================
-// Catalyst Tracker - FIXED Dashboard JS with Better Error Handling
+// Catalyst Tracker - Enhanced Dashboard JS with Deadline Management
 // ===============================
 
 // ---- Firebase Configuration ----
@@ -142,9 +142,9 @@ function setupNavAndListeners() {
     document.getElementById('project-form').addEventListener('submit', handleProjectFormSubmit);
     document.getElementById('status-report-button').addEventListener('click', generateStatusReport);
     document.getElementById('add-comment-button').addEventListener('click', handleAddComment);
-    document.getElementById('schedule-interview-button').addEventListener('click', handleScheduleInterview);
     document.getElementById('assign-editor-button').addEventListener('click', handleAssignEditor);
-    document.getElementById('update-deadlines-button').addEventListener('click', handleUpdateDeadlines);
+    document.getElementById('set-deadlines-button').addEventListener('click', handleSetDeadlines);
+    document.getElementById('request-deadline-change-button').addEventListener('click', handleRequestDeadlineChange);
     document.getElementById('delete-project-button').addEventListener('click', handleDeleteProject);
     document.getElementById('approve-button').addEventListener('click', () => approveProposal(currentlyViewedProjectId));
     document.getElementById('reject-button').addEventListener('click', () => updateProposalStatus('rejected'));
@@ -159,7 +159,7 @@ function setupNavAndListeners() {
     const saveProposalBtn = document.getElementById('save-proposal-button');
     const cancelProposalBtn = document.getElementById('cancel-proposal-button');
 
-    if (requestDeadlineBtn) requestDeadlineBtn.addEventListener('click', handleRequestDeadlineChange);
+    if (requestDeadlineBtn) requestDeadlineBtn.addEventListener('click', handleRequestDeadlineChangeModal);
     if (approveDeadlineBtn) approveDeadlineBtn.addEventListener('click', handleApproveDeadlineRequest);
     if (rejectDeadlineBtn) rejectDeadlineBtn.addEventListener('click', handleRejectDeadlineRequest);
     if (editProposalBtn) editProposalBtn.addEventListener('click', enableProposalEditing);
@@ -462,70 +462,79 @@ function refreshDetailsModal(project) {
     const needsEditor = project.timeline && project.timeline["Article Writing Complete"] && !project.editorId;
     document.getElementById('assign-editor-section').style.display = isAdmin && needsEditor ? 'flex' : 'none';
     
-    const interviewSection = document.getElementById('interview-details-section');
-    if (project.type === 'Interview') {
-        interviewSection.style.display = 'block';
-        renderInterviewStatus(project);
-        const canSchedule = isAuthor || isAdmin;
-        interviewSection.querySelector('#interview-date').disabled = !canSchedule;
-        interviewSection.querySelector('#schedule-interview-button').disabled = !canSchedule;
-    } else {
-        interviewSection.style.display = 'none';
-    }
-
+    // REMOVED: Interview details section is completely removed
+    
     populateEditorDropdown(project.editorId);
     renderTimeline(project, isAuthor, isEditor, isAdmin);
-    renderDeadlines(project, isAdmin);
+    renderDeadlines(project, isAuthor, isEditor, isAdmin);
     renderDeadlineRequestSection(project, isAuthor, isAdmin);
     renderActivityFeed(project.activity || []);
+    
+    // NEW: Show delete button only for project authors or admins
+    const deleteButton = document.getElementById('delete-project-button');
+    if (deleteButton) {
+        deleteButton.style.display = (isAuthor || isAdmin) ? 'block' : 'none';
+    }
 }
 
-// NEW: Deadline Request Management
+// NEW: Enhanced Deadline Request Management
 function renderDeadlineRequestSection(project, isAuthor, isAdmin) {
     const deadlineSection = document.getElementById('deadline-request-section');
-    if (!deadlineSection) return; // Safety check
+    if (!deadlineSection) return;
     
-    if (project.deadlineRequest) {
-        const request = project.deadlineRequest;
-        const requestDate = new Date(request.requestedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    if (project.deadlineChangeRequest) {
+        const request = project.deadlineChangeRequest;
         
         if (request.status === 'pending') {
-            deadlineSection.innerHTML = `
-                <h4>Pending Deadline Request</h4>
+            let requestDetailsHTML = `
+                <h4>Pending Deadline Change Request</h4>
                 <p><strong>Requested by:</strong> ${request.requestedBy}</p>
-                <p><strong>New deadline:</strong> ${requestDate}</p>
                 <p><strong>Reason:</strong> ${request.reason}</p>
-                ${isAdmin ? `
-                    <div class="button-group" style="margin-top: 12px;">
-                        <button id="approve-deadline-button" class="btn-success">Approve</button>
-                        <button id="reject-deadline-button" class="btn-danger">Reject</button>
-                    </div>
-                ` : '<p style="font-style: italic; color: var(--warning-color);">Awaiting admin approval...</p>'}
+                <div style="margin: 12px 0;">
+                    <strong>Requested Changes:</strong>
+                </div>
             `;
+            
+            for (const [field, newDate] of Object.entries(request.requestedDeadlines)) {
+                const fieldLabels = {
+                    'contact': 'Contact Professor',
+                    'interview': 'Conduct Interview', 
+                    'draft': 'Write Draft',
+                    'review': 'Editor Review',
+                    'edits': 'Review Edits'
+                };
+                
+                requestDetailsHTML += `
+                    <p style="margin-left: 16px;">• ${fieldLabels[field]}: ${new Date(newDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                `;
+            }
+            
+            if (isAdmin) {
+                requestDetailsHTML += `
+                    <div class="button-group" style="margin-top: 16px;">
+                        <button id="approve-deadline-change-button" class="btn-success">Approve Changes</button>
+                        <button id="reject-deadline-change-button" class="btn-danger">Reject Request</button>
+                    </div>
+                `;
+            } else {
+                requestDetailsHTML += '<p style="font-style: italic; color: var(--warning-color); margin-top: 12px;">Awaiting admin approval...</p>';
+            }
+            
+            deadlineSection.innerHTML = requestDetailsHTML;
             deadlineSection.style.display = 'block';
             
             // Re-attach event listeners for dynamically created buttons
             if (isAdmin) {
-                const approveBtn = document.getElementById('approve-deadline-button');
-                const rejectBtn = document.getElementById('reject-deadline-button');
-                if (approveBtn) approveBtn.addEventListener('click', handleApproveDeadlineRequest);
-                if (rejectBtn) rejectBtn.addEventListener('click', handleRejectDeadlineRequest);
+                const approveBtn = document.getElementById('approve-deadline-change-button');
+                const rejectBtn = document.getElementById('reject-deadline-change-button');
+                if (approveBtn) approveBtn.addEventListener('click', handleApproveDeadlineChangeRequest);
+                if (rejectBtn) rejectBtn.addEventListener('click', handleRejectDeadlineChangeRequest);
             }
         } else {
             deadlineSection.style.display = 'none';
         }
     } else {
         deadlineSection.style.display = 'none';
-    }
-    
-    // Show request button for authors
-    const requestButton = document.getElementById('request-deadline-button');
-    if (requestButton) {
-        if (isAuthor && (!project.deadlineRequest || project.deadlineRequest.status !== 'pending')) {
-            requestButton.style.display = 'inline-block';
-        } else {
-            requestButton.style.display = 'none';
-        }
     }
 }
 
@@ -630,82 +639,186 @@ async function handleSaveProposal() {
     }
 }
 
-// NEW: Deadline Request Functions
-async function handleRequestDeadlineChange() {
+// NEW: Enhanced Deadline Change Request Functions
+async function handleRequestDeadlineChangeModal() {
     if (!currentlyViewedProjectId) return;
     
     const project = allProjects.find(p => p.id === currentlyViewedProjectId);
     if (!project) return;
     
+    // Create a modal for deadline change request
     const reason = prompt('Please provide a reason for the deadline change request:');
     if (!reason || !reason.trim()) return;
     
-    const newDate = prompt('Enter the new deadline (YYYY-MM-DD format):');
-    if (!newDate || !isValidDate(newDate)) {
-        alert('Please enter a valid date in YYYY-MM-DD format.');
+    // Show form for setting new deadlines
+    showDeadlineChangeForm(project, reason.trim());
+}
+
+function showDeadlineChangeForm(project, reason) {
+    // Create a temporary modal for deadline changes
+    const modalHTML = `
+        <div id="deadline-change-modal" class="modal-overlay" style="display: flex;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Request Deadline Changes</h2>
+                    <button class="close-button" onclick="closeDeadlineChangeModal()">×</button>
+                </div>
+                <div style="padding: 24px;">
+                    <p><strong>Reason:</strong> ${reason}</p>
+                    <p style="margin: 16px 0;">Select which deadlines you want to change:</p>
+                    <form id="deadline-change-form">
+                        ${project.type === 'Interview' ? `
+                        <div class="deadline-item">
+                            <label>
+                                <input type="checkbox" id="change-contact"> Contact Professor
+                            </label>
+                            <input type="date" id="new-contact" disabled>
+                        </div>
+                        <div class="deadline-item">
+                            <label>
+                                <input type="checkbox" id="change-interview"> Conduct Interview
+                            </label>
+                            <input type="date" id="new-interview" disabled>
+                        </div>
+                        ` : ''}
+                        <div class="deadline-item">
+                            <label>
+                                <input type="checkbox" id="change-draft"> Write Draft
+                            </label>
+                            <input type="date" id="new-draft" disabled>
+                        </div>
+                        ${project.editorId === currentUser.uid ? `
+                        <div class="deadline-item">
+                            <label>
+                                <input type="checkbox" id="change-review"> Editor Review
+                            </label>
+                            <input type="date" id="new-review" disabled>
+                        </div>
+                        ` : ''}
+                        <div class="deadline-item">
+                            <label>
+                                <input type="checkbox" id="change-edits"> Review Edits
+                            </label>
+                            <input type="date" id="new-edits" disabled>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeDeadlineChangeModal()">Cancel</button>
+                    <button type="button" class="btn-primary" onclick="submitDeadlineChangeRequest('${reason}')">Submit Request</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Add event listeners for checkboxes
+    document.querySelectorAll('#deadline-change-form input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const fieldName = this.id.replace('change-', '');
+            const dateInput = document.getElementById(`new-${fieldName}`);
+            dateInput.disabled = !this.checked;
+            if (!this.checked) dateInput.value = '';
+        });
+    });
+}
+
+window.closeDeadlineChangeModal = function() {
+    const modal = document.getElementById('deadline-change-modal');
+    if (modal) modal.remove();
+};
+
+window.submitDeadlineChangeRequest = async function(reason) {
+    if (!currentlyViewedProjectId) return;
+    
+    const requestedDeadlines = {};
+    const checkboxes = document.querySelectorAll('#deadline-change-form input[type="checkbox"]:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Please select at least one deadline to change.');
+        return;
+    }
+    
+    let hasValidDates = true;
+    checkboxes.forEach(checkbox => {
+        const fieldName = checkbox.id.replace('change-', '');
+        const dateInput = document.getElementById(`new-${fieldName}`);
+        if (!dateInput.value) {
+            hasValidDates = false;
+            return;
+        }
+        requestedDeadlines[fieldName] = dateInput.value;
+    });
+    
+    if (!hasValidDates) {
+        alert('Please fill in all selected deadline dates.');
         return;
     }
     
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
-            deadlineRequest: {
+            deadlineChangeRequest: {
                 requestedBy: currentUserName,
-                requestedDate: newDate,
-                reason: reason.trim(),
+                requestedDeadlines: requestedDeadlines,
+                reason: reason,
                 status: 'pending',
                 requestedAt: new Date()
             }
         });
         
-        await addActivity(currentlyViewedProjectId, `requested a deadline change to ${new Date(newDate).toLocaleDateString()}. Reason: ${reason.trim()}`);
+        await addActivity(currentlyViewedProjectId, `requested deadline changes for: ${Object.keys(requestedDeadlines).join(', ')}. Reason: ${reason}`);
+        
+        closeDeadlineChangeModal();
         
     } catch (error) {
-        console.error('[DEADLINE REQUEST ERROR]', error);
-        alert('Failed to submit deadline request. Please try again.');
+        console.error('[DEADLINE CHANGE REQUEST ERROR]', error);
+        alert('Failed to submit deadline change request. Please try again.');
     }
-}
+};
 
-async function handleApproveDeadlineRequest() {
+async function handleApproveDeadlineChangeRequest() {
     if (!currentlyViewedProjectId) return;
     
     const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!project || !project.deadlineRequest) return;
+    if (!project || !project.deadlineChangeRequest) return;
     
     try {
         const newDeadlines = {
             ...project.deadlines,
-            publication: project.deadlineRequest.requestedDate
+            ...project.deadlineChangeRequest.requestedDeadlines
         };
         
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             deadlines: newDeadlines,
-            'deadlineRequest.status': 'approved',
-            'deadlineRequest.approvedBy': currentUserName,
-            'deadlineRequest.approvedAt': new Date()
+            'deadlineChangeRequest.status': 'approved',
+            'deadlineChangeRequest.approvedBy': currentUserName,
+            'deadlineChangeRequest.approvedAt': new Date()
         });
         
-        await addActivity(currentlyViewedProjectId, `approved the deadline change request. New deadline: ${new Date(project.deadlineRequest.requestedDate).toLocaleDateString()}`);
+        const changedFields = Object.keys(project.deadlineChangeRequest.requestedDeadlines).join(', ');
+        await addActivity(currentlyViewedProjectId, `approved deadline changes for: ${changedFields}`);
         
     } catch (error) {
-        console.error('[DEADLINE APPROVAL ERROR]', error);
-        alert('Failed to approve deadline request. Please try again.');
+        console.error('[DEADLINE CHANGE APPROVAL ERROR]', error);
+        alert('Failed to approve deadline changes. Please try again.');
     }
 }
 
-async function handleRejectDeadlineRequest() {
+async function handleRejectDeadlineChangeRequest() {
     if (!currentlyViewedProjectId) return;
     
-    const reason = prompt('Please provide a reason for rejecting this deadline request (optional):');
+    const reason = prompt('Please provide a reason for rejecting this deadline change request (optional):');
     
     try {
         const updates = {
-            'deadlineRequest.status': 'rejected',
-            'deadlineRequest.rejectedBy': currentUserName,
-            'deadlineRequest.rejectedAt': new Date()
+            'deadlineChangeRequest.status': 'rejected',
+            'deadlineChangeRequest.rejectedBy': currentUserName,
+            'deadlineChangeRequest.rejectedAt': new Date()
         };
         
         if (reason && reason.trim()) {
-            updates['deadlineRequest.rejectionReason'] = reason.trim();
+            updates['deadlineChangeRequest.rejectionReason'] = reason.trim();
         }
         
         await db.collection('projects').doc(currentlyViewedProjectId).update(updates);
@@ -717,8 +830,8 @@ async function handleRejectDeadlineRequest() {
         await addActivity(currentlyViewedProjectId, activityText);
         
     } catch (error) {
-        console.error('[DEADLINE REJECTION ERROR]', error);
-        alert('Failed to reject deadline request. Please try again.');
+        console.error('[DEADLINE CHANGE REJECTION ERROR]', error);
+        alert('Failed to reject deadline change request. Please try again.');
     }
 }
 
@@ -773,7 +886,8 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
     });
 }
 
-function renderDeadlines(project, isAdmin) {
+// NEW: Enhanced Deadline Management
+function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
     const deadlinesList = document.getElementById('details-deadlines-list');
     deadlinesList.innerHTML = '';
     const deadlines = project.deadlines || {};
@@ -794,39 +908,133 @@ function renderDeadlines(project, isAdmin) {
         const value = deadlines[field.key] || '';
         const deadlineItem = document.createElement('div');
         deadlineItem.className = 'deadline-item';
+        
+        // Determine if user can set this deadline
+        let canSetDeadline = false;
+        if (isAdmin) {
+            canSetDeadline = true;
+        } else if (field.key === 'review' && isEditor) {
+            canSetDeadline = true;
+        } else if (field.key !== 'review' && isAuthor) {
+            canSetDeadline = true;
+        }
+        
+        // If deadline is already set, disable editing (only admins can approve changes)
+        const isDeadlineSet = value !== '';
+        const canEdit = canSetDeadline && !isDeadlineSet;
+        
         deadlineItem.innerHTML = `
             <label for="deadline-${field.key}">${field.label}</label>
-            <input type="date" id="deadline-${field.key}" value="${value}" ${!isAdmin ? 'disabled' : ''}>
+            <input type="date" id="deadline-${field.key}" value="${value}" ${!canEdit ? 'disabled' : ''}>
+            ${isDeadlineSet && canSetDeadline && !isAdmin ? 
+                `<span style="font-size: 11px; color: var(--text-secondary);">Set - contact admin to change</span>` : 
+                ''}
         `;
+        
+        if (canEdit) {
+            const input = deadlineItem.querySelector('input');
+            input.addEventListener('change', async function() {
+                if (this.value) {
+                    await handleSetIndividualDeadline(project.id, field.key, this.value);
+                    this.disabled = true; // Disable after setting
+                }
+            });
+        }
+        
         deadlinesList.appendChild(deadlineItem);
     });
-     document.getElementById('update-deadlines-button').style.display = isAdmin ? 'block' : 'none';
-}
-
-function renderInterviewStatus(project) {
-    const statusDisplay = document.getElementById('interview-status-display');
-    const ts = project.interviewDate?.seconds;
-    if (ts) {
-        statusDisplay.innerHTML = `<strong>Scheduled for:</strong> ${new Date(ts * 1000).toLocaleString()}`;
-    } else {
-        statusDisplay.innerHTML = 'Not yet scheduled.';
+    
+    // Show deadline change request button for authors and editors
+    const requestButton = document.getElementById('request-deadline-change-button');
+    if (requestButton) {
+        if ((isAuthor || isEditor) && !project.deadlineChangeRequest || 
+            (project.deadlineChangeRequest && project.deadlineChangeRequest.status !== 'pending')) {
+            requestButton.style.display = 'inline-block';
+        } else {
+            requestButton.style.display = 'none';
+        }
+    }
+    
+    // Remove the old update deadlines button - no longer needed
+    const updateButton = document.getElementById('update-deadlines-button');
+    if (updateButton) updateButton.style.display = 'none';
+    
+    // Show set deadlines button instead
+    const setButton = document.getElementById('set-deadlines-button');
+    if (setButton) {
+        // Only show for admins or if user has unset deadlines they can control
+        const hasUnsetDeadlines = deadlineFields.some(field => {
+            if (project.type === 'Op-Ed' && (field.key === 'contact' || field.key === 'interview')) return false;
+            const canSet = isAdmin || (field.key === 'review' && isEditor) || (field.key !== 'review' && isAuthor);
+            return canSet && !deadlines[field.key];
+        });
+        
+        setButton.style.display = hasUnsetDeadlines ? 'block' : 'none';
     }
 }
 
-function renderActivityFeed(activity) {
-    const activityFeed = document.getElementById('details-activity-feed');
-    activityFeed.innerHTML = '';
-    if (!activity || !Array.isArray(activity)) return;
+// NEW: Individual deadline setting
+async function handleSetIndividualDeadline(projectId, field, date) {
+    if (!date || !projectId) return;
     
-    [...activity].sort((a, b) => b.timestamp.seconds - a.timestamp.seconds).forEach(item => {
-        activityFeed.innerHTML += `<div class="feed-item">
-            <div class="user-avatar" style="background-color: ${stringToColor(item.authorName)}">${item.authorName.charAt(0)}</div>
-            <div class="feed-content">
-                <p><span class="author">${item.authorName}</span> ${item.text}</p>
-                <span class="timestamp">${new Date(item.timestamp.seconds * 1000).toLocaleString()}</span>
-            </div>
-        </div>`;
+    try {
+        await db.collection('projects').doc(projectId).update({
+            [`deadlines.${field}`]: date
+        });
+        
+        const fieldLabels = {
+            'contact': 'Contact Professor',
+            'interview': 'Conduct Interview',
+            'draft': 'Write Draft',
+            'review': 'Editor Review',
+            'edits': 'Review Edits'
+        };
+        
+        await addActivity(projectId, `set ${fieldLabels[field]} deadline to ${new Date(date).toLocaleDateString()}`);
+        
+    } catch (error) {
+        console.error('[INDIVIDUAL DEADLINE SET ERROR]', error);
+        alert('Failed to set deadline. Please try again.');
+    }
+}
+
+// NEW: Batch deadline setting (for admins mainly)
+async function handleSetDeadlines() {
+    if (!currentlyViewedProjectId) return;
+
+    const currentProject = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!currentProject) return;
+
+    const newDeadlines = {
+        publication: currentProject.deadlines.publication,
+    };
+    
+    let changes = [];
+    const deadlineFields = ['contact', 'interview', 'draft', 'review', 'edits'];
+    deadlineFields.forEach(field => {
+        const input = document.getElementById(`deadline-${field}`);
+        if (input && input.value) {
+            const oldValue = currentProject.deadlines[field] || '';
+            const newValue = input.value;
+            if (oldValue !== newValue) {
+                changes.push(`${field} deadline to ${newValue}`);
+            }
+            newDeadlines[field] = newValue;
+        }
     });
+
+    if (changes.length > 0) {
+        try {
+            await db.collection('projects').doc(currentlyViewedProjectId).update({
+                deadlines: newDeadlines
+            });
+            await addActivity(currentlyViewedProjectId, `set deadlines: ${changes.join(', ')}.`);
+            alert('Deadlines set successfully!');
+        } catch (error) {
+            console.error('[BATCH DEADLINE SET ERROR]', error);
+            alert('Failed to set deadlines. Please try again.');
+        }
+    }
 }
 
 function populateEditorDropdown(currentEditorId) {
@@ -949,25 +1157,6 @@ async function updateProposalStatus(newStatus) {
     }
 }
 
-async function handleScheduleInterview() {
-    const dateInput = document.getElementById('interview-date').value;
-    if (!dateInput || !currentlyViewedProjectId) return;
-    
-    try {
-        const interviewDate = new Date(dateInput);
-        await db.collection('projects').doc(currentlyViewedProjectId).update({ 
-            interviewDate: interviewDate,
-            'timeline.Interview Scheduled': true
-        });
-        
-        await addActivity(currentlyViewedProjectId, `scheduled the interview for ${interviewDate.toLocaleString()}`);
-        
-    } catch (error) {
-        console.error(`[INTERVIEW ERROR] Failed to schedule interview:`, error);
-        alert('Failed to schedule interview. Please try again.');
-    }
-}
-
 async function handleAssignEditor() {
     const dropdown = document.getElementById('editor-dropdown');
     const editorId = dropdown.value;
@@ -990,46 +1179,21 @@ async function handleAssignEditor() {
     }
 }
 
-async function handleUpdateDeadlines() {
-    if (!currentlyViewedProjectId) return;
-
-    const currentProject = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!currentProject) return;
-
-    const newDeadlines = {
-        publication: currentProject.deadlines.publication,
-    };
-    
-    let changes = [];
-    const deadlineFields = ['contact', 'interview', 'draft', 'review', 'edits'];
-    deadlineFields.forEach(field => {
-        const input = document.getElementById(`deadline-${field}`);
-        if (input) {
-            const oldValue = currentProject.deadlines[field] || '';
-            const newValue = input.value;
-            if (oldValue !== newValue) {
-                changes.push(`${field} deadline from ${oldValue || 'none'} to ${newValue}`);
-            }
-            newDeadlines[field] = newValue;
-        }
-    });
-
-    if (changes.length > 0) {
-        try {
-            await db.collection('projects').doc(currentlyViewedProjectId).update({
-                deadlines: newDeadlines
-            });
-            await addActivity(currentlyViewedProjectId, `updated deadlines: ${changes.join(', ')}.`);
-            alert('Deadlines updated successfully!');
-        } catch (error) {
-            console.error('[DEADLINE UPDATE ERROR]', error);
-            alert('Failed to update deadlines. Please try again.');
-        }
-    }
-}
-
 async function handleDeleteProject() {
     if (!currentlyViewedProjectId) return;
+    
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!project) return;
+    
+    // Check if user can delete this project
+    const isAuthor = currentUser.uid === project.authorId;
+    const isAdmin = currentUserRole === 'admin';
+    
+    if (!isAuthor && !isAdmin) {
+        alert('You can only delete your own projects.');
+        return;
+    }
+    
     if (confirm("Are you sure you want to permanently delete this project? This action cannot be undone.")) {
         try {
             await db.collection('projects').doc(currentlyViewedProjectId).delete();
@@ -1055,9 +1219,9 @@ function generateStatusReport() {
         return new Date(finalDeadline) < now && getProjectState(p).column !== 'Completed';
     });
 
-    // NEW: Pending deadline requests for admin attention
+    // NEW: Pending deadline change requests for admin attention
     const pendingDeadlineRequests = allProjects.filter(p => 
-        p.deadlineRequest && p.deadlineRequest.status === 'pending'
+        p.deadlineChangeRequest && p.deadlineChangeRequest.status === 'pending'
     );
 
     const completedThisWeek = allProjects.filter(p => {
@@ -1082,10 +1246,10 @@ function generateStatusReport() {
                 `).join('') : '<p>No overdue projects. Great job!</p>'}
                 
             ${pendingDeadlineRequests.length > 0 ? 
-                `<h3>Pending Deadline Requests (${pendingDeadlineRequests.length})</h3>` + pendingDeadlineRequests.map(p => `
+                `<h3>Pending Deadline Change Requests (${pendingDeadlineRequests.length})</h3>` + pendingDeadlineRequests.map(p => `
                     <div class="report-item deadline-request-item" data-id="${p.id}">
                         <span class="report-item-title">${p.title}</span>
-                        <span class="report-item-meta">Requested by: ${p.deadlineRequest.requestedBy} | New deadline: ${new Date(p.deadlineRequest.requestedDate).toLocaleDateString()}</span>
+                        <span class="report-item-meta">Requested by: ${p.deadlineChangeRequest.requestedBy} | Fields: ${Object.keys(p.deadlineChangeRequest.requestedDeadlines).join(', ')}</span>
                     </div>
                 `).join('') : ''}
         </div>`;
@@ -1176,6 +1340,22 @@ function generateStatusReport() {
     });
 
     reportModal.style.display = 'flex';
+}
+
+function renderActivityFeed(activity) {
+    const activityFeed = document.getElementById('details-activity-feed');
+    activityFeed.innerHTML = '';
+    if (!activity || !Array.isArray(activity)) return;
+    
+    [...activity].sort((a, b) => b.timestamp.seconds - a.timestamp.seconds).forEach(item => {
+        activityFeed.innerHTML += `<div class="feed-item">
+            <div class="user-avatar" style="background-color: ${stringToColor(item.authorName)}">${item.authorName.charAt(0)}</div>
+            <div class="feed-content">
+                <p><span class="author">${item.authorName}</span> ${item.text}</p>
+                <span class="timestamp">${new Date(item.timestamp.seconds * 1000).toLocaleString()}</span>
+            </div>
+        </div>`;
+    });
 }
 
 // =================
