@@ -235,29 +235,19 @@
             <div class="details-container">
                 <div class="details-grid">
                     <div class="details-main">
-                        <h4></span> Proposal
+                        <h4>📝 Proposal
                             <button id="edit-proposal-button" class="btn-secondary" style="display: none; margin-left: 12px;">Edit</button>
                             <button id="save-proposal-button" class="btn-success" style="display: none; margin-left: 12px;">Save</button>
                             <button id="cancel-proposal-button" class="btn-secondary" style="display: none; margin-left: 6px;">Cancel</button>
                         </h4>
                         <p id="details-proposal"></p>
         
-                        <div id="interview-details-section" style="display: none;">
-                            <hr>
-                            <h4></span>Interview Status</h4>
-                            <div id="interview-status-display"></div>
-                            <div id="interview-form" class="details-form">
-                                <input type="datetime-local" id="interview-date" />
-                                <button id="schedule-interview-button" class="btn-secondary">Schedule</button>
-                            </div>
-                        </div>
-        
                         <hr>
-                        <h4></span>Progress Checklist</h4>
+                        <h4>✅ Progress Checklist</h4>
                         <div id="details-timeline"></div>
         
                         <hr>
-                        <h4></span>Comments & Activity</h4>
+                        <h4>💬 Comments & Activity</h4>
                         <div class="comment-box">
                             <textarea id="comment-input" placeholder="Add a comment or update..."></textarea>
                             <button id="add-comment-button" class="btn-primary">Post</button>
@@ -284,10 +274,9 @@
                         <div class="sidebar-section">
                             <h4>Publication Deadline</h4>
                             <p id="details-publication-deadline"></p>
-                            <button id="request-deadline-button" class="btn-secondary" style="width: 100%; margin-top: 8px; display: none;">Request Deadline Change</button>
                         </div>
 
-                        <!-- NEW: Deadline Request Section -->
+                        <!-- Enhanced: Deadline Change Request Section -->
                         <div id="deadline-request-section" class="sidebar-section" style="display: none;">
                             <!-- Content will be populated dynamically -->
                         </div>
@@ -295,7 +284,10 @@
                         <div id="deadlines-section" class="sidebar-section">
                             <h4>Task Deadlines</h4>
                             <div id="details-deadlines-list"></div>
-                            <button id="update-deadlines-button" class="btn-secondary admin-only" style="width: 100%; margin-top: 12px;">Update Deadlines</button>
+                            <!-- New: Individual deadline setting buttons -->
+                            <button id="set-deadlines-button" class="btn-secondary" style="width: 100%; margin-top: 12px; display: none;">Set Remaining Deadlines</button>
+                            <!-- Enhanced: Deadline change request for writers/editors -->
+                            <button id="request-deadline-change-button" class="btn-secondary" style="width: 100%; margin-top: 8px; display: none;">Request Deadline Changes</button>
                         </div>
         
                         <div id="admin-approval-section" class="sidebar-section admin-only">
@@ -306,9 +298,10 @@
                             </div>
                         </div>
         
+                        <!-- Enhanced: Delete section with proper permissions -->
                         <div id="delete-section" class="sidebar-section">
                             <h4>Delete Project</h4>
-                            <button id="delete-project-button" class="btn-danger">Delete Forever</button>
+                            <button id="delete-project-button" class="btn-danger" style="display: none;">Delete Forever</button>
                         </div>
                     </aside>
                 </div>
