@@ -2986,3 +2986,200 @@
 }
 
 /* === END CALENDAR STYLES === */
+
+/* === ENHANCED STATUS REPORT STYLES === */
+.report-modal-content {
+  width: 90vw !important;
+  max-width: 1200px !important;
+  height: 90vh !important;
+}
+
+.report-content-body {
+    padding: var(--space-8);
+    overflow-y: auto;
+    background-color: #f8fafc;
+}
+
+.report-section {
+    background: var(--surface-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    margin-bottom: var(--space-8);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.report-section h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: var(--space-5);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--text-color);
+}
+
+.report-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: var(--space-6);
+    margin-bottom: var(--space-3);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--space-2);
+}
+.report-section h3:first-child {
+    margin-top: 0;
+}
+
+/* Executive Summary Grid */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-6);
+}
+
+.summary-item {
+    background: #f8fafc;
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+.summary-item.overdue { border-left: 4px solid var(--danger-color); }
+.summary-item.pending { border-left: 4px solid var(--warning-color); }
+.summary-item.completed { border-left: 4px solid var(--success-color); }
+
+.summary-value {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--text-color);
+}
+.summary-item.overdue .summary-value { color: var(--danger-color); }
+.summary-item.pending .summary-value { color: var(--warning-color); }
+.summary-item.completed .summary-value { color: var(--success-color); }
+
+
+.summary-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-top: var(--space-2);
+}
+
+/* Meeting Agenda */
+.meeting-agenda {
+    list-style: none;
+    padding-left: 0;
+}
+.meeting-agenda li {
+    font-size: 14px;
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--muted-border);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.meeting-agenda li:last-child {
+    border-bottom: none;
+}
+.meeting-agenda li::before {
+    content: '▪️';
+    font-size: 18px;
+}
+
+/* Report Item Lists */
+.report-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    margin-bottom: var(--space-2);
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+.report-item:hover {
+    border-color: var(--primary-color);
+    background-color: var(--primary-subtle);
+    transform: translateX(4px);
+    box-shadow: var(--shadow-xs);
+}
+.report-item span {
+    font-weight: 600;
+}
+.report-item .meta {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background-color: var(--background-color);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-xl);
+}
+
+.report-item.overdue-item { background-color: #fef2f2; border-left: 4px solid var(--danger-color); }
+.report-item.pending-item { background-color: #fffbeb; border-left: 4px solid var(--warning-color); }
+
+/* User Workload Grid */
+.user-workload-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-5);
+}
+
+.user-card {
+    background: #fdfdff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+}
+
+.user-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--border-color);
+}
+.user-card-name {
+    font-size: 16px;
+    font-weight: 700;
+    flex: 1;
+}
+.user-card-stats {
+    display: flex;
+    gap: var(--space-4);
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.user-card-body {
+    padding: var(--space-4);
+}
+.user-card-body h4 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+    text-transform: uppercase;
+}
+
+.report-item.mini {
+    padding: var(--space-2);
+    font-size: 13px;
+    gap: var(--space-3);
+}
+
+.report-item .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.status-dot.default { background-color: #d1d5db; }
+.status-dot.yellow { background-color: #f59e0b; }
+.status-dot.blue { background-color: #3b82f6; }
+.status-dot.green { background-color: #22c55e; }
+.status-dot.red { background-color: #ef4444; }
