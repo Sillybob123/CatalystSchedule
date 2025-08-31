@@ -171,21 +171,77 @@
         </div>
 
         <div id="calendar-view" style="display: none">
-          <div class="calendar-header">
-            <button id="prev-month" class="icon-btn" aria-label="Previous month">
-              ‹
-            </button>
-            <h2 id="month-year">Calendar</h2>
-            <button id="next-month" class="icon-btn" aria-label="Next month">
-              ›
-            </button>
-          </div>
-          <div id="calendar-grid" class="calendar-grid"></div>
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <div class="calendar-nav">
+                        <button class="calendar-nav-btn" id="prev-month" aria-label="Previous month">‹</button>
+                        <h2 id="month-year">Calendar</h2>
+                        <button class="calendar-nav-btn" id="next-month" aria-label="Next month">›</button>
+                    </div>
+                    
+                    <div class="calendar-controls">
+                        <div class="view-toggle">
+                            <button class="active">Month</button>
+                            <button>Week</button>
+                            <button>Day</button>
+                        </div>
+                        <button class="today-btn" id="today-btn">Today</button>
+                    </div>
+                </div>
+                
+                <div class="calendar-content">
+                    <div class="calendar-day-names">
+                        <div class="calendar-day-name">Sun</div>
+                        <div class="calendar-day-name">Mon</div>
+                        <div class="calendar-day-name">Tue</div>
+                        <div class="calendar-day-name">Wed</div>
+                        <div class="calendar-day-name">Thu</div>
+                        <div class="calendar-day-name">Fri</div>
+                        <div class="calendar-day-name">Sat</div>
+                    </div>
+                    
+                    <div class="calendar-days-grid" id="calendar-grid">
+                        </div>
+                </div>
+            
+                <div class="calendar-legend">
+                    <div class="legend-item">
+                        <div class="legend-color publication"></div>
+                        <span>Publication</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color interview"></div>
+                        <span>Interview</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color due-soon"></div>
+                        <span>Due Soon</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color overdue"></div>
+                        <span>Overdue</span>
+                    </div>
+                    
+                    <div class="calendar-stats">
+                        <div class="stat-item">
+                            <div class="stat-number" id="stat-month">0</div>
+                            <div class="stat-label">This Month</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="stat-week">0</div>
+                            <div class="stat-label">This Week</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="stat-overdue">0</div>
+                            <div class="stat-label">Overdue</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
       </main>
     </div>
 
-    <!-- Modals -->
     <div id="project-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
       <div class="modal-content">
         <div class="modal-header">
@@ -290,8 +346,7 @@
                         </div>
 
                         <div id="deadline-request-section" class="sidebar-section" style="display: none;">
-                            <!-- Content will be populated dynamically -->
-                        </div>
+                            </div>
         
                         <div id="deadlines-section" class="sidebar-section">
                             <h4>Task Deadlines</h4>
@@ -332,7 +387,6 @@
       </div>
     </div>
 
-    <!-- Error Handler Script -->
     <script>
     window.addEventListener('error', function(e) {
         console.error('[GLOBAL ERROR]', e.error || e.message);
@@ -379,12 +433,10 @@
     }, 3000);
     </script>
 
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
-    <!-- App Scripts -->
     <script>
         // Debug mode - use simplified dashboard
         const useDebugMode = true;
@@ -415,48 +467,5 @@
       };
       document.head.appendChild(script);
     </script>
-  </body>
-</html>dlines</h4>
-                            <div id="details-deadlines-list"></div>
-                            <!-- New: Individual deadline setting buttons -->
-                            <button id="set-deadlines-button" class="btn-secondary" style="width: 100%; margin-top: 12px; display: none;">Set Remaining Deadlines</button>
-                            <!-- Enhanced: Deadline change request for writers/editors -->
-                            <button id="request-deadline-change-button" class="btn-secondary" style="width: 100%; margin-top: 8px; display: none;">Request Deadline Changes</button>
-                        </div>
-        
-                        <div id="admin-approval-section" class="sidebar-section admin-only">
-                            <h4>Admin Actions</h4>
-                            <div class="button-group">
-                                <button id="approve-button" class="btn-success">Approve</button>
-                                <button id="reject-button" class="btn-danger">Reject</button>
-                            </div>
-                        </div>
-        
-                        <!-- Enhanced: Delete section with proper permissions -->
-                        <div id="delete-section" class="sidebar-section">
-                            <h4>Delete Project</h4>
-                            <button id="delete-project-button" class="btn-danger" style="display: none;">Delete Forever</button>
-                        </div>
-                    </aside>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="report-modal" class="modal-overlay" role="dialog" aria-modal="true">
-      <div class="modal-content large">
-        <div class="modal-header">
-          <h2>Overall Status Report</h2>
-          <button class="close-button" aria-label="Close">×</button>
-        </div>
-        <div id="report-content" class="report-content"></div>
-      </div>
-    </div>
-
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="projectState.js"></script>
-    <script src="dashboard.js"></script>
   </body>
 </html>
