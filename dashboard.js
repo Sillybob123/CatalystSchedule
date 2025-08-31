@@ -1383,82 +1383,161 @@ function generateStatusReport() {
     const reportModal = document.getElementById('report-modal');
     const reportContent = document.getElementById('report-content');
     if (!reportModal || !reportContent) return;
-    
-    reportContent.innerHTML = '';
 
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+    // --- Data Analysis ---
     const overdueProjects = allProjects.filter(p => {
         const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
-        if (!finalDeadline) return false;
-        return new Date(finalDeadline) < now && getProjectState(p).column !== 'Completed';
+        return finalDeadline && new Date(finalDeadline) < now && getProjectState(p).column !== 'Completed';
     });
 
+    const pendingProposals = allProjects.filter(p => p.proposalStatus === 'pending');
+    
     const pendingDeadlineRequests = allProjects.filter(p => 
-        (p.deadlineRequest && p.deadlineRequest.status === 'pending') ||
-        (p.deadlineChangeRequest && p.deadlineChangeRequest.status === 'pending')
+        (p.deadlineRequest?.status === 'pending') || (p.deadlineChangeRequest?.status === 'pending')
     );
 
-    const completedThisWeek = allProjects.filter(p => {
+    const recentlyCompleted = allProjects.filter(p => {
         const state = getProjectState(p);
         if (state.column !== 'Completed') return false;
-        const completionActivity = (p.activity || []).find(a => 
-            a.text.includes('Suggestions Reviewed') || a.text.includes('completed')
-        );
-        if (!completionActivity || !completionActivity.timestamp) return false;
-        
-        const activityDate = completionActivity.timestamp.seconds ? 
-            new Date(completionActivity.timestamp.seconds * 1000) : 
-            new Date(completionActivity.timestamp);
-        
+        const completionActivity = (p.activity || []).find(a => a.text.includes('Suggestions Reviewed'));
+        if (!completionActivity?.timestamp) return false;
+        const activityDate = completionActivity.timestamp.seconds ? new Date(completionActivity.timestamp.seconds * 1000) : new Date(completionActivity.timestamp);
         return activityDate >= oneWeekAgo;
     });
-    
+
+    const stuckProjects = allProjects.filter(p => {
+        const state = getProjectState(p);
+        if (state.column === 'Completed' || state.column === 'Topic Proposal') return false;
+        const lastActivity = (p.activity || []).sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))[0];
+        if (!lastActivity?.timestamp) return false;
+        const lastActivityDate = lastActivity.timestamp.seconds ? new Date(lastActivity.timestamp.seconds * 1000) : new Date(lastActivity.timestamp);
+        const daysSinceUpdate = (now - lastActivityDate) / (1000 * 60 * 60 * 24);
+        return daysSinceUpdate > 14; // Stuck if no activity for 14 days
+    });
+
+    // --- Report Generation ---
     let reportHTML = `<div class="report-container">`;
 
+    // 1. Executive Summary
     reportHTML += `
         <div class="report-section">
-            <h2><span class="emoji">🚨</span> Weekly Alerts</h2>
-            ${overdueProjects.length > 0 ? 
-                `<h3>Overdue Projects (${overdueProjects.length})</h3>` + overdueProjects.map(p => {
-                    const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
-                    return `
-                        <div class="report-item overdue-item" data-id="${p.id}">
-                            <span class="report-item-title">${p.title}</span>
-                            <span class="report-item-meta">Due: ${new Date(finalDeadline).toLocaleDateString()} | Author: ${p.authorName}</span>
-                        </div>
-                    `;
-                }).join('') : '<p>No overdue projects. Great job!</p>'}
-                
-            ${pendingDeadlineRequests.length > 0 ? 
-                `<h3>Pending Deadline Requests (${pendingDeadlineRequests.length})</h3>` + pendingDeadlineRequests.map(p => {
-                    const request = p.deadlineRequest || p.deadlineChangeRequest;
-                    return `
-                        <div class="report-item deadline-request-item" data-id="${p.id}">
-                            <span class="report-item-title">${p.title}</span>
-                            <span class="report-item-meta">Requested by: ${request.requestedBy}</span>
-                        </div>
-                    `;
-                }).join('') : ''}
-        </div>`;
-
-    reportHTML += `
-        <div class="report-section">
-            <h2><span class="emoji">🎉</span> Recently Completed (Last 7 Days)</h2>
-            ${completedThisWeek.length > 0 ? completedThisWeek.map(p => `
-                 <div class="report-item" data-id="${p.id}">
-                    <span class="report-item-title">${p.title}</span>
-                    <span class="report-item-meta">Author: ${p.authorName}</span>
+            <h2>📊 Executive Summary</h2>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-value">${allProjects.length}</div>
+                    <div class="summary-label">Total Projects</div>
                 </div>
-            `).join('') : '<p>No projects completed in the last week.</p>'}
+                <div class="summary-item overdue">
+                    <div class="summary-value">${overdueProjects.length}</div>
+                    <div class="summary-label">Overdue</div>
+                </div>
+                <div class="summary-item pending">
+                    <div class="summary-value">${pendingProposals.length + pendingDeadlineRequests.length}</div>
+                    <div class="summary-label">Pending Approvals</div>
+                </div>
+                 <div class="summary-item completed">
+                    <div class="summary-value">${recentlyCompleted.length}</div>
+                    <div class="summary-label">Completed This Week</div>
+                </div>
+            </div>
         </div>
     `;
 
-    reportHTML += '</div>';
+    // 2. Meeting Agenda & Action Items
+    const meetingItems = [];
+    if(overdueProjects.length > 0) meetingItems.push(`Address ${overdueProjects.length} overdue projects.`);
+    if(pendingProposals.length > 0) meetingItems.push(`Review ${pendingProposals.length} new article proposals.`);
+    if(pendingDeadlineRequests.length > 0) meetingItems.push(`Action ${pendingDeadlineRequests.length} deadline requests.`);
+    if(stuckProjects.length > 0) meetingItems.push(`Check in on ${stuckProjects.length} potentially stuck projects (no updates in >2 weeks).`);
+    
+    if (meetingItems.length > 0) {
+        reportHTML += `
+            <div class="report-section">
+                <h2>📋 Meeting Agenda / Action Items</h2>
+                <ul class="meeting-agenda">
+                    ${meetingItems.map(item => `<li>${item}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
 
+    // 3. Detailed "Action Required" Section
+    if (overdueProjects.length > 0 || pendingProposals.length > 0 || pendingDeadlineRequests.length > 0) {
+        reportHTML += `
+            <div class="report-section">
+                <h2>🚨 Action Required</h2>
+                ${overdueProjects.length > 0 ? `<h3>Overdue Projects (${overdueProjects.length})</h3>` + overdueProjects.map(p => {
+                    const deadline = p.deadlines ? p.deadlines.publication : p.deadline;
+                    return `<div class="report-item overdue-item" data-id="${p.id}"><span>${p.title} (by ${p.authorName})</span><span class="meta">Due: ${new Date(deadline).toLocaleDateString()}</span></div>`;
+                }).join('') : ''}
+                
+                ${pendingProposals.length > 0 ? `<h3>Pending Proposals (${pendingProposals.length})</h3>` + pendingProposals.map(p => {
+                    return `<div class="report-item pending-item" data-id="${p.id}"><span>${p.title} (by ${p.authorName})</span><span class="meta">Awaiting Approval</span></div>`;
+                }).join('') : ''}
+                
+                ${pendingDeadlineRequests.length > 0 ? `<h3>Pending Deadline Requests (${pendingDeadlineRequests.length})</h3>` + pendingDeadlineRequests.map(p => {
+                     const request = p.deadlineRequest || p.deadlineChangeRequest;
+                    return `<div class="report-item pending-item" data-id="${p.id}"><span>${p.title} (by ${p.authorName})</span><span class="meta">Requested by ${request.requestedBy}</span></div>`;
+                }).join('') : ''}
+            </div>
+        `;
+    }
+
+    // 4. Team Workload Overview
+    const userProjects = {};
+    allProjects.forEach(p => {
+        if (!userProjects[p.authorName]) userProjects[p.authorName] = { authored: [], edited: [] };
+        userProjects[p.authorName].authored.push(p);
+
+        if (p.editorName) {
+            if (!userProjects[p.editorName]) userProjects[p.editorName] = { authored: [], edited: [] };
+            userProjects[p.editorName].edited.push(p);
+        }
+    });
+
+    reportHTML += `
+        <div class="report-section">
+            <h2>👥 Team Workload & Status</h2>
+            <div class="user-workload-grid">
+            ${Object.keys(userProjects).sort().map(name => {
+                const data = userProjects[name];
+                const authoredProjects = data.authored;
+                const editedProjects = data.edited;
+                return `
+                    <div class="user-card">
+                        <div class="user-card-header">
+                            <div class="user-avatar" style="background:${stringToColor(name)}">${name.charAt(0)}</div>
+                            <div class="user-card-name">${name}</div>
+                            <div class="user-card-stats">
+                                <span><strong>${authoredProjects.length}</strong> Authored</span>
+                                <span><strong>${editedProjects.length}</strong> Edited</span>
+                            </div>
+                        </div>
+                        <div class="user-card-body">
+                            ${authoredProjects.length > 0 ? '<h4>Authored Projects:</h4>' + authoredProjects.map(p => {
+                                const state = getProjectState(p);
+                                return `<div class="report-item mini" data-id="${p.id}"><span class="status-dot ${state.color}"></span><span>${p.title}</span><span class="meta">${state.statusText}</span></div>`
+                            }).join('') : ''}
+                             ${editedProjects.length > 0 ? '<h4>Edited Projects:</h4>' + editedProjects.map(p => {
+                                const state = getProjectState(p);
+                                return `<div class="report-item mini" data-id="${p.id}"><span class="status-dot ${state.color}"></span><span>${p.title}</span><span class="meta">${state.statusText}</span></div>`
+                            }).join('') : ''}
+                        </div>
+                    </div>
+                `
+            }).join('')}
+            </div>
+        </div>
+    `;
+
+
+    reportHTML += '</div>';
     reportContent.innerHTML = reportHTML;
 
+    // Add event listeners to make report items clickable
     reportContent.querySelectorAll('.report-item').forEach(item => {
         item.style.cursor = 'pointer';
         item.addEventListener('click', () => {
@@ -1469,6 +1548,7 @@ function generateStatusReport() {
 
     reportModal.style.display = 'flex';
 }
+
 
 // =================
 // Utils
