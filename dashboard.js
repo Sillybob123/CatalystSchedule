@@ -149,11 +149,9 @@ function setupNavAndListeners() {
     if (cancelProposalBtn) cancelProposalBtn.addEventListener('click', disableProposalEditing);
 
     // Deadline management listeners
-    const requestDeadlineBtn = document.getElementById('request-deadline-button');
     const setDeadlinesBtn = document.getElementById('set-deadlines-button');
     const requestDeadlineChangeBtn = document.getElementById('request-deadline-change-button');
 
-    if (requestDeadlineBtn) requestDeadlineBtn.addEventListener('click', handleRequestDeadlineChange);
     if (setDeadlinesBtn) setDeadlinesBtn.addEventListener('click', handleSetDeadlines);
     if (requestDeadlineChangeBtn) requestDeadlineChangeBtn.addEventListener('click', handleRequestDeadlineChange);
 
@@ -323,7 +321,7 @@ function createProjectCard(project) {
     
     const deadlineRequestIndicator = (project.deadlineRequest && project.deadlineRequest.status === 'pending') || 
                                    (project.deadlineChangeRequest && project.deadlineChangeRequest.status === 'pending') ? 
-        '<span class="deadline-request-indicator">套</span>' : '';
+        '<span class="deadline-request-indicator">⏰</span>' : '';
     
     card.innerHTML = `
         <h4 class="card-title">${project.title} ${deadlineRequestIndicator}</h4>
@@ -386,7 +384,7 @@ function renderCalendar() {
         createCalendarDay(calendarGrid, dayDate, false, today);
     }
 
-    // Next month's leading days to fill the grid (6 rows ﾃ7 days = 42 total)
+    // Next month's leading days to fill the grid (6 rows × 7 days = 42 total)
     const totalCells = calendarGrid.children.length;
     const remainingCells = 42 - totalCells;
     const nextMonth = new Date(year, month + 1, 1);
@@ -1379,6 +1377,483 @@ async function handleDeleteProject() {
     }
 }
 
+// ===================================
+// STATUS REPORT HELPER FUNCTIONS
+// ===================================
+
+/**
+ * Get the last activity for a project
+ */
+function getLastActivity(project) {
+    const activity = project.activity || [];
+    if (activity.length === 0) return 'No activity';
+    
+    const lastActivity = activity.sort((a, b) => {
+        const aTime = a.timestamp?.seconds || 0;
+        const bTime = b.timestamp?.seconds || 0;
+        return bTime - aTime;
+    })[0];
+    
+    if (!lastActivity.timestamp) return 'Unknown time';
+    
+    const timestamp = lastActivity.timestamp.seconds ? 
+        new Date(lastActivity.timestamp.seconds * 1000) : 
+        new Date(lastActivity.timestamp);
+    
+    const now = new Date();
+    const diffTime = now - timestamp;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+    return `${Math.ceil(diffDays / 30)} months ago`;
+}
+
+/**
+ * Get recommended action for a project based on its state
+ */
+function getRecommendedAction(project, state) {
+    const timeline = project.timeline || {};
+    const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
+    const now = new Date();
+    const daysOverdue = finalDeadline ? Math.ceil((now - new Date(finalDeadline)) / (1000 * 60 * 60 * 24)) : 0;
+    
+    // Severely overdue projects
+    if (daysOverdue > 7) {
+        if (!project.editorId && timeline["Article Writing Complete"]) {
+            return "URGENT: Assign editor immediately and expedite review process";
+        }
+        if (state.column === "Reviewing Suggestions") {
+            return "URGENT: Contact author to finalize article immediately";
+        }
+        if (state.column === "In Review") {
+            return "URGENT: Complete editor review and provide feedback ASAP";
+        }
+        return "URGENT: Contact all stakeholders to identify blockers and create recovery plan";
+    }
+    
+    // Recently overdue
+    if (daysOverdue > 0) {
+        if (state.column === "Interview Stage") {
+            return "Schedule interview immediately or consider topic change";
+        }
+        if (state.column === "Writing Stage") {
+            return "Set daily check-ins with author to ensure progress";
+        }
+        return "Expedite current phase and compress remaining timeline";
+    }
+    
+    // Regular recommendations
+    switch (state.column) {
+        case "Topic Proposal":
+            return project.proposalStatus === 'pending' ? 
+                "Review and approve/reject proposal within 24 hours" :
+                "Contact author to address rejection feedback";
+        
+        case "Interview Stage":
+            return timeline["Interview Scheduled"] ?
+                "Confirm interview details and prepare questions" :
+                "Schedule interview within next 3 business days";
+        
+        case "Writing Stage":
+            if (timeline["Article Writing Complete"] && !project.editorId) {
+                return "Assign qualified editor for review";
+            }
+            return "Monitor writing progress and offer support if needed";
+        
+        case "In Review":
+            return "Complete review within 3-5 business days";
+        
+        case "Reviewing Suggestions":
+            return "Follow up with author if no response within 48 hours";
+        
+        default:
+            return "Monitor progress and provide support as needed";
+    }
+}
+
+/**
+ * Analyze team performance and workload
+ */
+function analyzeTeamPerformance() {
+    const teamMembers = {};
+    const now = new Date();
+    
+    // Initialize team member data
+    allProjects.forEach(project => {
+        // Author analysis
+        if (!teamMembers[project.authorId]) {
+            teamMembers[project.authorId] = {
+                id: project.authorId,
+                name: project.authorName,
+                role: 'Author',
+                projects: [],
+                stats: {
+                    total: 0,
+                    completed: 0,
+                    overdue: 0,
+                    inProgress: 0,
+                    pending: 0
+                },
+                alerts: []
+            };
+        }
+        
+        // Editor analysis
+        if (project.editorId && !teamMembers[project.editorId]) {
+            teamMembers[project.editorId] = {
+                id: project.editorId,
+                name: project.editorName,
+                role: 'Editor',
+                projects: [],
+                stats: {
+                    total: 0,
+                    completed: 0,
+                    overdue: 0,
+                    inProgress: 0,
+                    pending: 0
+                },
+                alerts: []
+            };
+        }
+    });
+    
+    // Analyze each project
+    allProjects.forEach(project => {
+        const state = getProjectState(project);
+        const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
+        const isOverdue = finalDeadline && new Date(finalDeadline) < now;
+        
+        // Author stats
+        if (teamMembers[project.authorId]) {
+            const authorMember = teamMembers[project.authorId];
+            authorMember.projects.push({
+                ...project,
+                state,
+                isOverdue
+            });
+            
+            authorMember.stats.total++;
+            
+            if (state.column === 'Completed') {
+                authorMember.stats.completed++;
+            } else if (isOverdue) {
+                authorMember.stats.overdue++;
+                authorMember.alerts.push(`"${project.title}" is overdue`);
+            } else if (state.column === 'Writing Stage' || state.column === 'Interview Stage') {
+                authorMember.stats.inProgress++;
+            } else {
+                authorMember.stats.pending++;
+            }
+            
+            // Check for stuck projects
+            const lastActivity = getLastActivityDate(project);
+            if (lastActivity && (now - lastActivity) > 14 * 24 * 60 * 60 * 1000) {
+                authorMember.alerts.push(`"${project.title}" has no recent activity (>14 days)`);
+            }
+        }
+        
+        // Editor stats
+        if (project.editorId && teamMembers[project.editorId]) {
+            const editorMember = teamMembers[project.editorId];
+            editorMember.projects.push({
+                ...project,
+                state,
+                isOverdue
+            });
+            
+            editorMember.stats.total++;
+            
+            if (state.column === 'Completed') {
+                editorMember.stats.completed++;
+            } else if (isOverdue && (state.column === 'In Review' || state.column === 'Reviewing Suggestions')) {
+                editorMember.stats.overdue++;
+                editorMember.alerts.push(`"${project.title}" review is overdue`);
+            } else if (state.column === 'In Review') {
+                editorMember.stats.inProgress++;
+            } else {
+                editorMember.stats.pending++;
+            }
+        }
+    });
+    
+    return Object.values(teamMembers);
+}
+
+/**
+ * Get last activity date for a project
+ */
+function getLastActivityDate(project) {
+    const activity = project.activity || [];
+    if (activity.length === 0) return null;
+    
+    const lastActivity = activity.sort((a, b) => {
+        const aTime = a.timestamp?.seconds || 0;
+        const bTime = b.timestamp?.seconds || 0;
+        return bTime - aTime;
+    })[0];
+    
+    if (!lastActivity.timestamp) return null;
+    
+    return lastActivity.timestamp.seconds ? 
+        new Date(lastActivity.timestamp.seconds * 1000) : 
+        new Date(lastActivity.timestamp);
+}
+
+/**
+ * Generate team analysis HTML
+ */
+function generateTeamAnalysisHTML(teamAnalysis) {
+    if (!teamAnalysis || teamAnalysis.length === 0) {
+        return '<p>No team data available.</p>';
+    }
+    
+    let html = '';
+    
+    teamAnalysis.forEach(member => {
+        const completionRate = member.stats.total > 0 ? 
+            Math.round((member.stats.completed / member.stats.total) * 100) : 0;
+        
+        const hasAlerts = member.alerts.length > 0;
+        const isOverloaded = member.stats.inProgress > 5;
+        
+        html += `
+            <div class="team-member-card ${hasAlerts ? 'has-alerts' : ''}">
+                <div class="member-header">
+                    <div class="member-avatar" style="background-color: ${stringToColor(member.name)}">
+                        ${member.name.charAt(0)}
+                    </div>
+                    <div class="member-info">
+                        <h3>${member.name}</h3>
+                        <p class="member-role">${member.role}</p>
+                    </div>
+                </div>
+                
+                <div class="member-stats">
+                    <div class="stat-box ${member.stats.overdue > 0 ? 'alert' : ''}">
+                        <div class="stat-number">${member.stats.total}</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-box ${member.stats.inProgress > 0 ? 'warning' : ''}">
+                        <div class="stat-number">${member.stats.inProgress}</div>
+                        <div class="stat-label">In Progress</div>
+                    </div>
+                    <div class="stat-box ${member.stats.overdue > 0 ? 'alert' : ''}">
+                        <div class="stat-number">${member.stats.overdue}</div>
+                        <div class="stat-label">Overdue</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">${completionRate}%</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                </div>
+                
+                ${member.alerts.length > 0 ? `
+                    <div class="member-alerts">
+                        <h4>⚠️ Alerts</h4>
+                        ${member.alerts.map(alert => `<div class="alert-item">${alert}</div>`).join('')}
+                    </div>
+                ` : ''}
+                
+                <div class="member-projects">
+                    <h4>Recent Projects</h4>
+                    <div class="project-list">
+                        ${member.projects.slice(0, 3).map(project => {
+                            const statusClass = project.isOverdue ? 'overdue' : 
+                                               project.state.color === 'green' ? 'completed' : 
+                                               project.state.color === 'yellow' ? 'in-progress' : 'default';
+                            
+                            return `
+                                <div class="project-mini ${statusClass}" data-id="${project.id}">
+                                    <div class="project-title">${project.title}</div>
+                                    <div class="project-status ${statusClass}">${project.state.statusText}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                        
+                        ${member.projects.length > 3 ? `
+                            <div class="project-more">
+                                +${member.projects.length - 3} more projects
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    return html;
+}
+
+/**
+ * Get upcoming deadlines
+ */
+function getUpcomingDeadlines(days = 14) {
+    const now = new Date();
+    const futureDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    const upcomingDeadlines = [];
+    
+    allProjects.forEach(project => {
+        const deadlines = project.deadlines || {};
+        const finalDeadline = deadlines.publication || project.deadline;
+        
+        // Check all deadline types
+        const deadlineTypes = [
+            { key: 'contact', label: 'Contact Professor' },
+            { key: 'interview', label: 'Interview Due' },
+            { key: 'draft', label: 'Draft Due' },
+            { key: 'review', label: 'Review Due' },
+            { key: 'edits', label: 'Edits Due' },
+            { key: 'publication', label: 'Publication Due' }
+        ];
+        
+        deadlineTypes.forEach(deadlineType => {
+            let deadlineDate = null;
+            let deadlineLabel = deadlineType.label;
+            
+            if (deadlineType.key === 'publication') {
+                if (finalDeadline) {
+                    deadlineDate = new Date(finalDeadline + 'T23:59:59');
+                }
+            } else if (deadlines[deadlineType.key]) {
+                deadlineDate = new Date(deadlines[deadlineType.key] + 'T23:59:59');
+            }
+            
+            if (deadlineDate && deadlineDate >= now && deadlineDate <= futureDate) {
+                const daysUntil = Math.ceil((deadlineDate - now) / (1000 * 60 * 60 * 24));
+                const urgency = daysUntil <= 1 ? 'urgent' : 
+                              daysUntil <= 3 ? 'high' : 
+                              daysUntil <= 7 ? 'medium' : 'low';
+                
+                upcomingDeadlines.push({
+                    project,
+                    type: deadlineLabel,
+                    date: deadlineDate,
+                    formattedDate: deadlineDate.toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    }),
+                    daysUntil,
+                    urgency
+                });
+            }
+        });
+    });
+    
+    // Sort by date
+    upcomingDeadlines.sort((a, b) => a.date - b.date);
+    
+    return upcomingDeadlines;
+}
+
+/**
+ * Generate strategic recommendations
+ */
+function generateRecommendations(data) {
+    const recommendations = [];
+    
+    // Critical overdue issues
+    if (data.severelyOverdue.length > 0) {
+        recommendations.push({
+            priority: 'critical',
+            title: 'Severely Overdue Projects Need Immediate Attention',
+            description: `${data.severelyOverdue.length} projects are more than 7 days overdue. These require immediate intervention and resource reallocation.`,
+            actions: [
+                'Conduct emergency triage meeting',
+                'Reassign resources if needed',
+                'Establish daily check-ins',
+                'Consider deadline extensions or scope reduction'
+            ]
+        });
+    }
+    
+    // Editor bottleneck
+    if (data.needingEditors.length > 0) {
+        recommendations.push({
+            priority: 'high',
+            title: 'Editor Assignment Bottleneck',
+            description: `${data.needingEditors.length} completed articles are waiting for editor assignment. This is creating a workflow bottleneck.`,
+            actions: [
+                'Assign editors immediately',
+                'Consider cross-training more editors',
+                'Implement automatic editor assignment system'
+            ]
+        });
+    }
+    
+    // Stuck projects
+    if (data.stuckProjects.length > 2) {
+        recommendations.push({
+            priority: 'medium',
+            title: 'Multiple Stalled Projects',
+            description: `${data.stuckProjects.length} projects show no activity for over 2 weeks. These may need intervention or resources.`,
+            actions: [
+                'Contact project owners for status updates',
+                'Identify and remove blockers',
+                'Consider reassignment or additional support'
+            ]
+        });
+    }
+    
+    // Team workload analysis
+    const overloadedMembers = data.teamAnalysis.filter(member => 
+        member.stats.inProgress > 5 || member.stats.overdue > 2
+    );
+    
+    if (overloadedMembers.length > 0) {
+        recommendations.push({
+            priority: 'medium',
+            title: 'Team Workload Imbalance',
+            description: `${overloadedMembers.length} team members appear overloaded. Consider redistributing work or providing additional resources.`,
+            actions: [
+                'Review individual workloads',
+                'Redistribute assignments if possible',
+                'Provide additional training or support',
+                'Consider hiring additional staff'
+            ]
+        });
+    }
+    
+    // Proposal backlog
+    if (data.pendingProposals.length > 3) {
+        recommendations.push({
+            priority: 'medium',
+            title: 'Proposal Approval Backlog',
+            description: `${data.pendingProposals.length} proposals are pending approval. Quick decisions help maintain momentum.`,
+            actions: [
+                'Schedule proposal review sessions',
+                'Establish faster approval process',
+                'Delegate approval authority',
+                'Set 48-hour approval target'
+            ]
+        });
+    }
+    
+    // Process improvements
+    if (data.overdueProjects.length > data.teamAnalysis.length) {
+        recommendations.push({
+            priority: 'low',
+            title: 'Process Optimization Opportunity',
+            description: 'The ratio of overdue projects suggests potential process improvements could help prevent future delays.',
+            actions: [
+                'Analyze common delay patterns',
+                'Implement earlier warning systems',
+                'Improve deadline estimation accuracy',
+                'Create standard operating procedures'
+            ]
+        });
+    }
+    
+    return recommendations;
+}
+
+// ===================================
+// STATUS REPORT GENERATION
+// ===================================
+
 function generateStatusReport() {
     const reportModal = document.getElementById('report-modal');
     const reportContent = document.getElementById('report-content');
@@ -1386,8 +1861,6 @@ function generateStatusReport() {
 
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // ===== COMPREHENSIVE DATA ANALYSIS =====
     
@@ -1454,662 +1927,125 @@ function generateStatusReport() {
 
     // ===== REPORT GENERATION =====
     let reportHTML = `
-        <div class="report-container">
-            <div class="report-header">
-                <h1>📊 Weekly Status Report</h1>
-                <div class="report-date">Generated: ${now.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                })}</div>
-            </div>
-    `;
-
-    // 1. EXECUTIVE DASHBOARD
-    reportHTML += `
         <div class="report-section executive-summary">
             <h2>🎯 Executive Dashboard</h2>
-            <div class="dashboard-grid">
-                <div class="dashboard-card total">
-                    <div class="card-icon">📝</div>
-                    <div class="card-content">
-                        <div class="card-number">${allProjects.length}</div>
-                        <div class="card-label">Total Active Projects</div>
-                    </div>
+            <div class="summary-grid">
+                <div class="summary-item total">
+                    <div class="summary-value">${allProjects.length}</div>
+                    <div class="summary-label">Total Projects</div>
                 </div>
-                <div class="dashboard-card critical ${overdueProjects.length > 0 ? 'alert' : ''}">
-                    <div class="card-icon">⚠️</div>
-                    <div class="card-content">
-                        <div class="card-number">${overdueProjects.length}</div>
-                        <div class="card-label">Overdue Projects</div>
-                        ${severelyOverdue.length > 0 ? `<div class="card-sub">${severelyOverdue.length} severely overdue (>7 days)</div>` : ''}
-                    </div>
+                <div class="summary-item ${overdueProjects.length > 0 ? 'overdue' : ''}">
+                    <div class="summary-value">${overdueProjects.length}</div>
+                    <div class="summary-label">Overdue</div>
                 </div>
-                <div class="dashboard-card pending ${(pendingProposals.length + pendingDeadlineRequests.length) > 0 ? 'warning' : ''}">
-                    <div class="card-icon">⏳</div>
-                    <div class="card-content">
-                        <div class="card-number">${pendingProposals.length + pendingDeadlineRequests.length}</div>
-                        <div class="card-label">Pending Approvals</div>
-                        <div class="card-sub">${pendingProposals.length} proposals, ${pendingDeadlineRequests.length} deadlines</div>
-                    </div>
+                <div class="summary-item ${pendingProposals.length > 0 ? 'pending' : ''}">
+                    <div class="summary-value">${pendingProposals.length}</div>
+                    <div class="summary-label">Pending Approval</div>
                 </div>
-                <div class="dashboard-card success">
-                    <div class="card-icon">✅</div>
-                    <div class="card-content">
-                        <div class="card-number">${recentlyCompleted.length}</div>
-                        <div class="card-label">Completed This Week</div>
-                    </div>
-                </div>
-                <div class="dashboard-card stuck ${stuckProjects.length > 0 ? 'warning' : ''}">
-                    <div class="card-icon">🚧</div>
-                    <div class="card-content">
-                        <div class="card-number">${stuckProjects.length}</div>
-                        <div class="card-label">Potentially Stuck</div>
-                        <div class="card-sub">No activity >14 days</div>
-                    </div>
-                </div>
-                <div class="dashboard-card editors ${needingEditors.length > 0 ? 'warning' : ''}">
-                    <div class="card-icon">👥</div>
-                    <div class="card-content">
-                        <div class="card-number">${needingEditors.length}</div>
-                        <div class="card-label">Need Editor Assignment</div>
-                    </div>
+                <div class="summary-item completed">
+                    <div class="summary-value">${recentlyCompleted.length}</div>
+                    <div class="summary-label">Completed This Week</div>
                 </div>
             </div>
-            
-            <div class="workflow-status">
-                <h3>Project Status Breakdown</h3>
-                <div class="status-bars">
-                    ${Object.entries(statusBreakdown).map(([status, count]) => `
-                        <div class="status-bar">
-                            <div class="status-label">${status}</div>
-                            <div class="status-progress">
-                                <div class="status-fill" style="width: ${allProjects.length > 0 ? (count / allProjects.length * 100) : 0}%"></div>
+        </div>
+    `;
+
+    // Critical Actions
+    if (overdueProjects.length > 0 || needingEditors.length > 0 || pendingProposals.length > 0) {
+        reportHTML += `
+            <div class="report-section">
+                <h2>🚨 Actions Required</h2>
+                ${severelyOverdue.length > 0 ? `<h3>Severely Overdue (${severelyOverdue.length})</h3>` : ''}
+                ${severelyOverdue.map(p => {
+                    const deadline = p.deadlines ? p.deadlines.publication : p.deadline;
+                    const daysPast = Math.ceil((now - new Date(deadline)) / (1000 * 60 * 60 * 24));
+                    return `
+                        <div class="report-item overdue-item" data-id="${p.id}">
+                            <span>${p.title}</span>
+                            <span class="meta">${daysPast} days overdue</span>
+                        </div>
+                    `;
+                }).join('')}
+                
+                ${needingEditors.length > 0 ? `<h3>Need Editor Assignment (${needingEditors.length})</h3>` : ''}
+                ${needingEditors.map(p => `
+                    <div class="report-item pending-item" data-id="${p.id}">
+                        <span>${p.title}</span>
+                        <span class="meta">by ${p.authorName}</span>
+                    </div>
+                `).join('')}
+                
+                ${pendingProposals.length > 0 ? `<h3>Pending Proposals (${pendingProposals.length})</h3>` : ''}
+                ${pendingProposals.map(p => `
+                    <div class="report-item pending-item" data-id="${p.id}">
+                        <span>${p.title}</span>
+                        <span class="meta">by ${p.authorName}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    // Team Analysis
+    if (teamAnalysis.length > 0) {
+        reportHTML += `
+            <div class="report-section">
+                <h2>👥 Team Analysis</h2>
+                <div class="user-workload-grid">
+                    ${teamAnalysis.map(member => `
+                        <div class="user-card">
+                            <div class="user-card-header">
+                                <div class="user-avatar" style="background-color: ${stringToColor(member.name)}">
+                                    ${member.name.charAt(0)}
+                                </div>
+                                <div class="user-card-name">${member.name}</div>
+                                <div class="user-card-stats">
+                                    <span>Total: ${member.stats.total}</span>
+                                    <span>Overdue: ${member.stats.overdue}</span>
+                                </div>
                             </div>
-                            <div class="status-count">${count}</div>
+                            <div class="user-card-body">
+                                ${member.stats.inProgress > 0 ? `
+                                    <h4>In Progress (${member.stats.inProgress})</h4>
+                                    ${member.projects.filter(p => p.state.column !== 'Completed' && !p.isOverdue).slice(0, 3).map(p => `
+                                        <div class="report-item mini" data-id="${p.id}">
+                                            <div class="status-dot ${p.state.color}"></div>
+                                            <span>${p.title}</span>
+                                        </div>
+                                    `).join('')}
+                                ` : ''}
+                                
+                                ${member.alerts.length > 0 ? `
+                                    <h4>⚠️ Alerts</h4>
+                                    ${member.alerts.slice(0, 2).map(alert => `<div class="alert-item">${alert}</div>`).join('')}
+                                ` : ''}
+                            </div>
                         </div>
                     `).join('')}
                 </div>
             </div>
-        </div>
-    `;
-
-    // 2. CRITICAL ACTIONS NEEDED
-    const criticalActions = [];
-    if (severelyOverdue.length > 0) criticalActions.push(`🚨 URGENT: ${severelyOverdue.length} projects severely overdue (>7 days)`);
-    if (overdueProjects.length > 0) criticalActions.push(`⚠️ ${overdueProjects.length} projects past deadline`);
-    if (pendingProposals.length > 0) criticalActions.push(`📋 ${pendingProposals.length} proposals awaiting approval`);
-    if (needingEditors.length > 0) criticalActions.push(`👥 ${needingEditors.length} completed articles need editor assignment`);
-    if (pendingDeadlineRequests.length > 0) criticalActions.push(`📅 ${pendingDeadlineRequests.length} deadline requests pending`);
-    if (stuckProjects.length > 0) criticalActions.push(`🚧 ${stuckProjects.length} projects may be stuck (no recent activity)`);
-
-    if (criticalActions.length > 0) {
-        reportHTML += `
-            <div class="report-section critical-actions">
-                <h2>🚨 Critical Actions Required</h2>
-                <div class="action-list">
-                    ${criticalActions.map(action => `<div class="action-item">${action}</div>`).join('')}
-                </div>
-            </div>
         `;
     }
 
-    // 3. DETAILED PROJECT BREAKDOWN
-    if (overdueProjects.length > 0) {
-        reportHTML += `
-            <div class="report-section overdue-details">
-                <h2>⚠️ Overdue Projects (${overdueProjects.length})</h2>
-                <div class="project-details-grid">
-                    ${overdueProjects.map(p => {
-                        const deadline = p.deadlines ? p.deadlines.publication : p.deadline;
-                        const daysPast = Math.ceil((now - new Date(deadline)) / (1000 * 60 * 60 * 24));
-                        const state = getProjectState(p);
-                        const lastActivity = getLastActivity(p);
-                        
-                        return `
-                            <div class="project-detail-card overdue ${daysPast > 7 ? 'severe' : ''}" data-id="${p.id}">
-                                <div class="project-header">
-                                    <h4>${p.title}</h4>
-                                    <div class="urgency-badge ${daysPast > 7 ? 'severe' : daysPast > 3 ? 'high' : 'medium'}">${daysPast} days overdue</div>
-                                </div>
-                                <div class="project-meta">
-                                    <div class="meta-item"><strong>Author:</strong> ${p.authorName}</div>
-                                    <div class="meta-item"><strong>Editor:</strong> ${p.editorName || 'Not assigned'}</div>
-                                    <div class="meta-item"><strong>Type:</strong> ${p.type}</div>
-                                    <div class="meta-item"><strong>Status:</strong> ${state.statusText}</div>
-                                    <div class="meta-item"><strong>Progress:</strong> ${calculateProgress(p.timeline)}%</div>
-                                </div>
-                                <div class="project-timeline">
-                                    <div class="timeline-status">Current Stage: ${state.column}</div>
-                                    <div class="last-activity">Last Activity: ${lastActivity}</div>
-                                </div>
-                                <div class="project-actions">
-                                    <strong>Recommended Action:</strong> ${getRecommendedAction(p, state)}
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    // 4. TEAM WORKLOAD & PERFORMANCE
-    reportHTML += `
-        <div class="report-section team-analysis">
-            <h2>👥 Team Workload & Performance Analysis</h2>
-            ${generateTeamAnalysisHTML(teamAnalysis)}
-        </div>
-    `;
-
-    // 5. UPCOMING DEADLINES
+    // Upcoming Deadlines
     if (upcomingDeadlines.length > 0) {
         reportHTML += `
-            <div class="report-section upcoming-deadlines">
+            <div class="report-section">
                 <h2>📅 Upcoming Deadlines (Next 2 Weeks)</h2>
-                <div class="deadline-timeline">
-                    ${upcomingDeadlines.map(item => `
-                        <div class="deadline-item ${item.urgency}" data-id="${item.project.id}">
-                            <div class="deadline-date">${item.formattedDate}</div>
-                            <div class="deadline-content">
-                                <h4>${item.project.title}</h4>
-                                <div class="deadline-meta">
-                                    <span class="deadline-type">${item.type}</span>
-                                    <span class="deadline-author">${item.project.authorName}</span>
-                                    <span class="deadline-days">${item.daysUntil} days</span>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
+                ${upcomingDeadlines.slice(0, 10).map(item => `
+                    <div class="report-item ${item.urgency}" data-id="${item.project.id}">
+                        <span>${item.project.title} - ${item.type}</span>
+                        <span class="meta">${item.formattedDate} (${item.daysUntil} days)</span>
+                    </div>
+                `).join('')}
             </div>
         `;
     }
 
-    // 6. RECENT ACTIVITY & COMPLETIONS
-    if (recentlyCompleted.length > 0) {
-        reportHTML += `
-            <div class="report-section recent-completions">
-                <h2>🎉 Recent Completions (Last 7 Days)</h2>
-                <div class="completion-grid">
-                    ${recentlyCompleted.map(p => `
-                        <div class="completion-card" data-id="${p.id}">
-                            <h4>${p.title}</h4>
-                            <div class="completion-meta">
-                                <span>By ${p.authorName}</span>
-                                ${p.editorName ? `<span>Edited by ${p.editorName}</span>` : ''}
-                                <span>${p.type}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
+    reportContent.innerHTML = reportHTML;
 
-    // 7. RECOMMENDATIONS & NEXT STEPS
-    const recommendations = generateRecommendations({
-        overdueProjects,
-        severelyOverdue,
-        stuckProjects,
-        pendingProposals,
-        needingEditors,
-        teamAnalysis
-    });
-
-    if (recommendations.length > 0) {
-        reportHTML += `
-            <div class="report-section recommendations">
-                <h2>💡 Strategic Recommendations</h2>
-                <div class="recommendations-list">
-                    ${recommendations.map((rec, index) => `
-                        <div class="recommendation-item priority-${rec.priority}">
-                            <div class="rec-priority">${rec.priority.toUpperCase()}</div>
-                            <div class="rec-content">
-                                <h4>${rec.title}</h4>
-                                <p>${rec.description}</p>
-                                ${rec.actions ? `<div class="rec-actions">${rec.actions.join(' • ')}</div>` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    reportHTML += '</div>';
-
-    // Apply enhanced CSS
-    const enhancedCSS = `
-        <style>
-        .report-container {
-            max-width: none;
-            font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
-        }
-        
-        .report-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            text-align: center;
-            margin: -2rem -2rem 2rem -2rem;
-            border-radius: 0;
-        }
-        
-        .report-header h1 {
-            margin: 0 0 0.5rem 0;
-            font-size: 2.5rem;
-            font-weight: 700;
-        }
-        
-        .report-date {
-            opacity: 0.9;
-            font-size: 1.1rem;
-        }
-        
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        
-        .dashboard-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-        }
-        
-        .dashboard-card.alert {
-            border-color: #ef4444;
-            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-        }
-        
-        .dashboard-card.warning {
-            border-color: #f59e0b;
-            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-        }
-        
-        .dashboard-card.success {
-            border-color: #22c55e;
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        }
-        
-        .card-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .card-number {
-            font-size: 2.5rem;
-            font-weight: 800;
-            line-height: 1;
-            margin-bottom: 0.5rem;
-        }
-        
-        .card-label {
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 0.25rem;
-        }
-        
-        .card-sub {
-            font-size: 0.875rem;
-            color: #6b7280;
-        }
-        
-        .workflow-status {
-            background: #f9fafb;
-            padding: 1.5rem;
-            border-radius: 12px;
-            margin-top: 2rem;
-        }
-        
-        .status-bars {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        
-        .status-bar {
-            display: grid;
-            grid-template-columns: 150px 1fr 50px;
-            align-items: center;
-            gap: 1rem;
-        }
-        
-        .status-progress {
-            background: #e5e7eb;
-            height: 20px;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .status-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
-            transition: width 0.5s ease;
-        }
-        
-        .critical-actions {
-            background: #fef2f2;
-            border: 2px solid #ef4444;
-        }
-        
-        .action-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-        
-        .action-item {
-            background: white;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            border-left: 4px solid #ef4444;
-            font-weight: 600;
-        }
-        
-        .project-details-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .project-detail-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 2px solid #e5e7eb;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .project-detail-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-        
-        .project-detail-card.overdue {
-            border-color: #f59e0b;
-            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-        }
-        
-        .project-detail-card.severe {
-            border-color: #ef4444;
-            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-        }
-        
-        .project-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-        
-        .project-header h4 {
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 700;
-        }
-        
-        .urgency-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        
-        .urgency-badge.severe {
-            background: #ef4444;
-            color: white;
-        }
-        
-        .urgency-badge.high {
-            background: #f59e0b;
-            color: white;
-        }
-        
-        .urgency-badge.medium {
-            background: #6b7280;
-            color: white;
-        }
-        
-        .project-meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .meta-item {
-            font-size: 0.875rem;
-        }
-        
-        .project-timeline {
-            background: rgba(255,255,255,0.5);
-            padding: 0.75rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-        
-        .project-actions {
-            background: #3b82f6;
-            color: white;
-            padding: 0.75rem;
-            border-radius: 8px;
-            font-size: 0.875rem;
-        }
-        
-        .team-member-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 2px solid #e5e7eb;
-            margin-bottom: 1rem;
-        }
-        
-        .member-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        
-        .member-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: white;
-        }
-        
-        .member-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        
-        .stat-box {
-            text-align: center;
-            padding: 0.75rem;
-            background: #f9fafb;
-            border-radius: 8px;
-        }
-        
-        .stat-number {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
-        
-        .stat-label {
-            font-size: 0.75rem;
-            color: #6b7280;
-            text-transform: uppercase;
-        }
-        
-        .member-projects {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid #e5e7eb;
-        }
-        
-        .member-projects h4 {
-            margin: 0 0 0.75rem 0;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #374151;
-        }
-        
-        .project-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        
-        .project-mini {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0.75rem;
-            background: #f9fafb;
-            border-radius: 6px;
-            border-left: 3px solid #d1d5db;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .project-mini:hover {
-            background: #f3f4f6;
-            transform: translateX(2px);
-        }
-        
-        .project-mini.overdue {
-            border-left-color: #ef4444;
-            background: #fef2f2;
-        }
-        
-        .project-title {
-            font-weight: 600;
-            color: #374151;
-            flex: 1;
-            margin-right: 1rem;
-        }
-        
-        .project-status {
-            padding: 0.25rem 0.5rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .project-status.default {
-            background: #f3f4f6;
-            color: #6b7280;
-        }
-        
-        .project-status.yellow {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .project-status.blue {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-        
-        .project-status.green {
-            background: #dcfce7;
-            color: #166534;
-        }
-        
-        .project-more {
-            padding: 0.5rem 0.75rem;
-            text-align: center;
-            background: #f3f4f6;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            color: #6b7280;
-            font-style: italic;
-        }
-        
-        .member-alerts {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid #fecaca;
-            background: #fef2f2;
-            border-radius: 8px;
-            padding: 0.75rem;
-        }
-        
-        .alert-item {
-            font-size: 0.875rem;
-            color: #dc2626;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-        
-        .alert-item:last-child {
-            margin-bottom: 0;
-        }
-        
-        .stat-box.alert {
-            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-            border: 1px solid #fecaca;
-        }
-        
-        .stat-box.alert .stat-number {
-            color: #dc2626;
-        }
-        
-        .stat-box.warning {
-            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-            border: 1px solid #fed7aa;
-        }
-        
-        .stat-box.warning .stat-number {
-            color: #d97706;
-        }
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .project-details-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .status-bar {
-                grid-template-columns: 1fr;
-                gap: 0.5rem;
-            }
-            
-            .deadline-item {
-                grid-template-columns: 1fr;
-            }
-        }
-        </style>
-    `;
-
-    reportContent.innerHTML = enhancedCSS + reportHTML;
-
-    // Add event listeners to make all project cards clickable
+    // Add click handlers
     reportContent.querySelectorAll('[data-id]').forEach(item => {
-        item.style.cursor = 'pointer';
         item.addEventListener('click', () => {
             closeAllModals();
             openDetailsModal(item.dataset.id);
@@ -2147,3 +2083,6 @@ function isValidDate(dateString) {
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
 }
+
+// Import getProjectState and getColumnsForView from projectState.js
+// These functions are defined in projectState.js which is loaded before this file
