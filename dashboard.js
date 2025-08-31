@@ -165,6 +165,9 @@ function setupNavAndListeners() {
             }
         });
     });
+    
+    setupCalendarListeners();
+    setupCalendarKeyboardNavigation();
 }
 
 // ==================
@@ -189,16 +192,21 @@ function handleNavClick(view) {
         'calendar': 'Deadlines Calendar'
     };
     document.getElementById('board-title').textContent = viewTitles[view] || view;
-    renderCurrentView();
+    renderCurrentViewEnhanced();
 }
 
-function renderCurrentView() {
+function renderCurrentViewEnhanced() {
     const boardView = document.getElementById('board-view');
     const calendarView = document.getElementById('calendar-view');
 
     if (currentView === 'calendar') {
         boardView.style.display = 'none';
         calendarView.style.display = 'block';
+        
+        // Setup calendar listeners if not already done
+        setupCalendarListeners();
+        
+        // Render calendar
         renderCalendar();
     } else {
         boardView.style.display = 'block';
@@ -218,7 +226,7 @@ function subscribeToProjects() {
         
         allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        renderCurrentView();
+        renderCurrentViewEnhanced();
         updateNavCounts();
 
         if (currentlyViewedProjectId) {
@@ -349,50 +357,351 @@ function createProjectCard(project) {
 function renderCalendar() {
     const calendarGrid = document.getElementById('calendar-grid');
     const monthYear = document.getElementById('month-year');
+    
+    if (!calendarGrid || !monthYear) return;
+    
     calendarGrid.innerHTML = '';
     
     const month = calendarDate.getMonth();
     const year = calendarDate.getFullYear();
+    
+    // Update header
     monthYear.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
 
-    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
-        calendarGrid.innerHTML += `<div class="calendar-day-name">${day}</div>`;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonth = new Date(year, month, 0);
+    const today = new Date();
+
+    // Previous month's trailing days
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const dayDate = new Date(prevMonth);
+        dayDate.setDate(prevMonth.getDate() - i);
+        createCalendarDay(calendarGrid, dayDate, true, today);
+    }
+
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayDate = new Date(year, month, day);
+        createCalendarDay(calendarGrid, dayDate, false, today);
+    }
+
+    // Next month's leading days to fill the grid (6 rows × 7 days = 42 total)
+    const totalCells = calendarGrid.children.length;
+    const remainingCells = 42 - totalCells;
+    const nextMonth = new Date(year, month + 1, 1);
+    
+    for (let day = 1; day <= remainingCells; day++) {
+        const dayDate = new Date(nextMonth);
+        dayDate.setDate(day);
+        createCalendarDay(calendarGrid, dayDate, true, today);
+    }
+
+    // Update statistics
+    updateCalendarStats();
+    
+    // Add fade-in animation
+    const container = document.querySelector('.calendar-container');
+    if (container) {
+        container.classList.add('calendar-fade-in');
+        setTimeout(() => container.classList.remove('calendar-fade-in'), 300);
+    }
+}
+
+function createCalendarDay(grid, date, isOtherMonth, today) {
+    const dayEl = document.createElement('div');
+    dayEl.className = 'calendar-day';
+    
+    if (isOtherMonth) {
+        dayEl.classList.add('other-month');
+    }
+    
+    // Check if this is today
+    if (isSameDay(date, today)) {
+        dayEl.classList.add('today');
+    }
+
+    // Create day number
+    const dayNumber = document.createElement('div');
+    dayNumber.className = 'day-number';
+    dayNumber.textContent = date.getDate();
+
+    // Create events container
+    const eventsContainer = document.createElement('div');
+    eventsContainer.className = 'calendar-events';
+
+    // Find projects for this day
+    const dayProjects = allProjects.filter(project => {
+        return hasProjectDeadlineOnDate(project, date);
     });
 
-    const firstDay = new Date(year, month, 1).getDay();
-    for (let i = 0; i < firstDay; i++) {
-        calendarGrid.innerHTML += `<div></div>`;
+    // Display up to 3 events, then show "+X more"
+    const maxVisibleEvents = 3;
+    dayProjects.slice(0, maxVisibleEvents).forEach(project => {
+        const eventEl = createCalendarEvent(project, date);
+        eventsContainer.appendChild(eventEl);
+    });
+
+    if (dayProjects.length > maxVisibleEvents) {
+        const moreEl = document.createElement('div');
+        moreEl.className = 'event-more';
+        moreEl.textContent = `+${dayProjects.length - maxVisibleEvents} more`;
+        moreEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showDayDetails(date, dayProjects);
+        });
+        eventsContainer.appendChild(moreEl);
     }
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dayEl = document.createElement('div');
-        dayEl.className = 'calendar-day';
-        dayEl.innerHTML = `<div class="day-number">${day}</div>`;
-        
-        const dayProjects = allProjects.filter(p => {
-            const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
-            if (!finalDeadline) return false;
-            const d = new Date(finalDeadline + 'T00:00:00');
-            return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
-        });
-        
-        dayProjects.forEach(p => {
-            const eventEl = document.createElement('div');
-            eventEl.className = 'calendar-event';
-            const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
-            if (new Date(finalDeadline) < new Date()) eventEl.classList.add('overdue');
-            eventEl.textContent = p.title;
-            eventEl.addEventListener('click', () => openDetailsModal(p.id));
-            dayEl.appendChild(eventEl);
-        });
-        calendarGrid.appendChild(dayEl);
+    dayEl.appendChild(dayNumber);
+    dayEl.appendChild(eventsContainer);
+
+    // Add click handler for day
+    dayEl.addEventListener('click', () => {
+        if (dayProjects.length === 1) {
+            openDetailsModal(dayProjects[0].id);
+        } else if (dayProjects.length > 1) {
+            showDayDetails(date, dayProjects);
+        }
+    });
+
+    grid.appendChild(dayEl);
+}
+
+function createCalendarEvent(project, date) {
+    const eventEl = document.createElement('div');
+    
+    // Determine event type and styling
+    const { eventType, eventTitle } = getEventTypeForDate(project, date);
+    
+    eventEl.className = `calendar-event ${eventType}`;
+    eventEl.textContent = eventTitle;
+    eventEl.title = `${project.title} - ${eventTitle} - ${date.toLocaleDateString()}`;
+
+    // Add click handler
+    eventEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openDetailsModal(project.id);
+    });
+
+    return eventEl;
+}
+
+function getEventTypeForDate(project, date) {
+    const deadlines = project.deadlines || {};
+    const finalDeadline = deadlines.publication || project.deadline;
+    const dateStr = formatDateForComparison(date);
+    
+    // Check different types of deadlines
+    if (deadlines.contact && formatDateForComparison(new Date(deadlines.contact + 'T00:00:00')) === dateStr) {
+        return { eventType: 'interview', eventTitle: 'Contact Professor' };
     }
+    if (deadlines.interview && formatDateForComparison(new Date(deadlines.interview + 'T00:00:00')) === dateStr) {
+        return { eventType: 'interview', eventTitle: 'Interview Due' };
+    }
+    if (deadlines.draft && formatDateForComparison(new Date(deadlines.draft + 'T00:00:00')) === dateStr) {
+        return { eventType: 'due-soon', eventTitle: 'Draft Due' };
+    }
+    if (deadlines.review && formatDateForComparison(new Date(deadlines.review + 'T00:00:00')) === dateStr) {
+        return { eventType: 'due-soon', eventTitle: 'Review Due' };
+    }
+    if (deadlines.edits && formatDateForComparison(new Date(deadlines.edits + 'T00:00:00')) === dateStr) {
+        return { eventType: 'due-soon', eventTitle: 'Edits Due' };
+    }
+    if (finalDeadline && formatDateForComparison(new Date(finalDeadline + 'T00:00:00')) === dateStr) {
+        const isOverdue = new Date(finalDeadline) < new Date();
+        const eventType = isOverdue ? 'overdue' : 'publication';
+        return { eventType, eventTitle: 'Publication Due' };
+    }
+    
+    return { eventType: 'publication', eventTitle: project.title };
+}
+
+function hasProjectDeadlineOnDate(project, date) {
+    const deadlines = project.deadlines || {};
+    const finalDeadline = deadlines.publication || project.deadline;
+    const dateStr = formatDateForComparison(date);
+    
+    // Check all possible deadline types
+    const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
+    
+    for (const type of deadlineTypes) {
+        if (deadlines[type]) {
+            const deadlineDate = new Date(deadlines[type] + 'T00:00:00');
+            if (formatDateForComparison(deadlineDate) === dateStr) {
+                return true;
+            }
+        }
+    }
+    
+    // Check final publication deadline
+    if (finalDeadline) {
+        const publicationDate = new Date(finalDeadline + 'T00:00:00');
+        if (formatDateForComparison(publicationDate) === dateStr) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+function formatDateForComparison(date) {
+    return date.getFullYear() + '-' + 
+           String(date.getMonth() + 1).padStart(2, '0') + '-' +
+           String(date.getDate()).padStart(2, '0');
+}
+
+function isSameDay(date1, date2) {
+    return date1.getDate() === date2.getDate() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getFullYear() === date2.getFullYear();
+}
+
+function updateCalendarStats() {
+    const now = new Date();
+    const monthStart = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
+    const monthEnd = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0);
+    
+    // Get week boundaries
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    
+    let thisMonthCount = 0;
+    let thisWeekCount = 0;
+    let overdueCount = 0;
+    
+    allProjects.forEach(project => {
+        const deadlines = project.deadlines || {};
+        const finalDeadline = deadlines.publication || project.deadline;
+        
+        if (finalDeadline) {
+            const deadline = new Date(finalDeadline + 'T00:00:00');
+            
+            // Count for this month
+            if (deadline >= monthStart && deadline <= monthEnd) {
+                thisMonthCount++;
+            }
+            
+            // Count for this week
+            if (deadline >= weekStart && deadline <= weekEnd) {
+                thisWeekCount++;
+            }
+            
+            // Count overdue (not completed)
+            const state = getProjectState(project);
+            if (deadline < now && state.column !== 'Completed') {
+                overdueCount++;
+            }
+        }
+        
+        // Also check intermediate deadlines for current month/week
+        const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
+        deadlineTypes.forEach(type => {
+            if (deadlines[type]) {
+                const deadline = new Date(deadlines[type] + 'T00:00:00');
+                
+                if (deadline >= monthStart && deadline <= monthEnd) {
+                    thisMonthCount++;
+                }
+                
+                if (deadline >= weekStart && deadline <= weekEnd) {
+                    thisWeekCount++;
+                }
+            }
+        });
+    });
+    
+    // Update stats display
+    const statMonth = document.getElementById('stat-month');
+    const statWeek = document.getElementById('stat-week');
+    const statOverdue = document.getElementById('stat-overdue');
+    
+    if (statMonth) statMonth.textContent = thisMonthCount;
+    if (statWeek) statWeek.textContent = thisWeekCount;
+    if (statOverdue) statOverdue.textContent = overdueCount;
+}
+
+function showDayDetails(date, projects) {
+    const dateStr = date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
+    let message = `Events for ${dateStr}:\n\n`;
+    
+    projects.forEach((project, index) => {
+        const { eventType, eventTitle } = getEventTypeForDate(project, date);
+        message += `${index + 1}. ${project.title}\n   ${eventTitle}\n   Author: ${project.authorName}\n\n`;
+    });
+    
+    message += 'Click on an individual event to view project details.';
+    alert(message);
 }
 
 function changeMonth(offset) {
     calendarDate.setMonth(calendarDate.getMonth() + offset);
     renderCalendar();
+}
+
+function goToToday() {
+    calendarDate = new Date();
+    renderCalendar();
+}
+
+// Enhanced event listener setup for calendar
+function setupCalendarListeners() {
+    // Navigation buttons
+    const prevBtn = document.getElementById('prev-month');
+    const nextBtn = document.getElementById('next-month');
+    const todayBtn = document.getElementById('today-btn');
+    
+    if (prevBtn) prevBtn.addEventListener('click', () => changeMonth(-1));
+    if (nextBtn) nextBtn.addEventListener('click', () => changeMonth(1));
+    if (todayBtn) todayBtn.addEventListener('click', goToToday);
+    
+    // View toggle buttons
+    document.querySelectorAll('.view-toggle button').forEach((btn, index) => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.view-toggle button').forEach((b, i) => {
+                b.classList.toggle('active', i === index);
+            });
+            // Future: implement different view modes
+            renderCalendar();
+        });
+    });
+}
+
+// Keyboard navigation for calendar
+function setupCalendarKeyboardNavigation() {
+    document.addEventListener('keydown', (e) => {
+        if (currentView !== 'calendar') return;
+        
+        switch(e.key) {
+            case 'ArrowLeft':
+                if (e.ctrlKey || e.metaKey) {
+                    changeMonth(-1);
+                    e.preventDefault();
+                }
+                break;
+            case 'ArrowRight':
+                if (e.ctrlKey || e.metaKey) {
+                    changeMonth(1);
+                    e.preventDefault();
+                }
+                break;
+            case 't':
+            case 'T':
+                if (e.ctrlKey || e.metaKey) {
+                    goToToday();
+                    e.preventDefault();
+                }
+                break;
+        }
+    });
 }
 
 // =================
