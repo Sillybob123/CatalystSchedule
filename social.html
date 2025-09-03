@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Social Media Planner - Catalyst Tracker</title>
+    <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png">
+    <link rel="stylesheet" href="base.css" />
+    <link rel="stylesheet" href="components.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="loader" class="loader-container">
+      <div class="loader" role="status" aria-label="Loading"></div>
+      <p style="margin-top: 20px; color: #64748b;">Loading Social Media Planner...</p>
+    </div>
+
+    <div id="app-container" class="app-container" style="display: none">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <img src="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png" alt="Catalyst Logo" class="logo-img">
+          <h2>Catalyst Tracker</h2>
+        </div>
+
+        <nav class="sidebar-nav" aria-label="Primary">
+          <p class="nav-heading">Views</p>
+          <a href="dashboard.html" id="nav-dashboard" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span>Dashboard</span>
+          </a>
+          <a href="social.html" id="nav-social" class="nav-item active" aria-current="page">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+            <span>Social Media</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-profile">
+            <div class="user-avatar" id="user-avatar" aria-hidden="true">U</div>
+            <div class="user-details">
+              <span id="user-name">Loading...</span>
+              <span id="user-role">writer</span>
+            </div>
+          </div>
+          <button id="logout-button" class="logout-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
+              />
+            </svg>
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="main-header">
+          <h1 id="board-title">Social Media Planner</h1>
+          <div class="header-actions">
+            <button id="add-post-button" class="add-project-btn">
+              + Propose New Post
+            </button>
+          </div>
+        </header>
+
+        <div id="board-view">
+          <div id="kanban-board" class="kanban-board" aria-live="polite">
+            </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="post-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">Propose New Social Media Post</h2>
+          <button class="close-button" aria-label="Close">×</button>
+        </div>
+        <form id="post-form">
+          <div class="form-group">
+            <label for="post-title">Post Title / Topic</label>
+            <input
+              type="text"
+              id="post-title"
+              required
+              placeholder="e.g., Announcing our new article on AI in Neuroscience"
+            />
+          </div>
+          <div class="form-group">
+            <label for="post-platform">Platform</label>
+            <select id="post-platform" required>
+              <option value="Instagram">Instagram</option>
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Twitter">Twitter</option>
+              <option value="Facebook">Facebook</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="post-content">Post Content</label>
+            <textarea
+              id="post-content"
+              rows="6"
+              placeholder="Write the full content of the post here, including any links or hashtags."
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="post-deadline">Target Post Date</label>
+            <input type="date" id="post-deadline" required />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary close-button">
+              Cancel
+            </button>
+            <button type="submit" id="save-post-button" class="btn-primary">
+              Save Proposal
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="details-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 id="details-title">Post Details</h2>
+                <button class="close-button" aria-label="Close">×</button>
+            </div>
+            <div class="details-container">
+                <div class="details-grid">
+                    <div class="details-main">
+                        <h4>Content</h4>
+                        <p id="details-content" style="white-space: pre-wrap;"></p>
+                    </div>
+                    <aside class="details-sidebar">
+                        <div class="sidebar-section">
+                            <h4>Status</h4>
+                            <p id="details-status">Loading...</p>
+                        </div>
+                        <div class="sidebar-section">
+                            <h4>Key People</h4>
+                            <p><strong>Proposer:</strong> <span id="details-proposer">Unknown</span></p>
+                            <p><strong>Assigned To:</strong> <span id="details-assignee">Not Assigned</span></p>
+                             <div id="assign-user-section" class="admin-only details-form" style="margin-top: 12px; display: none;">
+                                <select id="user-dropdown">
+                                  <option value="">Select User</option>
+                                </select>
+                                <button id="assign-user-button" class="btn-secondary">Assign</button>
+                            </div>
+                        </div>
+                        <div class="sidebar-section">
+                            <h4>Platform</h4>
+                            <p id="details-platform">Not set</p>
+                        </div>
+                        <div class="sidebar-section">
+                            <h4>Post Deadline</h4>
+                            <p id="details-deadline">Not set</p>
+                        </div>
+                        <div id="admin-approval-section" class="sidebar-section admin-only" style="display: none;">
+                            <h4>Admin Actions</h4>
+                            <div class="button-group">
+                                <button id="approve-button" class="btn-success">Approve</button>
+                                <button id="reject-button" class="btn-danger">Reject</button>
+                            </div>
+                        </div>
+                         <div id="mark-posted-section" class="sidebar-section" style="display: none;">
+                            <h4>Mark as Posted</h4>
+                            <button id="mark-posted-button" class="btn-success" style="width: 100%;">Mark as Posted</button>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="social.js"></script>
+  </body>
+</html>
