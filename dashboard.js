@@ -113,8 +113,20 @@ function setupUI() {
 function setupNavAndListeners() {
     // Navigation listeners
     document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+    
+    // ========================================================================
+    //  FIX: Updated navigation logic to allow links to other pages
+    // ========================================================================
     document.querySelectorAll('.nav-item').forEach(link => {
         link.addEventListener('click', e => {
+            // If the link has a destination file (like "social.html"),
+            // let the browser navigate normally and do not run our script.
+            const href = link.getAttribute('href');
+            if (href && href !== '#') {
+                return;
+            }
+            
+            // Otherwise, it's an in-page view change. Prevent page reload.
             e.preventDefault();
             const view = link.id.replace('nav-', '');
             handleNavClick(view);
