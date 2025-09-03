@@ -5,12 +5,141 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Social Media Planner - Catalyst Tracker</title>
     <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png">
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="base.css" />
     <link rel="stylesheet" href="components.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <style>
+      /* === SOCIAL MEDIA SPECIFIC STYLES === */
+      .platform-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-transform: uppercase;
+      }
+      
+      .platform-instagram {
+        background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
+        color: white;
+      }
+      
+      .platform-linkedin {
+        background: #0077b5;
+        color: white;
+      }
+      
+      .card-content-preview {
+        margin: 12px 0;
+        font-size: 0.9rem;
+        color: #64748b;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        line-height: 1.4;
+      }
+      
+      .card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 16px;
+        padding-top: 12px;
+        border-top: 1px solid #f1f5f9;
+        font-size: 0.85rem;
+      }
+      
+      .card-author {
+        color: #64748b;
+      }
+      
+      .card-deadline {
+        color: #007AFF;
+        font-weight: 500;
+      }
+      
+      .details-content-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 16px 0;
+        white-space: pre-wrap;
+        font-family: 'Inter', sans-serif;
+        line-height: 1.6;
+        color: #1d1d1f;
+      }
+      
+      .platform-display {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: #f1f5f9;
+        border-radius: 20px;
+        font-weight: 500;
+      }
+      
+      .platform-icon {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+      }
+      
+      .instagram-icon {
+        background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
+      }
+      
+      .linkedin-icon {
+        background: #0077b5;
+      }
+      
+      .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+      
+      .status-proposed {
+        background: rgba(251, 146, 60, 0.1);
+        color: #ea580c;
+      }
+      
+      .status-approved {
+        background: rgba(34, 197, 94, 0.1);
+        color: #16a34a;
+      }
+      
+      .status-assigned {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+      }
+      
+      .status-posted {
+        background: rgba(139, 69, 193, 0.1);
+        color: #9333ea;
+      }
+      
+      .assignment-info {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 8px;
+      }
+      
+      .assignment-info strong {
+        color: #0369a1;
+      }
+    </style>
   </head>
   <body>
     <div id="loader" class="loader-container">
@@ -35,6 +164,24 @@
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
             <span>Social Media</span>
           </a>
+          <a href="dashboard.html" id="nav-my-assignments" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle stroke="currentColor" stroke-width="2" cx="12" cy="7" r="4"></circle></svg>
+            <span>My Assignments</span>
+          </a>
+          <a href="dashboard.html" id="nav-calendar" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect stroke="currentColor" stroke-width="2" x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"></line><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"></line><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"></line></svg>
+            <span>Calendar</span>
+          </a>
+
+          <p class="nav-heading">Workflows</p>
+          <a href="dashboard.html" id="nav-interviews" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+            <span>In The Capital</span>
+          </a>
+          <a href="dashboard.html" id="nav-opeds" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span>Op-Eds</span>
+          </a>
         </nav>
 
         <div class="sidebar-footer">
@@ -47,10 +194,7 @@
           </div>
           <button id="logout-button" class="logout-btn">
             <svg width="24" height="24" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
-              />
+              <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
             </svg>
             <span>Logout</span>
           </button>
@@ -59,17 +203,28 @@
 
       <main class="main-content">
         <header class="main-header">
-          <h1 id="board-title">Social Media Planner</h1>
+          <div class="header-title-section">
+            <h1 id="board-title">Social Media Planner</h1>
+            <p class="header-subtitle">Coordinate and schedule social media content across platforms</p>
+          </div>
           <div class="header-actions">
             <button id="add-post-button" class="add-project-btn">
-              + Propose New Post
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Propose New Post
             </button>
           </div>
         </header>
 
         <div id="board-view">
           <div id="kanban-board" class="kanban-board" aria-live="polite">
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
+              <div class="loader" style="margin: 0 auto 20px;"></div>
+              <p>Loading social media posts...</p>
             </div>
+          </div>
         </div>
       </main>
     </div>
@@ -90,31 +245,63 @@
               placeholder="e.g., Announcing our new article on AI in Neuroscience"
             />
           </div>
+          
           <div class="form-group">
             <label for="post-platform">Platform</label>
             <select id="post-platform" required>
-              <option value="Instagram">Instagram</option>
-              <option value="LinkedIn">LinkedIn</option>
+              <option value="">Select Platform</option>
+              <option value="Instagram">📸 Instagram</option>
+              <option value="LinkedIn">💼 LinkedIn</option>
+              <option value="Twitter">🐦 Twitter</option>
+              <option value="Facebook">📘 Facebook</option>
             </select>
           </div>
+          
           <div class="form-group">
             <label for="post-content">Post Content</label>
             <textarea
               id="post-content"
-              rows="6"
-              placeholder="Write the full content of the post here, including any links or hashtags."
+              rows="8"
+              required
+              placeholder="Write the full content of the post here, including any links, hashtags, and mentions.
+
+Example:
+🧠 Exciting news! Our latest article explores how AI is revolutionizing neuroscience research. 
+
+From brain imaging to predictive modeling, artificial intelligence is opening new frontiers in understanding the human mind.
+
+Read the full article: [link]
+
+#AI #Neuroscience #Research #Innovation #CatalystMag"
             ></textarea>
+            <div class="form-help">
+              <small>💡 Tip: Include hashtags, mentions, and links as you want them to appear</small>
+            </div>
           </div>
+          
           <div class="form-group">
             <label for="post-deadline">Target Post Date</label>
             <input type="date" id="post-deadline" required />
+            <div class="form-help">
+              <small>When should this be posted?</small>
+            </div>
           </div>
+          
+          <div class="form-group">
+            <label for="post-notes">Additional Notes (Optional)</label>
+            <textarea
+              id="post-notes"
+              rows="3"
+              placeholder="Any specific instructions for the social media manager? Best times to post, related articles to cross-promote, etc."
+            ></textarea>
+          </div>
+          
           <div class="modal-footer">
             <button type="button" class="btn-secondary close-button">
               Cancel
             </button>
             <button type="submit" id="save-post-button" class="btn-primary">
-              Save Proposal
+              Submit Proposal
             </button>
           </div>
         </form>
@@ -130,43 +317,107 @@
             <div class="details-container">
                 <div class="details-grid">
                     <div class="details-main">
-                        <h4>Content</h4>
-                        <p id="details-content" style="white-space: pre-wrap;"></p>
+                        <div class="detail-section">
+                            <h4>Post Content</h4>
+                            <div id="details-content" class="details-content-box">Loading content...</div>
+                        </div>
+                        
+                        <div id="notes-section" class="detail-section" style="display: none;">
+                            <h4>Additional Notes</h4>
+                            <div id="details-notes" class="details-content-box">No additional notes provided.</div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h4>Activity & Comments</h4>
+                            <div class="comment-box">
+                                <textarea id="comment-input" placeholder="Add a comment or update about this post..."></textarea>
+                                <button id="add-comment-button" class="btn-primary">Post Comment</button>
+                            </div>
+                            <div id="details-activity-feed" class="activity-feed">
+                                <p style="color: #64748b; font-style: italic;">No comments yet.</p>
+                            </div>
+                        </div>
                     </div>
+        
                     <aside class="details-sidebar">
                         <div class="sidebar-section">
                             <h4>Status</h4>
-                            <p id="details-status">Loading...</p>
-                        </div>
-                        <div class="sidebar-section">
-                            <h4>Key People</h4>
-                            <p><strong>Proposer:</strong> <span id="details-proposer">Unknown</span></p>
-                            <p><strong>Assigned To:</strong> <span id="details-assignee">Not Assigned</span></p>
-                             <div id="assign-user-section" class="admin-only details-form" style="margin-top: 12px; display: none;">
-                                <select id="user-dropdown">
-                                  <option value="">Select User</option>
-                                </select>
-                                <button id="assign-user-button" class="btn-secondary">Assign</button>
+                            <div id="details-status-container">
+                                <div id="details-status" class="status-indicator">Loading...</div>
                             </div>
                         </div>
+    
                         <div class="sidebar-section">
                             <h4>Platform</h4>
-                            <p id="details-platform">Not set</p>
-                        </div>
-                        <div class="sidebar-section">
-                            <h4>Post Deadline</h4>
-                            <p id="details-deadline">Not set</p>
-                        </div>
-                        <div id="admin-approval-section" class="sidebar-section admin-only" style="display: none;">
-                            <h4>Admin Actions</h4>
-                            <div class="button-group">
-                                <button id="approve-button" class="btn-success">Approve</button>
-                                <button id="reject-button" class="btn-danger">Reject</button>
+                            <div id="details-platform-container">
+                                <div id="details-platform" class="platform-display">Loading...</div>
                             </div>
                         </div>
-                         <div id="mark-posted-section" class="sidebar-section" style="display: none;">
+                        
+                        <div class="sidebar-section">
+                            <h4>Key People</h4>
+                            <p><strong>Proposed by:</strong> <span id="details-proposer">Unknown</span></p>
+                            <div id="assignment-display">
+                                <p><strong>Assigned to:</strong> <span id="details-assignee">Not Assigned</span></p>
+                            </div>
+                            
+                            <div id="assign-user-section" class="admin-only details-form" style="margin-top: 12px; display: none;">
+                                <label for="user-dropdown" style="font-size: 0.9rem; margin-bottom: 8px; display: block;">Assign to:</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <select id="user-dropdown" style="flex: 1;">
+                                        <option value="">Select User</option>
+                                    </select>
+                                    <button id="assign-user-button" class="btn-secondary">Assign</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="sidebar-section">
+                            <h4>Target Post Date</h4>
+                            <p id="details-deadline" style="font-weight: 500; color: #007AFF;">Not set</p>
+                        </div>
+    
+                        <div id="admin-approval-section" class="sidebar-section admin-only" style="display: none;">
+                            <h4>Admin Actions</h4>
+                            <div class="button-group" style="gap: 8px;">
+                                <button id="approve-button" class="btn-success">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M20 6L9 17l-5-5"/>
+                                    </svg>
+                                    Approve
+                                </button>
+                                <button id="reject-button" class="btn-danger">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="mark-posted-section" class="sidebar-section" style="display: none;">
                             <h4>Mark as Posted</h4>
-                            <button id="mark-posted-button" class="btn-success" style="width: 100%;">Mark as Posted</button>
+                            <button id="mark-posted-button" class="btn-success" style="width: 100%;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 6L9 17l-5-5"/>
+                                </svg>
+                                Mark as Posted
+                            </button>
+                            <small style="color: #64748b; margin-top: 8px; display: block;">
+                                Click when you've successfully posted this content
+                            </small>
+                        </div>
+                        
+                        <div id="delete-section" class="sidebar-section" style="display: none;">
+                            <h4 style="color: #ef4444;">Danger Zone</h4>
+                            <button id="delete-post-button" class="btn-danger" style="width: 100%;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3,6 5,6 21,6"></polyline>
+                                    <path d="M19,6V20a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6M8,6V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"></path>
+                                </svg>
+                                Delete Post
+                            </button>
                         </div>
                     </aside>
                 </div>
@@ -177,6 +428,679 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="social.js"></script>
+    
+    <script>
+// ===============================
+// Catalyst Tracker - Social Media Planner JS
+// ===============================
+
+// ---- Firebase Configuration ----
+const firebaseConfig = {
+    apiKey: "AIzaSyBT6urJvPCtuYQ1c2iH77QTDfzE3yGw-Xk",
+    authDomain: "catalystmonday.firebaseapp.com",
+    projectId: "catalystmonday",
+    storageBucket: "catalystmonday.appspot.com",
+    messagingSenderId: "394311851220",
+    appId: "1:394311851220:web:86e4939b7d5a085b46d75d"
+};
+
+// Initialize Firebase
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ---- App State ----
+let currentUser = null, currentUserName = null, currentUserRole = null;
+let allPosts = [], allUsers = [];
+let currentlyViewedPostId = null;
+
+// ======================
+//  Initialization
+// ======================
+auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+        window.location.href = 'index.html';
+        return;
+    }
+    currentUser = user;
+
+    try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        const userData = userDoc.data();
+        currentUserName = userData.name;
+        currentUserRole = userData.role;
+
+        await fetchAllUsers();
+        setupUI();
+        setupListeners();
+        subscribeToPosts();
+
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('app-container').style.display = 'flex';
+        
+    } catch (error) {
+        console.error("Initialization Error:", error);
+        alert("Could not load your profile. Please refresh the page and try again.");
+    }
+});
+
+async function fetchAllUsers() {
+    try {
+        const usersSnapshot = await db.collection('users').get();
+        allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching users:", error);
+    }
+}
+
+function setupUI() {
+    document.getElementById('user-name').textContent = currentUserName;
+    document.getElementById('user-role').textContent = currentUserRole;
+    const avatar = document.getElementById('user-avatar');
+    avatar.textContent = currentUserName.charAt(0).toUpperCase();
+}
+
+// ==================
+//  Event Listeners
+// ==================
+function setupListeners() {
+    document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+    document.getElementById('add-post-button').addEventListener('click', openPostModal);
+    document.getElementById('post-form').addEventListener('submit', handlePostFormSubmit);
+    
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', e => {
+            if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('close-button')) {
+                closeAllModals();
+            }
+        });
+    });
+
+    document.getElementById('approve-button').addEventListener('click', () => updatePostStatus('approved'));
+    document.getElementById('reject-button').addEventListener('click', () => updatePostStatus('rejected'));
+    document.getElementById('assign-user-button').addEventListener('click', handleAssignUser);
+    document.getElementById('mark-posted-button').addEventListener('click', () => updatePostStatus('posted'));
+    document.getElementById('add-comment-button').addEventListener('click', handleAddComment);
+    
+    // Delete functionality (admin only)
+    document.getElementById('delete-post-button').addEventListener('click', handleDeletePost);
+}
+
+// ==================
+//  Data Handling
+// ==================
+function subscribeToPosts() {
+    db.collection('social_posts').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+        allPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderKanbanBoard(allPosts);
+        if (currentlyViewedPostId) {
+            const post = allPosts.find(p => p.id === currentlyViewedPostId);
+            if(post) {
+                refreshDetailsModal(post);
+            } else {
+                closeAllModals();
+            }
+        }
+    }, error => {
+        console.error("Error fetching social posts:", error);
+    });
+}
+
+// ==================
+//  Kanban Board
+// ==================
+function renderKanbanBoard(posts) {
+    const board = document.getElementById('kanban-board');
+    board.innerHTML = '';
+    
+    const columns = [
+        { title: "Proposed", status: "proposed", color: "#fb923c" },
+        { title: "Approved", status: "approved", color: "#22c55e" }, 
+        { title: "Assigned", status: "assigned", color: "#3b82f6" },
+        { title: "Posted", status: "posted", color: "#a855f7" }
+    ];
+    
+    columns.forEach(column => {
+        const columnPosts = posts.filter(post => post.status === column.status);
+        
+        const columnEl = document.createElement('div');
+        columnEl.className = 'kanban-column';
+        columnEl.innerHTML = `
+            <div class="column-header">
+                <div class="column-title">
+                    <span class="column-title-text">${column.title}</span>
+                    <span class="task-count" style="background-color: ${column.color}20; color: ${column.color};">${columnPosts.length}</span>
+                </div>
+            </div>
+            <div class="column-content">
+                <div class="kanban-cards"></div>
+            </div>
+        `;
+        
+        const cardsContainer = columnEl.querySelector('.kanban-cards');
+        columnPosts.forEach(post => {
+            cardsContainer.appendChild(createPostCard(post));
+        });
+        
+        board.appendChild(columnEl);
+    });
+}
+
+function createPostCard(post) {
+    const card = document.createElement('div');
+    card.className = 'kanban-card';
+    card.dataset.id = post.id;
+    
+    const platformClass = `platform-${post.platform.toLowerCase()}`;
+    const truncatedContent = post.content.length > 120 ? post.content.substring(0, 120) + '...' : post.content;
+    
+    const isOverdue = new Date(post.deadline) < new Date() && post.status !== 'posted';
+    const deadlineClass = isOverdue ? 'overdue' : '';
+    
+    card.innerHTML = `
+        <h4 class="card-title">${post.title}</h4>
+        <div class="platform-badge ${platformClass}">${post.platform}</div>
+        <div class="card-content-preview">${truncatedContent}</div>
+        <div class="card-footer">
+            <div class="card-author">
+                <span>By ${post.proposerName}</span>
+            </div>
+            <div class="card-deadline ${deadlineClass}">
+                ${new Date(post.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </div>
+        </div>
+    `;
+    
+    if (isOverdue) {
+        card.style.borderLeft = '4px solid #ef4444';
+    }
+    
+    card.addEventListener('click', () => openDetailsModal(post.id));
+    return card;
+}
+
+// =================
+// Modals
+// =================
+function openPostModal() {
+    document.getElementById('post-form').reset();
+    
+    // Set default date to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('post-deadline').value = tomorrow.toISOString().split('T')[0];
+    
+    document.getElementById('modal-title').textContent = 'Propose New Social Media Post';
+    document.getElementById('post-modal').style.display = 'flex';
+}
+
+function openDetailsModal(postId) {
+    const post = allPosts.find(p => p.id === postId);
+    if (!post) return;
+    currentlyViewedPostId = postId;
+    refreshDetailsModal(post);
+    document.getElementById('details-modal').style.display = 'flex';
+}
+
+function closeAllModals() {
+    document.querySelectorAll('.modal-overlay').forEach(modal => modal.style.display = 'none');
+    currentlyViewedPostId = null;
+}
+
+function refreshDetailsModal(post) {
+    document.getElementById('details-title').textContent = post.title;
+    document.getElementById('details-content').textContent = post.content;
+    document.getElementById('details-proposer').textContent = post.proposerName;
+    document.getElementById('details-assignee').textContent = post.assigneeName || 'Not Assigned';
+    document.getElementById('details-deadline').textContent = new Date(post.deadline).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        weekday: 'long'
+    });
+
+    // Handle status display
+    const statusContainer = document.getElementById('details-status-container');
+    const statusClass = `status-${post.status}`;
+    statusContainer.innerHTML = `<div class="status-indicator ${statusClass}">${post.status.charAt(0).toUpperCase() + post.status.slice(1)}</div>`;
+
+    // Handle platform display
+    const platformContainer = document.getElementById('details-platform-container');
+    const platformIcon = post.platform.toLowerCase() === 'instagram' ? '📸' : 
+                         post.platform.toLowerCase() === 'linkedin' ? '💼' : 
+                         post.platform.toLowerCase() === 'twitter' ? '🐦' : '📘';
+    platformContainer.innerHTML = `
+        <div class="platform-display">
+            <span>${platformIcon}</span>
+            <span>${post.platform}</span>
+        </div>
+    `;
+
+    // Handle notes section
+    const notesSection = document.getElementById('notes-section');
+    const notesContent = document.getElementById('details-notes');
+    if (post.notes && post.notes.trim()) {
+        notesContent.textContent = post.notes;
+        notesSection.style.display = 'block';
+    } else {
+        notesSection.style.display = 'none';
+    }
+
+    // Handle permissions and visibility
+    const isAdmin = currentUserRole === 'admin';
+    const isAssignee = currentUser.uid === post.assigneeId;
+    const isProposer = currentUser.uid === post.proposerId;
+
+    // Admin approval section
+    const adminApprovalSection = document.getElementById('admin-approval-section');
+    adminApprovalSection.style.display = isAdmin && post.status === 'proposed' ? 'block' : 'none';
+
+    // Assignment section
+    const assignUserSection = document.getElementById('assign-user-section');
+    assignUserSection.style.display = isAdmin && post.status === 'approved' ? 'flex' : 'none';
+
+    // Mark as posted section
+    const markPostedSection = document.getElementById('mark-posted-section');
+    markPostedSection.style.display = (isAdmin || isAssignee) && post.status === 'assigned' ? 'block' : 'none';
+
+    // Delete section (admin or proposer can delete if not posted)
+    const deleteSection = document.getElementById('delete-section');
+    deleteSection.style.display = (isAdmin || (isProposer && post.status === 'proposed')) ? 'block' : 'none';
+    
+    if (isAdmin) {
+        populateUserDropdown(post.assigneeId);
+    }
+
+    // Load comments/activity
+    loadPostActivity(post.id);
+}
+
+function populateUserDropdown(currentAssigneeId) {
+    const dropdown = document.getElementById('user-dropdown');
+    dropdown.innerHTML = '<option value="">Select User</option>';
+    allUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = `${user.name} (${user.role})`;
+        if (user.id === currentAssigneeId) option.selected = true;
+        dropdown.appendChild(option);
+    });
+}
+
+// =================
+// Actions
+// =================
+async function handlePostFormSubmit(e) {
+    e.preventDefault();
+    
+    const submitButton = document.getElementById('save-post-button');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Saving...';
+    
+    const newPost = {
+        title: document.getElementById('post-title').value.trim(), 
+        platform: document.getElementById('post-platform').value,
+        content: document.getElementById('post-content').value.trim(),
+        notes: document.getElementById('post-notes').value.trim(),
+        deadline: document.getElementById('post-deadline').value,
+        proposerId: currentUser.uid, 
+        proposerName: currentUserName,
+        assigneeId: null,
+        assigneeName: null,
+        status: 'proposed',
+        createdAt: new Date(),
+        updatedAt: new Date()
+    };
+    
+    try {
+        await db.collection('social_posts').add(newPost);
+        closeAllModals();
+        
+        // Show success message
+        showNotification('Post proposal submitted successfully!', 'success');
+        
+    } catch (error) {
+        console.error("Failed to create post:", error);
+        showNotification('Failed to create post. Please try again.', 'error');
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Submit Proposal';
+    }
+}
+
+async function updatePostStatus(newStatus) {
+    if (!currentlyViewedPostId) return;
+    
+    const statusMessages = {
+        approved: 'Post approved successfully!',
+        rejected: 'Post rejected.',
+        posted: 'Post marked as posted!'
+    };
+    
+    try {
+        await db.collection('social_posts').doc(currentlyViewedPostId).update({
+            status: newStatus,
+            updatedAt: new Date()
+        });
+        
+        // Add activity log
+        await addActivityLog(currentlyViewedPostId, `Post ${newStatus} by ${currentUserName}`);
+        
+        showNotification(statusMessages[newStatus] || `Post status updated to ${newStatus}`, 'success');
+        
+    } catch (error) {
+        console.error(`Failed to update post status to ${newStatus}:`, error);
+        showNotification(`Failed to update post status. Please try again.`, 'error');
+    }
+}
+
+async function handleAssignUser() {
+    const dropdown = document.getElementById('user-dropdown');
+    const userId = dropdown.value;
+    if (!userId || !currentlyViewedPostId) return;
+    
+    const selectedUser = allUsers.find(u => u.id === userId);
+    if (!selectedUser) return;
+    
+    const assignButton = document.getElementById('assign-user-button');
+    assignButton.disabled = true;
+    assignButton.textContent = 'Assigning...';
+    
+    try {
+        await db.collection('social_posts').doc(currentlyViewedPostId).update({
+            assigneeId: userId,
+            assigneeName: selectedUser.name,
+            status: 'assigned',
+            updatedAt: new Date()
+        });
+        
+        await addActivityLog(currentlyViewedPostId, `Post assigned to ${selectedUser.name} by ${currentUserName}`);
+        showNotification(`Post assigned to ${selectedUser.name}`, 'success');
+        
+    } catch (error) {
+        console.error(`Failed to assign user:`, error);
+        showNotification('Failed to assign user. Please try again.', 'error');
+    } finally {
+        assignButton.disabled = false;
+        assignButton.textContent = 'Assign';
+    }
+}
+
+async function handleAddComment() {
+    const commentInput = document.getElementById('comment-input');
+    const comment = commentInput.value.trim();
+    
+    if (!comment || !currentlyViewedPostId) return;
+    
+    const addButton = document.getElementById('add-comment-button');
+    addButton.disabled = true;
+    addButton.textContent = 'Posting...';
+    
+    try {
+        await addActivityLog(currentlyViewedPostId, comment, 'comment');
+        commentInput.value = '';
+        showNotification('Comment added', 'success');
+        
+    } catch (error) {
+        console.error('Failed to add comment:', error);
+        showNotification('Failed to add comment. Please try again.', 'error');
+    } finally {
+        addButton.disabled = false;
+        addButton.textContent = 'Post Comment';
+    }
+}
+
+async function handleDeletePost() {
+    if (!currentlyViewedPostId) return;
+    
+    const post = allPosts.find(p => p.id === currentlyViewedPostId);
+    if (!post) return;
+    
+    const confirmMessage = `Are you sure you want to delete "${post.title}"? This action cannot be undone.`;
+    if (!confirm(confirmMessage)) return;
+    
+    try {
+        // Delete all activity logs for this post
+        const activitySnapshot = await db.collection('social_post_activity')
+            .where('postId', '==', currentlyViewedPostId)
+            .get();
+        
+        const batch = db.batch();
+        activitySnapshot.docs.forEach(doc => batch.delete(doc.ref));
+        
+        // Delete the post
+        batch.delete(db.collection('social_posts').doc(currentlyViewedPostId));
+        
+        await batch.commit();
+        
+        closeAllModals();
+        showNotification('Post deleted successfully', 'success');
+        
+    } catch (error) {
+        console.error('Failed to delete post:', error);
+        showNotification('Failed to delete post. Please try again.', 'error');
+    }
+}
+
+// =================
+// Activity & Comments
+// =================
+async function addActivityLog(postId, message, type = 'system') {
+    try {
+        await db.collection('social_post_activity').add({
+            postId: postId,
+            message: message,
+            type: type, // 'system', 'comment', 'status_change'
+            userId: currentUser.uid,
+            userName: currentUserName,
+            timestamp: new Date()
+        });
+    } catch (error) {
+        console.error('Failed to add activity log:', error);
+    }
+}
+
+function loadPostActivity(postId) {
+    const activityFeed = document.getElementById('details-activity-feed');
+    activityFeed.innerHTML = '<p style="color: #64748b; font-style: italic;">Loading activity...</p>';
+    
+    // Subscribe to real-time activity updates
+    db.collection('social_post_activity')
+        .where('postId', '==', postId)
+        .orderBy('timestamp', 'desc')
+        .onSnapshot(snapshot => {
+            const activities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderActivityFeed(activities);
+        }, error => {
+            console.error('Error loading activity:', error);
+            activityFeed.innerHTML = '<p style="color: #ef4444;">Failed to load activity</p>';
+        });
+}
+
+function renderActivityFeed(activities) {
+    const activityFeed = document.getElementById('details-activity-feed');
+    
+    if (activities.length === 0) {
+        activityFeed.innerHTML = '<p style="color: #64748b; font-style: italic;">No activity yet.</p>';
+        return;
+    }
+    
+    activityFeed.innerHTML = activities.map(activity => {
+        const timeAgo = getTimeAgo(activity.timestamp.toDate());
+        const isComment = activity.type === 'comment';
+        
+        return `
+            <div class="activity-item ${isComment ? 'activity-comment' : 'activity-system'}">
+                <div class="activity-header">
+                    <span class="activity-user">${activity.userName}</span>
+                    <span class="activity-time">${timeAgo}</span>
+                </div>
+                <div class="activity-message">${activity.message}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getTimeAgo(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// =================
+// Utilities
+// =================
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        z-index: 10000;
+        transform: translateX(400px);
+        transition: transform 0.3s ease;
+        max-width: 300px;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => notification.style.transform = 'translateX(0)', 100);
+    
+    // Remove after 4 seconds
+    setTimeout(() => {
+        notification.style.transform = 'translateX(400px)';
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
+}
+
+// Add CSS for activity feed
+const activityStyles = document.createElement('style');
+activityStyles.textContent = `
+    .activity-feed {
+        max-height: 400px;
+        overflow-y: auto;
+        margin-top: 16px;
+    }
+    
+    .activity-item {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        border-left: 3px solid transparent;
+    }
+    
+    .activity-comment {
+        background: #f8fafc;
+        border-left-color: #3b82f6;
+    }
+    
+    .activity-system {
+        background: #f1f5f9;
+        border-left-color: #64748b;
+    }
+    
+    .activity-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+        font-size: 0.85rem;
+    }
+    
+    .activity-user {
+        font-weight: 600;
+        color: #1e293b;
+    }
+    
+    .activity-time {
+        color: #64748b;
+    }
+    
+    .activity-message {
+        font-size: 0.9rem;
+        color: #374151;
+        white-space: pre-wrap;
+    }
+    
+    .comment-box {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+        margin-bottom: 16px;
+    }
+    
+    .comment-box textarea {
+        resize: vertical;
+        min-height: 80px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 12px;
+        font-family: inherit;
+    }
+    
+    .comment-box button {
+        align-self: flex-end;
+    }
+    
+    .detail-section {
+        margin-bottom: 32px;
+    }
+    
+    .detail-section h4 {
+        margin: 0 0 16px 0;
+        color: #1e293b;
+        font-weight: 600;
+    }
+    
+    .overdue {
+        color: #ef4444 !important;
+        font-weight: 600;
+    }
+    
+    .form-help {
+        margin-top: 6px;
+    }
+    
+    .form-help small {
+        color: #64748b;
+        font-size: 0.85rem;
+    }
+    
+    .header-title-section {
+        flex-grow: 1;
+    }
+    
+    .header-subtitle {
+        margin: 8px 0 0 0;
+        color: #64748b;
+        font-size: 0.95rem;
+        font-weight: 400;
+    }
+`;
+document.head.appendChild(activityStyles);
+    </script>
   </body>
 </html>
