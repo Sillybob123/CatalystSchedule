@@ -977,10 +977,28 @@
       }
 
       /* Responsive Design */
-      @media (max-width: 1024px) {
+      @media (max-width: 1400px) {
         .kanban-board {
-          grid-template-columns: 1fr;
-          gap: var(--space-4);
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          padding: 20px;
+        }
+        
+        .kanban-column {
+          height: 550px;
+          min-height: 550px;
+        }
+      }
+
+      @media (max-width: 1200px) {
+        .kanban-board {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+        }
+        
+        .kanban-column {
+          height: 500px;
+          min-height: 500px;
         }
 
         .social-stats {
@@ -999,16 +1017,24 @@
 
       @media (max-width: 768px) {
         .social-header {
-          padding: var(--space-6) var(--space-4);
+          padding: 32px 24px;
           text-align: center;
         }
 
         .social-stats {
           grid-template-columns: 1fr;
+          gap: 12px;
         }
 
         .kanban-board {
-          padding: var(--space-2);
+          grid-template-columns: 1fr;
+          padding: 16px;
+          gap: 16px;
+        }
+        
+        .kanban-column {
+          height: 400px;
+          min-height: 400px;
         }
 
         .fab {
@@ -1016,12 +1042,12 @@
           right: 24px;
           width: 56px;
           height: 56px;
-          font-size: 1.3rem;
+          font-size: 20px;
         }
 
         .modal-content {
-          margin: var(--space-4);
-          max-width: calc(100vw - 2rem);
+          margin: 16px;
+          max-width: calc(100vw - 32px);
         }
 
         .modal-content.details-modal {
