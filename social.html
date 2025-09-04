@@ -20,16 +20,31 @@
         font-size: 0.85rem;
         font-weight: 500;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
       
       .platform-instagram {
         background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
         color: white;
+        box-shadow: 0 2px 8px rgba(240, 148, 51, 0.3);
       }
       
       .platform-linkedin {
         background: #0077b5;
         color: white;
+        box-shadow: 0 2px 8px rgba(0, 119, 181, 0.3);
+      }
+      
+      .platform-twitter {
+        background: #1da1f2;
+        color: white;
+        box-shadow: 0 2px 8px rgba(29, 161, 242, 0.3);
+      }
+      
+      .platform-facebook {
+        background: #1877f2;
+        color: white;
+        box-shadow: 0 2px 8px rgba(24, 119, 242, 0.3);
       }
       
       .card-content-preview {
@@ -38,9 +53,13 @@
         color: #64748b;
         overflow: hidden;
         display: -webkit-box;
-        -webkit-line-clamp: 2;
+        -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
         line-height: 1.4;
+        background: #f8fafc;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
       }
       
       .details-content-box {
@@ -53,6 +72,8 @@
         font-family: 'Inter', sans-serif;
         line-height: 1.6;
         color: #1d1d1f;
+        max-height: 300px;
+        overflow-y: auto;
       }
       
       .platform-display {
@@ -63,6 +84,7 @@
         background: #f1f5f9;
         border-radius: 20px;
         font-weight: 500;
+        border: 1px solid #e2e8f0;
       }
       
       .status-indicator {
@@ -72,53 +94,311 @@
         padding: 6px 12px;
         border-radius: 20px;
         font-size: 0.9rem;
-        font-weight: 500;
+        font-weight: 600;
+        text-transform: capitalize;
       }
       
       .status-proposed {
         background: rgba(251, 146, 60, 0.1);
         color: #ea580c;
+        border: 1px solid rgba(251, 146, 60, 0.3);
       }
       
       .status-approved {
         background: rgba(34, 197, 94, 0.1);
         color: #16a34a;
+        border: 1px solid rgba(34, 197, 94, 0.3);
       }
       
       .status-assigned {
         background: rgba(59, 130, 246, 0.1);
         color: #2563eb;
+        border: 1px solid rgba(59, 130, 246, 0.3);
       }
       
       .status-posted {
         background: rgba(139, 69, 193, 0.1);
         color: #9333ea;
+        border: 1px solid rgba(139, 69, 193, 0.3);
       }
 
-      /* FIX: Improved Form Validation UX */
+      .status-rejected {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+
+      /* Form Validation */
       #post-form.was-validated input:invalid,
       #post-form.was-validated textarea:invalid,
       #post-form.was-validated select:invalid {
         border-color: var(--danger-color);
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
       }
-      #post-form.was-validated select:invalid {
-        color: var(--danger-color);
-      }
+
       .form-help {
         margin-top: 6px;
       }
       .form-help small {
           color: #64748b;
           font-size: 0.85rem;
+          font-style: italic;
       }
+
       .header-title-section {
           flex-grow: 1;
       }
+
       .header-subtitle {
           margin: 8px 0 0 0;
           color: #64748b;
           font-size: 0.95rem;
           font-weight: 400;
+      }
+
+      /* Activity Feed Styling */
+      .activity-feed { 
+        max-height: 400px; 
+        overflow-y: auto; 
+        margin-top: 16px; 
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #fafbfc;
+      }
+      
+      .activity-item { 
+        padding: 16px; 
+        border-bottom: 1px solid #f1f5f9;
+        transition: background-color 0.2s ease;
+      }
+      
+      .activity-item:last-child {
+        border-bottom: none;
+      }
+      
+      .activity-item:hover {
+        background: rgba(0, 122, 255, 0.02);
+      }
+      
+      .activity-comment { 
+        background: #fff;
+        border-left: 3px solid #3b82f6; 
+      }
+      
+      .activity-system { 
+        background: #f8fafc;
+        border-left: 3px solid #64748b; 
+      }
+      
+      .activity-header { 
+        display: flex; 
+        justify-content: space-between; 
+        margin-bottom: 6px; 
+        font-size: 0.85rem; 
+      }
+      
+      .activity-user { 
+        font-weight: 600; 
+        color: #1e293b; 
+      }
+      
+      .activity-time { 
+        color: #64748b; 
+        font-size: 0.8rem;
+      }
+      
+      .activity-message { 
+        font-size: 0.9rem; 
+        color: #374151; 
+        white-space: pre-wrap; 
+        line-height: 1.5;
+      }
+      
+      .comment-box { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 12px; 
+        padding: 16px; 
+        background: var(--surface-color);
+        border: 1px solid #e2e8f0;
+        border-radius: 12px; 
+        margin-bottom: 16px; 
+      }
+      
+      .comment-box textarea { 
+        resize: vertical; 
+        min-height: 80px; 
+        border: 1px solid #d1d5db; 
+        border-radius: 8px; 
+        padding: 12px; 
+        font-family: inherit;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .comment-box textarea:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px var(--primary-light);
+      }
+      
+      .comment-box button { 
+        align-self: flex-end; 
+      }
+      
+      .detail-section { 
+        margin-bottom: 32px; 
+      }
+      
+      .detail-section h4 { 
+        margin: 0 0 16px 0; 
+        color: #1e293b; 
+        font-weight: 600; 
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .overdue { 
+        color: #ef4444 !important; 
+        font-weight: 600; 
+        animation: pulse 2s ease-in-out infinite;
+      }
+      
+      .empty-column-message { 
+        text-align: center; 
+        padding: 60px 20px; 
+        color: #94a3b8; 
+        font-style: italic; 
+        font-size: 0.9rem; 
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 2px dashed #e2e8f0;
+      }
+
+      /* Character Counter */
+      .character-counter {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 4px;
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+
+      .character-counter.warning {
+        color: #f59e0b;
+      }
+
+      .character-counter.error {
+        color: #ef4444;
+      }
+
+      /* Enhanced Card Styling */
+      .kanban-card.overdue-card {
+        border-left: 4px solid #ef4444;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      }
+
+      .kanban-card.due-soon-card {
+        border-left: 4px solid #f59e0b;
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      }
+
+      /* Platform Icons */
+      .platform-icon {
+        font-size: 1.2rem;
+        margin-right: 4px;
+      }
+
+      /* Success Messages */
+      .success-message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        z-index: 10000;
+        transform: translateX(400px);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        max-width: 300px;
+        font-weight: 500;
+      }
+
+      .error-message-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+        z-index: 10000;
+        transform: translateX(400px);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        max-width: 300px;
+        font-weight: 500;
+      }
+
+      /* Loading States */
+      .loading-shimmer {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: shimmer 2s infinite;
+      }
+
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+
+      /* Enhanced Hover Effects */
+      .assignee-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: #f1f5f9;
+        border-radius: 8px;
+        font-size: 0.9rem;
+      }
+
+      .assignee-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Responsive Enhancements */
+      @media (max-width: 768px) {
+        .details-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .details-sidebar {
+          border-top: 1px solid var(--border-color);
+          border-right: none;
+        }
+        
+        .platform-badge {
+          font-size: 0.75rem;
+          padding: 3px 8px;
+        }
+        
+        .modal-content.large {
+          width: 95vw;
+          height: 90vh;
+        }
       }
     </style>
   </head>
@@ -138,11 +418,11 @@
         <nav class="sidebar-nav" aria-label="Primary">
           <p class="nav-heading">Views</p>
           <a href="dashboard.html" id="nav-dashboard" class="nav-item">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
             <span>Dashboard</span>
           </a>
           <a href="social.html" id="nav-social" class="nav-item active" aria-current="page">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
             <span>Social Media</span>
           </a>
         </nav>
@@ -156,7 +436,7 @@
             </div>
           </div>
           <button id="logout-button" class="logout-btn">
-            <svg width="24" height="24" viewBox="0 0 24 24">
+            <svg width="20" height="20" viewBox="0 0 24 24">
               <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
             </svg>
             <span>Logout</span>
@@ -192,6 +472,7 @@
       </main>
     </div>
 
+    <!-- New Post Modal -->
     <div id="post-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
       <div class="modal-content">
         <div class="modal-header">
@@ -199,55 +480,70 @@
           <button class="close-button" aria-label="Close">×</button>
         </div>
         <form id="post-form" novalidate>
-          <div class="form-group">
-            <label for="post-title">Post Title / Topic</label>
-            <input
-              type="text"
-              id="post-title"
-              required
-              placeholder="e.g., Announcing our new article on AI in Neuroscience"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="post-platform">Platform</label>
-            <select id="post-platform" required>
-              <option value="">Select Platform...</option>
-              <option value="Instagram">📸 Instagram</option>
-              <option value="LinkedIn">💼 LinkedIn</option>
-              <option value="Twitter">🐦 Twitter</option>
-              <option value="Facebook">📘 Facebook</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="post-content">Post Content</label>
-            <textarea
-              id="post-content"
-              rows="8"
-              required
-              placeholder="Write the full content of the post here, including links and hashtags."
-            ></textarea>
-            <div class="form-help">
-              <small>💡 Tip: Include hashtags, mentions, and links as you want them to appear.</small>
+          <div style="padding: var(--space-6);">
+            <div class="form-group">
+              <label for="post-title">Post Title / Topic</label>
+              <input
+                type="text"
+                id="post-title"
+                required
+                maxlength="100"
+                placeholder="e.g., Announcing our new article on AI in Neuroscience"
+              />
+              <div class="form-help">
+                <small>💡 Keep it descriptive but concise for easy identification</small>
+              </div>
             </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="post-deadline">Target Post Date</label>
-            <input type="date" id="post-deadline" required />
-            <div class="form-help">
-              <small>When should this be scheduled to be posted?</small>
+            
+            <div class="form-group">
+              <label for="post-platform">Platform</label>
+              <select id="post-platform" required>
+                <option value="">Select Platform...</option>
+                <option value="Instagram">📸 Instagram</option>
+                <option value="LinkedIn">💼 LinkedIn</option>
+                <option value="Twitter">🐦 Twitter</option>
+                <option value="Facebook">📘 Facebook</option>
+              </select>
+              <div class="form-help">
+                <small>Choose the primary platform for this post</small>
+              </div>
             </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="post-notes">Additional Notes (Optional)</label>
-            <textarea
-              id="post-notes"
-              rows="3"
-              placeholder="Any specific instructions? e.g., Best times to post, related articles to cross-promote, etc."
-            ></textarea>
+            
+            <div class="form-group">
+              <label for="post-content">Post Content</label>
+              <textarea
+                id="post-content"
+                rows="8"
+                required
+                maxlength="2000"
+                placeholder="Write the full content of the post here, including links and hashtags. Make it ready to copy and paste for posting."
+              ></textarea>
+              <div class="character-counter" id="character-counter">0 / 2000</div>
+              <div class="form-help">
+                <small>💡 Include hashtags, mentions, and links exactly as they should appear</small>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="post-deadline">Target Post Date</label>
+              <input type="date" id="post-deadline" required />
+              <div class="form-help">
+                <small>📅 When should this be scheduled to be posted?</small>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="post-notes">Additional Notes (Optional)</label>
+              <textarea
+                id="post-notes"
+                rows="3"
+                maxlength="500"
+                placeholder="Any specific instructions? e.g., Best times to post, related articles to cross-promote, image suggestions, etc."
+              ></textarea>
+              <div class="form-help">
+                <small>Any special instructions for the social media manager</small>
+              </div>
+            </div>
           </div>
           
           <div class="modal-footer">
@@ -262,6 +558,7 @@
       </div>
     </div>
 
+    <!-- Post Details Modal -->
     <div id="details-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
         <div class="modal-content large">
             <div class="modal-header">
@@ -272,23 +569,34 @@
                 <div class="details-grid">
                     <div class="details-main">
                         <div class="detail-section">
-                            <h4>Post Content</h4>
+                            <h4>
+                              <span class="emoji">📝</span>
+                              Post Content
+                            </h4>
                             <div id="details-content" class="details-content-box">Loading content...</div>
                         </div>
                         
                         <div id="notes-section" class="detail-section" style="display: none;">
-                            <h4>Additional Notes</h4>
+                            <h4>
+                              <span class="emoji">📋</span>
+                              Additional Notes
+                            </h4>
                             <div id="details-notes" class="details-content-box">No additional notes provided.</div>
                         </div>
                         
                         <div class="detail-section">
-                            <h4>Activity & Comments</h4>
+                            <h4>
+                              <span class="emoji">💬</span>
+                              Activity & Comments
+                            </h4>
                             <div class="comment-box">
-                                <textarea id="comment-input" placeholder="Add a comment or update about this post..."></textarea>
+                                <textarea id="comment-input" placeholder="Add a comment or update about this post..." maxlength="500"></textarea>
                                 <button id="add-comment-button" class="btn-primary">Post Comment</button>
                             </div>
                             <div id="details-activity-feed" class="activity-feed">
-                                <p style="color: #64748b; font-style: italic;">No comments yet.</p>
+                                <div class="activity-item">
+                                    <p style="color: #64748b; font-style: italic; text-align: center;">No comments yet. Be the first to add one!</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -304,7 +612,10 @@
                         <div class="sidebar-section">
                             <h4>Platform</h4>
                             <div id="details-platform-container">
-                                <div id="details-platform" class="platform-display">Loading...</div>
+                                <div id="details-platform" class="platform-display">
+                                    <span>🔄</span>
+                                    <span>Loading...</span>
+                                </div>
                             </div>
                         </div>
                         
@@ -313,12 +624,16 @@
                             <p><strong>Proposed by:</strong> <span id="details-proposer">Unknown</span></p>
                             <div id="assignment-display">
                                 <p><strong>Assigned to:</strong> <span id="details-assignee">Not Assigned</span></p>
+                                <div id="assignee-info" class="assignee-info" style="display: none;">
+                                    <div id="assignee-avatar" class="assignee-avatar">A</div>
+                                    <span id="assignee-name">Assignee Name</span>
+                                </div>
                             </div>
                             
                             <div id="assign-user-section" class="admin-only details-form" style="margin-top: 12px; display: none;">
                                 <label for="user-dropdown" style="font-size: 0.9rem; margin-bottom: 8px; display: block;">Assign to:</label>
                                 <div style="display: flex; gap: 8px;">
-                                    <select id="user-dropdown" style="flex: 1;">
+                                    <select id="user-dropdown" style="flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
                                         <option value="">Select User</option>
                                     </select>
                                     <button id="assign-user-button" class="btn-secondary">Assign</button>
@@ -328,25 +643,51 @@
                         
                         <div class="sidebar-section">
                             <h4>Target Post Date</h4>
-                            <p id="details-deadline" style="font-weight: 500; color: #007AFF;">Not set</p>
+                            <p id="details-deadline" style="font-weight: 500; color: #007AFF; font-size: 1.1rem;">Not set</p>
+                            <div id="deadline-urgency" style="margin-top: 8px; font-size: 0.85rem;"></div>
                         </div>
     
                         <div id="admin-approval-section" class="sidebar-section admin-only" style="display: none;">
                             <h4>Admin Actions</h4>
                             <div class="button-group" style="gap: 8px;">
-                                <button id="approve-button" class="btn-success">Approve</button>
-                                <button id="reject-button" class="btn-danger">Reject</button>
+                                <button id="approve-button" class="btn-success">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20,6 9,17 4,12"></polyline>
+                                  </svg>
+                                  Approve
+                                </button>
+                                <button id="reject-button" class="btn-danger">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                  </svg>
+                                  Reject
+                                </button>
                             </div>
                         </div>
                         
                         <div id="mark-posted-section" class="sidebar-section" style="display: none;">
                             <h4>Mark as Posted</h4>
-                            <button id="mark-posted-button" class="btn-success" style="width: 100%;">Mark as Posted</button>
+                            <button id="mark-posted-button" class="btn-success" style="width: 100%;">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20,6 9,17 4,12"></polyline>
+                              </svg>
+                              Mark as Posted
+                            </button>
+                            <div class="form-help" style="text-align: center; margin-top: 8px;">
+                              <small>Click when the post has been published</small>
+                            </div>
                         </div>
                         
                         <div id="delete-section" class="sidebar-section" style="display: none;">
                             <h4 style="color: #ef4444;">Danger Zone</h4>
-                            <button id="delete-post-button" class="btn-danger" style="width: 100%;">Delete Post</button>
+                            <button id="delete-post-button" class="btn-danger" style="width: 100%;">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3,6 5,6 21,6"></polyline>
+                                <path d="m19,6v14a2,2 0 0 1 -2,2H7a2,2 0 0 1 -2,-2V6m3,0V4a2,2 0 0 1 2,-2h4a2,2 0 0 1 2,2v2"></path>
+                              </svg>
+                              Delete Post
+                            </button>
                         </div>
                     </aside>
                 </div>
@@ -360,7 +701,7 @@
     
     <script>
 // ===============================
-// Catalyst Tracker - Social Media Planner JS (v2 - Bug Fixes & Enhancements)
+// Catalyst Tracker - Social Media Planner JS
 // ===============================
 
 // ---- Firebase Configuration ----
@@ -373,9 +714,15 @@ const firebaseConfig = {
     appId: "1:394311851220:web:86e4939b7d5a085b46d75d"
 };
 
-// Initialize Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+// Initialize Firebase with error handling
+try {
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log("[FIREBASE] Firebase initialized successfully");
+    }
+} catch (initError) {
+    console.error("[FIREBASE] Firebase initialization failed:", initError);
+    showNotification("Failed to connect to the database. Please refresh the page.", 'error');
 }
 
 const auth = firebase.auth();
@@ -397,10 +744,28 @@ auth.onAuthStateChanged(async (user) => {
     currentUser = user;
 
     try {
+        console.log("[INIT] User authenticated:", user.uid);
+        
+        // Get user profile
         const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data();
-        currentUserName = userData.name;
-        currentUserRole = userData.role;
+        
+        if (!userDoc.exists) {
+            console.warn("[INIT] User document not found, creating default profile");
+            const defaultUserData = {
+                name: user.displayName || user.email.split('@')[0],
+                email: user.email,
+                role: 'writer',
+                createdAt: new Date()
+            };
+            
+            await db.collection('users').doc(user.uid).set(defaultUserData);
+            currentUserName = defaultUserData.name;
+            currentUserRole = defaultUserData.role;
+        } else {
+            const userData = userDoc.data();
+            currentUserName = userData.name || user.displayName || user.email.split('@')[0];
+            currentUserRole = userData.role || 'writer';
+        }
 
         await fetchAllUsers();
         setupUI();
@@ -410,36 +775,55 @@ auth.onAuthStateChanged(async (user) => {
         document.getElementById('loader').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
         
+        console.log("[INIT] Social Media Planner initialized successfully");
+        
     } catch (error) {
         console.error("Initialization Error:", error);
-        alert("Could not load your profile. Please refresh the page and try again.");
+        showNotification("Could not load your profile. Please refresh and try again.", 'error');
     }
 });
 
 async function fetchAllUsers() {
     try {
+        console.log("[INIT] Fetching all users...");
         const usersSnapshot = await db.collection('users').get();
         allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("[INIT] Found", allUsers.length, "users");
     } catch (error) {
         console.error("Error fetching users:", error);
+        allUsers = [];
     }
 }
 
 function setupUI() {
+    // Set up user info in sidebar
     document.getElementById('user-name').textContent = currentUserName;
     document.getElementById('user-role').textContent = currentUserRole;
     const avatar = document.getElementById('user-avatar');
     avatar.textContent = currentUserName.charAt(0).toUpperCase();
+    avatar.style.backgroundColor = stringToColor(currentUserName);
+    
+    // Show admin features if user is admin
+    if (currentUserRole === 'admin') {
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+    }
+
+    // Set default deadline to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('post-deadline').value = tomorrow.toISOString().split('T')[0];
 }
 
 // ==================
 //  Event Listeners
 // ==================
 function setupListeners() {
+    // Navigation and basic controls
     document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
     document.getElementById('add-post-button').addEventListener('click', openPostModal);
     document.getElementById('post-form').addEventListener('submit', handlePostFormSubmit);
     
+    // Modal close listeners
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', e => {
             if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('close-button')) {
@@ -448,32 +832,75 @@ function setupListeners() {
         });
     });
 
+    // Action buttons
     document.getElementById('approve-button').addEventListener('click', () => updatePostStatus('approved'));
-    document.getElementById('reject-button').addEventListener('click', () => updatePostStatus('rejected'));
+    document.getElementById('reject-button').addEventListener('click', () => handleRejectPost());
     document.getElementById('assign-user-button').addEventListener('click', handleAssignUser);
     document.getElementById('mark-posted-button').addEventListener('click', () => updatePostStatus('posted'));
     document.getElementById('add-comment-button').addEventListener('click', handleAddComment);
-    
     document.getElementById('delete-post-button').addEventListener('click', handleDeletePost);
+
+    // Character counter for content
+    const contentTextarea = document.getElementById('post-content');
+    const characterCounter = document.getElementById('character-counter');
+    
+    contentTextarea.addEventListener('input', () => {
+        const length = contentTextarea.value.length;
+        characterCounter.textContent = `${length} / 2000`;
+        
+        characterCounter.className = 'character-counter';
+        if (length > 1800) {
+            characterCounter.classList.add('error');
+        } else if (length > 1500) {
+            characterCounter.classList.add('warning');
+        }
+    });
+
+    // Form validation
+    setupFormValidation();
+}
+
+function setupFormValidation() {
+    const form = document.getElementById('post-form');
+    const inputs = form.querySelectorAll('input[required], textarea[required], select[required]');
+    
+    inputs.forEach(input => {
+        input.addEventListener('blur', () => {
+            if (input.value.trim()) {
+                input.style.borderColor = '#10b981';
+            }
+        });
+        
+        input.addEventListener('invalid', () => {
+            input.style.borderColor = '#ef4444';
+        });
+    });
 }
 
 // ==================
 //  Data Handling
 // ==================
 function subscribeToPosts() {
+    console.log("[FIREBASE] Setting up social posts subscription...");
+    
     db.collection('social_posts').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+        console.log("[FIREBASE] Social posts updated, processing...");
+        
         allPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderKanbanBoard(allPosts);
+        
+        // Update details modal if open
         if (currentlyViewedPostId) {
             const post = allPosts.find(p => p.id === currentlyViewedPostId);
-            if(post) {
+            if (post) {
                 refreshDetailsModal(post);
             } else {
                 closeAllModals();
             }
         }
     }, error => {
-        console.error("Error fetching social posts:", error);
+        console.error("[FIREBASE ERROR] Social posts subscription failed:", error);
+        showNotification("Failed to load social posts. Please refresh the page.", 'error');
     });
 }
 
@@ -481,25 +908,27 @@ function subscribeToPosts() {
 //  Kanban Board
 // ==================
 function renderKanbanBoard(posts) {
+    console.log(`[RENDER] Rendering ${posts.length} social media posts`);
     const board = document.getElementById('kanban-board');
     board.innerHTML = '';
     
     const columns = [
-        { title: "Proposed", status: "proposed", color: "#fb923c" },
-        { title: "Approved", status: "approved", color: "#22c55e" }, 
-        { title: "Assigned", status: "assigned", color: "#3b82f6" },
-        { title: "Posted", status: "posted", color: "#a855f7" }
+        { title: "Proposed", status: "proposed", color: "#fb923c", icon: "💡" },
+        { title: "Approved", status: "approved", color: "#22c55e", icon: "✅" }, 
+        { title: "Assigned", status: "assigned", color: "#3b82f6", icon: "👤" },
+        { title: "Posted", status: "posted", color: "#a855f7", icon: "🚀" }
     ];
     
     columns.forEach(column => {
         const columnPosts = posts.filter(post => post.status === column.status);
+        console.log(`[COLUMN] "${column.title}" has ${columnPosts.length} posts`);
         
         const columnEl = document.createElement('div');
         columnEl.className = 'kanban-column';
         columnEl.innerHTML = `
             <div class="column-header">
                 <div class="column-title">
-                    <span class="column-title-text">${column.title}</span>
+                    <span class="column-title-text">${column.icon} ${column.title}</span>
                     <span class="task-count" style="background-color: ${column.color}20; color: ${column.color};">${columnPosts.length}</span>
                 </div>
             </div>
@@ -510,7 +939,12 @@ function renderKanbanBoard(posts) {
         
         const cardsContainer = columnEl.querySelector('.kanban-cards');
         if (columnPosts.length === 0) {
-            cardsContainer.innerHTML = `<div class="empty-column-message">No posts here yet.</div>`;
+            cardsContainer.innerHTML = `
+                <div class="empty-column-message">
+                    <div style="font-size: 2rem; margin-bottom: 12px; opacity: 0.5;">${column.icon}</div>
+                    No ${column.title.toLowerCase()} posts yet
+                </div>
+            `;
         } else {
             columnPosts.forEach(post => {
                 cardsContainer.appendChild(createPostCard(post));
@@ -526,32 +960,88 @@ function createPostCard(post) {
     card.className = 'kanban-card';
     card.dataset.id = post.id;
     
-    const platformClass = `platform-${post.platform.toLowerCase()}`;
-    const truncatedContent = post.content.length > 120 ? post.content.substring(0, 120) + '...' : post.content;
+    // Determine card styling based on status and urgency
+    const today = new Date();
+    const postDate = new Date(post.deadline + 'T23:59:59');
+    const daysUntil = Math.ceil((postDate - today) / (1000 * 60 * 60 * 24));
     
-    const isOverdue = new Date(post.deadline) < new Date() && post.status !== 'posted';
-    const deadlineClass = isOverdue ? 'overdue' : '';
+    let cardClass = '';
+    if (post.status !== 'posted') {
+        if (daysUntil < 0) {
+            cardClass = 'overdue-card';
+        } else if (daysUntil <= 2) {
+            cardClass = 'due-soon-card';
+        }
+    }
+    
+    if (cardClass) {
+        card.classList.add(cardClass);
+    }
+    
+    // Platform styling
+    const platformClass = `platform-${post.platform.toLowerCase()}`;
+    const platformIcon = getPlatformIcon(post.platform);
+    
+    // Truncate content for card preview
+    const truncatedContent = post.content.length > 150 ? post.content.substring(0, 150) + '...' : post.content;
+    
+    // Deadline formatting
+    const deadlineText = postDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: postDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+    });
+    
+    let deadlineClass = '';
+    let urgencyIndicator = '';
+    if (post.status !== 'posted') {
+        if (daysUntil < 0) {
+            deadlineClass = 'overdue';
+            urgencyIndicator = `<span style="color: #ef4444; font-weight: 700;">⚠️ ${Math.abs(daysUntil)} days overdue</span>`;
+        } else if (daysUntil <= 2) {
+            deadlineClass = 'due-soon';
+            urgencyIndicator = `<span style="color: #f59e0b; font-weight: 600;">⏰ Due in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}</span>`;
+        }
+    }
     
     card.innerHTML = `
         <h4 class="card-title">${post.title}</h4>
-        <div class="platform-badge ${platformClass}">${post.platform}</div>
+        <div class="card-meta" style="margin-bottom: 12px;">
+            <span class="platform-badge ${platformClass}">${platformIcon} ${post.platform}</span>
+            <span class="card-status status-${post.status}">${post.status.charAt(0).toUpperCase() + post.status.slice(1)}</span>
+        </div>
         <div class="card-content-preview">${truncatedContent}</div>
         <div class="card-footer">
             <div class="card-author">
+                <div class="user-avatar" style="background: ${stringToColor(post.proposerName)}; width: 24px; height: 24px; font-size: 11px;">
+                    ${post.proposerName.charAt(0)}
+                </div>
                 <span>By ${post.proposerName}</span>
             </div>
             <div class="card-deadline ${deadlineClass}">
-                ${new Date(post.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                ${deadlineText}
             </div>
         </div>
+        ${urgencyIndicator ? `<div style="margin-top: 8px; text-align: center; font-size: 0.8rem;">${urgencyIndicator}</div>` : ''}
+        ${post.assigneeName && post.status === 'assigned' ? `
+            <div style="margin-top: 8px; padding: 6px 10px; background: #e0f2fe; border-radius: 6px; font-size: 0.8rem; text-align: center;">
+                📌 Assigned to ${post.assigneeName}
+            </div>
+        ` : ''}
     `;
-    
-    if (isOverdue) {
-        card.style.borderLeft = '4px solid #ef4444';
-    }
     
     card.addEventListener('click', () => openDetailsModal(post.id));
     return card;
+}
+
+function getPlatformIcon(platform) {
+    const icons = {
+        'Instagram': '📸',
+        'LinkedIn': '💼', 
+        'Twitter': '🐦',
+        'Facebook': '📘'
+    };
+    return icons[platform] || '📱';
 }
 
 // =================
@@ -562,12 +1052,20 @@ function openPostModal() {
     postForm.reset();
     postForm.classList.remove('was-validated');
 
+    // Set default deadline to tomorrow
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     document.getElementById('post-deadline').value = tomorrow.toISOString().split('T')[0];
     
+    // Reset character counter
+    document.getElementById('character-counter').textContent = '0 / 2000';
+    document.getElementById('character-counter').className = 'character-counter';
+    
     document.getElementById('modal-title').textContent = 'Propose New Social Media Post';
     document.getElementById('post-modal').style.display = 'flex';
+    
+    // Focus on title field
+    setTimeout(() => document.getElementById('post-title').focus(), 100);
 }
 
 function openDetailsModal(postId) {
@@ -584,32 +1082,72 @@ function closeAllModals() {
 }
 
 function refreshDetailsModal(post) {
+    // Basic information
     document.getElementById('details-title').textContent = post.title;
     document.getElementById('details-content').textContent = post.content;
     document.getElementById('details-proposer').textContent = post.proposerName;
-    document.getElementById('details-assignee').textContent = post.assigneeName || 'Not Assigned';
-    document.getElementById('details-deadline').textContent = new Date(post.deadline).toLocaleDateString('en-US', { 
+    
+    // Platform display with icon
+    const platformIcon = getPlatformIcon(post.platform);
+    const platformContainer = document.getElementById('details-platform-container');
+    platformContainer.innerHTML = `
+        <div class="platform-display">
+            <span class="platform-icon">${platformIcon}</span>
+            <span>${post.platform}</span>
+        </div>
+    `;
+
+    // Status display with proper styling
+    const statusContainer = document.getElementById('details-status-container');
+    const statusClass = `status-${post.status}`;
+    statusContainer.innerHTML = `<div class="status-indicator ${statusClass}">${post.status.charAt(0).toUpperCase() + post.status.slice(1)}</div>`;
+
+    // Assignment information
+    const assigneeDisplay = document.getElementById('details-assignee');
+    const assigneeInfo = document.getElementById('assignee-info');
+    const assigneeAvatar = document.getElementById('assignee-avatar');
+    const assigneeName = document.getElementById('assignee-name');
+    
+    if (post.assigneeName) {
+        assigneeDisplay.textContent = post.assigneeName;
+        assigneeAvatar.textContent = post.assigneeName.charAt(0);
+        assigneeAvatar.style.backgroundColor = stringToColor(post.assigneeName);
+        assigneeName.textContent = post.assigneeName;
+        assigneeInfo.style.display = 'flex';
+    } else {
+        assigneeDisplay.textContent = 'Not Assigned';
+        assigneeInfo.style.display = 'none';
+    }
+    
+    // Deadline with urgency indicator
+    const postDate = new Date(post.deadline + 'T23:59:59');
+    const today = new Date();
+    const daysUntil = Math.ceil((postDate - today) / (1000 * 60 * 60 * 24));
+    
+    document.getElementById('details-deadline').textContent = postDate.toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: 'long', 
         day: 'numeric',
         weekday: 'long'
     });
 
-    const statusContainer = document.getElementById('details-status-container');
-    const statusClass = `status-${post.status}`;
-    statusContainer.innerHTML = `<div class="status-indicator ${statusClass}">${post.status.charAt(0).toUpperCase() + post.status.slice(1)}</div>`;
+    // Urgency indicator
+    const urgencyElement = document.getElementById('deadline-urgency');
+    if (post.status !== 'posted') {
+        if (daysUntil < 0) {
+            urgencyElement.innerHTML = `<span style="color: #ef4444; font-weight: 600;">⚠️ ${Math.abs(daysUntil)} days overdue</span>`;
+        } else if (daysUntil === 0) {
+            urgencyElement.innerHTML = `<span style="color: #f59e0b; font-weight: 600;">📅 Due today</span>`;
+        } else if (daysUntil <= 2) {
+            urgencyElement.innerHTML = `<span style="color: #f59e0b; font-weight: 600;">⏰ Due in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}</span>`;
+        } else {
+            urgencyElement.innerHTML = `<span style="color: #64748b;">📆 ${daysUntil} days remaining</span>`;
+        }
+    } else {
+        urgencyElement.innerHTML = `<span style="color: #10b981; font-weight: 600;">✅ Posted</span>`;
+    }
 
-    const platformContainer = document.getElementById('details-platform-container');
-    const platformIcon = post.platform.toLowerCase() === 'instagram' ? '📸' : 
-                         post.platform.toLowerCase() === 'linkedin' ? '💼' : 
-                         post.platform.toLowerCase() === 'twitter' ? '🐦' : '📘';
-    platformContainer.innerHTML = `
-        <div class="platform-display">
-            <span>${platformIcon}</span>
-            <span>${post.platform}</span>
-        </div>
-    `;
-
+    // Notes section
     const notesSection = document.getElementById('notes-section');
     const notesContent = document.getElementById('details-notes');
     if (post.notes && post.notes.trim()) {
@@ -619,16 +1157,24 @@ function refreshDetailsModal(post) {
         notesSection.style.display = 'none';
     }
 
+    // Permission-based UI
     const isAdmin = currentUserRole === 'admin';
     const isAssignee = currentUser.uid === post.assigneeId;
     const isProposer = currentUser.uid === post.proposerId;
 
-    document.getElementById('admin-approval-section').style.display = isAdmin && post.status === 'proposed' ? 'block' : 'none';
-    document.getElementById('assign-user-section').style.display = isAdmin && post.status === 'approved' ? 'flex' : 'none';
-    document.getElementById('mark-posted-section').style.display = (isAdmin || isAssignee) && post.status === 'assigned' ? 'block' : 'none';
-    document.getElementById('delete-section').style.display = (isAdmin || (isProposer && post.status === 'proposed')) ? 'block' : 'none';
+    document.getElementById('admin-approval-section').style.display = 
+        isAdmin && post.status === 'proposed' ? 'block' : 'none';
     
-    if (isAdmin) {
+    document.getElementById('assign-user-section').style.display = 
+        isAdmin && post.status === 'approved' ? 'flex' : 'none';
+    
+    document.getElementById('mark-posted-section').style.display = 
+        (isAdmin || isAssignee) && post.status === 'assigned' ? 'block' : 'none';
+    
+    document.getElementById('delete-section').style.display = 
+        (isAdmin || (isProposer && (post.status === 'proposed' || post.status === 'rejected'))) ? 'block' : 'none';
+    
+    if (isAdmin && post.status === 'approved') {
         populateUserDropdown(post.assigneeId);
     }
 
@@ -638,7 +1184,17 @@ function refreshDetailsModal(post) {
 function populateUserDropdown(currentAssigneeId) {
     const dropdown = document.getElementById('user-dropdown');
     dropdown.innerHTML = '<option value="">Select User</option>';
-    allUsers.forEach(user => {
+    
+    // Filter to show all users, but prioritize those who might handle social media
+    const sortedUsers = [...allUsers].sort((a, b) => {
+        // Prioritize admins and editors, then writers
+        const aScore = a.role === 'admin' ? 3 : a.role === 'editor' ? 2 : 1;
+        const bScore = b.role === 'admin' ? 3 : b.role === 'editor' ? 2 : 1;
+        if (aScore !== bScore) return bScore - aScore;
+        return a.name.localeCompare(b.name);
+    });
+    
+    sortedUsers.forEach(user => {
         const option = document.createElement('option');
         option.value = user.id;
         option.textContent = `${user.name} (${user.role})`;
@@ -656,12 +1212,17 @@ async function handlePostFormSubmit(e) {
     form.classList.add('was-validated');
 
     if (!form.checkValidity()) {
+        showNotification('Please fill out all required fields correctly.', 'error');
         return;
     }
     
     const submitButton = document.getElementById('save-post-button');
+    const originalText = submitButton.textContent;
     submitButton.disabled = true;
-    submitButton.textContent = 'Saving...';
+    submitButton.innerHTML = `
+        <div class="loader" style="width: 16px; height: 16px; border-width: 2px; margin-right: 8px;"></div>
+        Saving...
+    `;
     
     const newPost = {
         title: document.getElementById('post-title').value.trim(), 
@@ -679,59 +1240,119 @@ async function handlePostFormSubmit(e) {
     };
     
     try {
-        await db.collection('social_posts').add(newPost);
+        const docRef = await db.collection('social_posts').add(newPost);
+        
+        // Add initial activity log
+        await addActivityLog(docRef.id, `Post proposal created for ${newPost.platform}`, 'system');
+        
         closeAllModals();
-        showNotification('Post proposal submitted successfully!', 'success');
+        showNotification(`${newPost.platform} post proposal submitted successfully!`, 'success');
+        
     } catch (error) {
         console.error("Failed to create post:", error);
         showNotification('Failed to create post. Please try again.', 'error');
     } finally {
         submitButton.disabled = false;
-        submitButton.textContent = 'Submit Proposal';
+        submitButton.innerHTML = originalText;
     }
 }
 
 async function updatePostStatus(newStatus) {
     if (!currentlyViewedPostId) return;
     
+    const post = allPosts.find(p => p.id === currentlyViewedPostId);
+    if (!post) return;
+    
     try {
-        await db.collection('social_posts').doc(currentlyViewedPostId).update({
+        const updates = {
             status: newStatus,
             updatedAt: new Date()
-        });
-        await addActivityLog(currentlyViewedPostId, `Post status changed to ${newStatus} by ${currentUserName}`);
-        showNotification(`Post status updated to ${newStatus}`, 'success');
+        };
+        
+        // Add timestamp for posting
+        if (newStatus === 'posted') {
+            updates.postedAt = new Date();
+        }
+        
+        await db.collection('social_posts').doc(currentlyViewedPostId).update(updates);
+        
+        const actionText = newStatus === 'posted' ? 'marked the post as posted' : `changed status to ${newStatus}`;
+        await addActivityLog(currentlyViewedPostId, actionText, 'system');
+        
+        const statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+        showNotification(`Post status updated to ${statusText}`, 'success');
+        
     } catch (error) {
         console.error(`Failed to update post status to ${newStatus}:`, error);
-        showNotification(`Failed to update post status.`, 'error');
+        showNotification('Failed to update post status. Please try again.', 'error');
+    }
+}
+
+async function handleRejectPost() {
+    if (!currentlyViewedPostId) return;
+    
+    const reason = prompt('Please provide a reason for rejecting this post proposal (optional):');
+    
+    try {
+        const updates = {
+            status: 'rejected',
+            updatedAt: new Date()
+        };
+        
+        if (reason && reason.trim()) {
+            updates.rejectionReason = reason.trim();
+        }
+        
+        await db.collection('social_posts').doc(currentlyViewedPostId).update(updates);
+        
+        const reasonText = reason ? ` Reason: ${reason.trim()}` : '';
+        await addActivityLog(currentlyViewedPostId, `rejected the post proposal.${reasonText}`, 'system');
+        
+        showNotification('Post proposal rejected', 'success');
+        
+    } catch (error) {
+        console.error('Failed to reject post:', error);
+        showNotification('Failed to reject post. Please try again.', 'error');
     }
 }
 
 async function handleAssignUser() {
     const dropdown = document.getElementById('user-dropdown');
     const userId = dropdown.value;
-    if (!userId || !currentlyViewedPostId) return;
+    if (!userId || !currentlyViewedPostId) {
+        showNotification('Please select a user to assign.', 'error');
+        return;
+    }
     
     const selectedUser = allUsers.find(u => u.id === userId);
-    if (!selectedUser) return;
+    if (!selectedUser) {
+        showNotification('Selected user not found.', 'error');
+        return;
+    }
     
     const assignButton = document.getElementById('assign-user-button');
+    const originalText = assignButton.textContent;
     assignButton.disabled = true;
+    assignButton.textContent = 'Assigning...';
     
     try {
         await db.collection('social_posts').doc(currentlyViewedPostId).update({
             assigneeId: userId,
             assigneeName: selectedUser.name,
             status: 'assigned',
+            assignedAt: new Date(),
             updatedAt: new Date()
         });
-        await addActivityLog(currentlyViewedPostId, `Post assigned to ${selectedUser.name} by ${currentUserName}`);
+        
+        await addActivityLog(currentlyViewedPostId, `assigned post to ${selectedUser.name}`, 'system');
         showNotification(`Post assigned to ${selectedUser.name}`, 'success');
+        
     } catch (error) {
-        console.error(`Failed to assign user:`, error);
-        showNotification('Failed to assign user.', 'error');
+        console.error('Failed to assign user:', error);
+        showNotification('Failed to assign user. Please try again.', 'error');
     } finally {
         assignButton.disabled = false;
+        assignButton.textContent = originalText;
     }
 }
 
@@ -740,18 +1361,26 @@ async function handleAddComment() {
     const comment = commentInput.value.trim();
     if (!comment || !currentlyViewedPostId) return;
     
+    if (comment.length > 500) {
+        showNotification('Comment is too long. Please keep it under 500 characters.', 'error');
+        return;
+    }
+    
     const addButton = document.getElementById('add-comment-button');
+    const originalText = addButton.textContent;
     addButton.disabled = true;
+    addButton.textContent = 'Posting...';
     
     try {
         await addActivityLog(currentlyViewedPostId, comment, 'comment');
         commentInput.value = '';
-        showNotification('Comment added', 'success');
+        showNotification('Comment added successfully', 'success');
     } catch (error) {
         console.error('Failed to add comment:', error);
-        showNotification('Failed to add comment.', 'error');
+        showNotification('Failed to add comment. Please try again.', 'error');
     } finally {
         addButton.disabled = false;
+        addButton.textContent = originalText;
     }
 }
 
@@ -761,20 +1390,39 @@ async function handleDeletePost() {
     const post = allPosts.find(p => p.id === currentlyViewedPostId);
     if (!post) return;
     
-    if (!confirm(`Are you sure you want to delete "${post.title}"? This cannot be undone.`)) return;
+    // Permission check
+    const isAdmin = currentUserRole === 'admin';
+    const isProposer = currentUser.uid === post.proposerId;
+    
+    if (!isAdmin && !isProposer) {
+        showNotification('You can only delete your own post proposals.', 'error');
+        return;
+    }
+    
+    if (post.status === 'posted') {
+        showNotification('Cannot delete a post that has already been posted.', 'error');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete "${post.title}"? This action cannot be undone.`)) return;
     
     try {
+        // Delete activity logs first
         const activitySnapshot = await db.collection('social_post_activity')
             .where('postId', '==', currentlyViewedPostId).get();
+        
         const batch = db.batch();
         activitySnapshot.docs.forEach(doc => batch.delete(doc.ref));
         batch.delete(db.collection('social_posts').doc(currentlyViewedPostId));
+        
         await batch.commit();
+        
         closeAllModals();
         showNotification('Post deleted successfully', 'success');
+        
     } catch (error) {
         console.error('Failed to delete post:', error);
-        showNotification('Failed to delete post.', 'error');
+        showNotification('Failed to delete post. Please try again.', 'error');
     }
 }
 
@@ -784,17 +1432,26 @@ async function handleDeletePost() {
 async function addActivityLog(postId, message, type = 'system') {
     try {
         await db.collection('social_post_activity').add({
-            postId: postId, message, type, 
-            userId: currentUser.uid, userName: currentUserName, timestamp: new Date()
+            postId: postId, 
+            message, 
+            type, 
+            userId: currentUser.uid, 
+            userName: currentUserName, 
+            timestamp: new Date()
         });
     } catch (error) {
         console.error('Failed to add activity log:', error);
+        throw error;
     }
 }
 
 function loadPostActivity(postId) {
     const activityFeed = document.getElementById('details-activity-feed');
-    activityFeed.innerHTML = '<p>Loading activity...</p>';
+    activityFeed.innerHTML = `
+        <div class="activity-item">
+            <div class="loading-shimmer" style="height: 60px; border-radius: 8px;"></div>
+        </div>
+    `;
     
     db.collection('social_post_activity')
         .where('postId', '==', postId)
@@ -804,40 +1461,60 @@ function loadPostActivity(postId) {
             renderActivityFeed(activities);
         }, error => {
             console.error('Error loading activity:', error);
-            activityFeed.innerHTML = '<p style="color: red;">Failed to load activity</p>';
+            activityFeed.innerHTML = `
+                <div class="activity-item">
+                    <p style="color: #ef4444; text-align: center;">Failed to load activity. Please refresh.</p>
+                </div>
+            `;
         });
 }
 
 function renderActivityFeed(activities) {
     const activityFeed = document.getElementById('details-activity-feed');
+    
     if (activities.length === 0) {
-        activityFeed.innerHTML = '<p>No activity yet.</p>';
+        activityFeed.innerHTML = `
+            <div class="activity-item">
+                <p style="color: #64748b; font-style: italic; text-align: center;">No activity yet. Add the first comment!</p>
+            </div>
+        `;
         return;
     }
     
     activityFeed.innerHTML = activities.map(activity => {
         const timeAgo = getTimeAgo(activity.timestamp.toDate());
         const isComment = activity.type === 'comment';
+        const activityClass = isComment ? 'activity-comment' : 'activity-system';
+        
         return `
-            <div class="activity-item ${isComment ? 'activity-comment' : 'activity-system'}">
+            <div class="activity-item ${activityClass}">
                 <div class="activity-header">
-                    <span class="activity-user">${activity.userName}</span>
+                    <span class="activity-user">
+                        ${isComment ? '💬 ' : '🔄 '}${activity.userName}
+                    </span>
                     <span class="activity-time">${timeAgo}</span>
                 </div>
                 <div class="activity-message">${activity.message}</div>
-            </div>`;
+            </div>
+        `;
     }).join('');
 }
 
 function getTimeAgo(date) {
-    const diffMs = new Date() - date;
+    const now = new Date();
+    const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
+    
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
+    
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
+    
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -845,42 +1522,188 @@ function getTimeAgo(date) {
 // Utilities
 // =================
 function showNotification(message, type = 'info') {
+    // Remove any existing notifications
+    document.querySelectorAll('.success-message, .error-message-toast').forEach(el => el.remove());
+    
     const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed; top: 20px; right: 20px;
-        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-        color: white; padding: 16px 24px; border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 10000;
-        transform: translateX(400px); transition: transform 0.3s ease; max-width: 300px;
+    const isError = type === 'error';
+    notification.className = isError ? 'error-message-toast' : 'success-message';
+    
+    const icon = isError ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span>${icon}</span>
+            <span>${message}</span>
+        </div>
     `;
-    notification.textContent = message;
+    
     document.body.appendChild(notification);
+    
+    // Animate in
     setTimeout(() => notification.style.transform = 'translateX(0)', 100);
+    
+    // Animate out and remove
     setTimeout(() => {
         notification.style.transform = 'translateX(400px)';
         setTimeout(() => notification.remove(), 300);
     }, 4000);
 }
 
-const activityStyles = document.createElement('style');
-activityStyles.textContent = `
-    .activity-feed { max-height: 400px; overflow-y: auto; margin-top: 16px; }
-    .activity-item { padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid transparent; }
-    .activity-comment { background: #f8fafc; border-left-color: #3b82f6; }
-    .activity-system { background: #f1f5f9; border-left-color: #64748b; }
-    .activity-header { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.85rem; }
-    .activity-user { font-weight: 600; color: #1e293b; }
-    .activity-time { color: #64748b; }
-    .activity-message { font-size: 0.9rem; color: #374151; white-space: pre-wrap; }
-    .comment-box { display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #f8fafc; border-radius: 8px; margin-bottom: 16px; }
-    .comment-box textarea { resize: vertical; min-height: 80px; border: 1px solid #d1d5db; border-radius: 6px; padding: 12px; font-family: inherit; }
-    .comment-box button { align-self: flex-end; }
-    .detail-section { margin-bottom: 32px; }
-    .detail-section h4 { margin: 0 0 16px 0; color: #1e293b; font-weight: 600; }
-    .overdue { color: #ef4444 !important; font-weight: 600; }
-    .empty-column-message { text-align: center; padding: 40px 20px; color: #94a3b8; font-style: italic; font-size: 0.9rem; }
-`;
-document.head.appendChild(activityStyles);
+function stringToColor(str) {
+    if (!str) return '#cccccc';
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Generate a pleasant color
+    const hue = Math.abs(hash) % 360;
+    const saturation = 65 + (Math.abs(hash) % 20); // 65-85%
+    const lightness = 45 + (Math.abs(hash) % 15);  // 45-60%
+    
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
+
+function validateDateInput(dateInput) {
+    const selectedDate = new Date(dateInput.value + 'T23:59:59');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+        dateInput.style.borderColor = '#f59e0b';
+        return false;
+    } else {
+        dateInput.style.borderColor = '#10b981';
+        return true;
+    }
+}
+
+// Enhanced form validation
+function setupAdvancedFormValidation() {
+    const titleInput = document.getElementById('post-title');
+    const contentInput = document.getElementById('post-content');
+    const deadlineInput = document.getElementById('post-deadline');
+    
+    // Real-time title validation
+    titleInput.addEventListener('input', () => {
+        const length = titleInput.value.length;
+        if (length > 80) {
+            titleInput.style.borderColor = '#f59e0b';
+        } else if (length > 10) {
+            titleInput.style.borderColor = '#10b981';
+        } else {
+            titleInput.style.borderColor = '#d1d5db';
+        }
+    });
+    
+    // Content validation with platform-specific suggestions
+    contentInput.addEventListener('input', () => {
+        const platform = document.getElementById('post-platform').value;
+        const length = contentInput.value.length;
+        let suggestion = '';
+        
+        // Platform-specific character recommendations
+        switch(platform) {
+            case 'Twitter':
+                if (length > 280) suggestion = '⚠️ Twitter has a 280 character limit';
+                else if (length > 250) suggestion = '⏰ Getting close to Twitter limit';
+                break;
+            case 'Instagram':
+                if (length > 2200) suggestion = '⚠️ Instagram captions work best under 2200 characters';
+                break;
+            case 'LinkedIn':
+                if (length > 1300) suggestion = '💡 LinkedIn posts perform best around 1300 characters or less';
+                break;
+        }
+        
+        // Update suggestion text
+        const helpElement = contentInput.parentElement.querySelector('.form-help small');
+        if (suggestion) {
+            helpElement.textContent = suggestion;
+            helpElement.style.color = length > 2000 ? '#ef4444' : '#f59e0b';
+        } else {
+            helpElement.textContent = '💡 Include hashtags, mentions, and links exactly as they should appear';
+            helpElement.style.color = '#64748b';
+        }
+    });
+    
+    // Deadline validation
+    deadlineInput.addEventListener('change', () => validateDateInput(deadlineInput));
+}
+
+// =================
+// Enhanced Error Handling
+// =================
+window.addEventListener('error', function(e) {
+    console.error('[GLOBAL ERROR]', e.error || e.message);
+    showNotification('An unexpected error occurred. Please refresh if problems persist.', 'error');
+});
+
+// Check Firebase loading
+setTimeout(() => {
+    if (typeof firebase === 'undefined') {
+        console.error('[FIREBASE ERROR] Firebase not loaded after 3 seconds');
+        const loader = document.getElementById('loader');
+        if (loader) {
+            loader.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <h3 style="color: #ef4444; margin-bottom: 16px;">Connection Error</h3>
+                    <p style="color: #64748b; margin-bottom: 20px;">Unable to connect to the database. Please check your internet connection.</p>
+                    <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007AFF; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        Try Again
+                    </button>
+                </div>
+            `;
+        }
+    }
+}, 3000);
+
+// =================
+// Keyboard Shortcuts
+// =================
+document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + N to create new post
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        openPostModal();
+    }
+    
+    // Escape to close modals
+    if (e.key === 'Escape') {
+        closeAllModals();
+    }
+});
+
+// =================
+// Initialize Enhanced Features
+// =================
+document.addEventListener('DOMContentLoaded', () => {
+    setupAdvancedFormValidation();
+    
+    // Add platform change handler for dynamic suggestions
+    const platformSelect = document.getElementById('post-platform');
+    const contentTextarea = document.getElementById('post-content');
+    
+    platformSelect.addEventListener('change', () => {
+        // Trigger content validation with new platform
+        contentTextarea.dispatchEvent(new Event('input'));
+        
+        // Add platform-specific placeholder suggestions
+        const platform = platformSelect.value;
+        const placeholders = {
+            'Instagram': 'Write engaging copy with relevant hashtags. Consider:\n\n🌟 Eye-catching opening line\n📸 Describe the visual content\n#️⃣ Relevant hashtags (5-10 recommended)\n🔗 Link in bio reference\n\nExample: "Just published our latest piece on AI in neuroscience! 🧠✨ Link in bio to read the full interview with Dr. Smith. #AI #Neuroscience #CatalystMag #ScienceWriting"',
+            'LinkedIn': 'Professional tone with industry insights:\n\n💼 Professional opening\n📊 Key insights or data points\n🤝 Call to action for engagement\n#️⃣ Professional hashtags\n\nExample: "Our latest article explores the intersection of AI and neuroscience. Key takeaways include... What are your thoughts on AI\'s role in advancing brain research? #ArtificialIntelligence #Neuroscience #Innovation"',
+            'Twitter': 'Concise and engaging (280 characters max):\n\n🎯 Clear, punchy message\n🔗 Shortened link\n#️⃣ 2-3 relevant hashtags\n\nExample: "New article: How AI is revolutionizing neuroscience research 🧠🤖 Fascinating insights from leading researchers. Read more: [link] #AI #Neuroscience #Innovation"',
+            'Facebook': 'Conversational and community-focused:\n\n👥 Community-oriented language\n📖 Story-telling approach\n❓ Questions to encourage comments\n🔗 Direct link\n\nExample: "We\'re excited to share our latest deep-dive into AI and neuroscience! This topic has been generating so much discussion lately. Have you seen AI making an impact in your field? Read our full investigation: [link]"'
+        };
+        
+        if (platform && placeholders[platform]) {
+            contentTextarea.placeholder = placeholders[platform];
+        }
+    });
+});
+
+console.log("[SOCIAL] Social Media Planner script loaded successfully");
     </script>
   </body>
 </html>
