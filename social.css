@@ -36,9 +36,9 @@
 .social-header {
   background: var(--social-header-gradient);
   color: white;
-  padding-top: 4rem;
+  padding-top: 1rem;
   padding-right: 4rem;
-  padding-bottom: 8rem;
+  padding-bottom: 9rem;
   padding-left: 4rem;
   margin-bottom: 2rem;
   position: relative;
