@@ -984,6 +984,11 @@
           padding: 20px;
         }
         
+        .social-stats {
+          gap: 16px;
+          padding: 0 20px;
+        }
+        
         .kanban-column {
           height: 550px;
           min-height: 550px;
@@ -996,13 +1001,15 @@
           gap: 16px;
         }
         
+        .social-stats {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+          padding: 0 20px;
+        }
+        
         .kanban-column {
           height: 500px;
           min-height: 500px;
-        }
-
-        .social-stats {
-          grid-template-columns: repeat(2, 1fr);
         }
 
         .details-grid {
@@ -1017,13 +1024,17 @@
 
       @media (max-width: 768px) {
         .social-header {
-          padding: 32px 24px;
-          text-align: center;
+          padding: 32px 0 24px 0;
+        }
+        
+        .social-header-content {
+          padding: 0 16px;
         }
 
         .social-stats {
           grid-template-columns: 1fr;
           gap: 12px;
+          padding: 0 16px;
         }
 
         .kanban-board {
