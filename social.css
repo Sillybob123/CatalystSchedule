@@ -1248,6 +1248,12 @@
     max-height: calc(100vh - 5rem);
     border-radius: 16px;
   }
+  
+  .modal-content.form-modal {
+    min-width: auto;
+    width: calc(100vw - 2rem);
+    max-width: none;
+  }
 
   .modal-header {
     padding: 1.25rem 1.5rem;
@@ -1255,7 +1261,8 @@
   }
 
   .modal-header h2 {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
+    line-height: 1.4;
   }
 
   .form-container {
@@ -1313,6 +1320,15 @@
   
   .modal-overlay {
     padding: 0.75rem;
+  }
+  
+  .modal-content.form-modal {
+    width: calc(100vw - 1.5rem);
+  }
+  
+  .modal-header h2 {
+    font-size: 1rem;
+    line-height: 1.5;
   }
   
   .social-stats {
