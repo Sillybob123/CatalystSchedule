@@ -7,339 +7,819 @@
     <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png">
     <link rel="stylesheet" href="base.css" />
     <link rel="stylesheet" href="components.css" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    
     <style>
-      /* === SOCIAL MEDIA SPECIFIC STYLES === */
-      .platform-badge {
-        display: inline-block;
-        padding: 4px 12px;
+      /* === ENHANCED SOCIAL MEDIA STYLES === */
+      
+      /* Root Variables for Social Media */
+      :root {
+        --instagram-gradient: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        --linkedin-color: #0077b5;
+        --twitter-color: #1da1f2;
+        --facebook-color: #1877f2;
+        --tiktok-gradient: linear-gradient(45deg, #ff0050, #00f2ea);
+        --youtube-color: #ff0000;
+      }
+
+      /* Enhanced Header */
+      .social-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: var(--space-8) var(--space-6);
+        margin: calc(var(--space-6) * -1) calc(var(--space-6) * -1) var(--space-8);
+        border-radius: 0 0 24px 24px;
+      }
+
+      .social-header h1 {
+        font-size: clamp(28px, 4vw, 42px);
+        font-weight: 800;
+        margin: 0 0 var(--space-3) 0;
+        background: linear-gradient(135deg, #ffffff, #e2e8f0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .social-header p {
+        font-size: clamp(16px, 2vw, 20px);
+        margin: 0;
+        opacity: 0.9;
+        font-weight: 400;
+      }
+
+      .social-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: var(--space-4);
+        margin-top: var(--space-6);
+      }
+
+      .stat-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: var(--radius-lg);
+        padding: var(--space-4);
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .stat-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: white;
+        display: block;
+      }
+
+      .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin-top: var(--space-1);
+      }
+
+      /* Enhanced Kanban Board */
+      .kanban-board {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: var(--space-5);
+        padding: var(--space-4);
+        min-height: 70vh;
+      }
+
+      .kanban-column {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border-radius: var(--radius-xl);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        box-shadow: 
+          0 10px 25px rgba(0, 0, 0, 0.08),
+          0 20px 48px rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+        height: fit-content;
+        min-height: 500px;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .kanban-column:hover {
+        transform: translateY(-4px);
+        box-shadow: 
+          0 20px 40px rgba(0, 0, 0, 0.12),
+          0 32px 64px rgba(0, 0, 0, 0.08);
+      }
+
+      .column-header {
+        padding: var(--space-6) var(--space-5);
+        background: linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%);
+        border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .column-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--column-color, var(--primary-color));
+      }
+
+      .column-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0;
+      }
+
+      .column-title-main {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+      }
+
+      .column-icon {
+        font-size: 1.5rem;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+      }
+
+      .column-title-text {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text-color);
+        letter-spacing: -0.02em;
+      }
+
+      .task-count {
+        background: linear-gradient(135deg, var(--column-color, var(--primary-color)), var(--column-color-dark, var(--primary-hover)));
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: var(--space-2) var(--space-3);
         border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 500;
+        min-width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .column-content {
+        flex: 1;
+        padding: var(--space-4);
+        overflow-y: auto;
+        min-height: 0;
+      }
+
+      .kanban-cards {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+      }
+
+      /* Enhanced Cards */
+      .kanban-card {
+        background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        box-shadow: 
+          0 2px 4px rgba(0, 0, 0, 0.06),
+          0 8px 16px rgba(0, 0, 0, 0.04);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .kanban-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--card-color, #e5e7eb);
+        transition: all 0.3s ease;
+      }
+
+      .kanban-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 
+          0 8px 25px rgba(0, 0, 0, 0.12),
+          0 16px 32px rgba(0, 0, 0, 0.08);
+        border-color: var(--primary-color);
+      }
+
+      .kanban-card:hover::before {
+        height: 6px;
+      }
+
+      /* Platform-specific card colors */
+      .kanban-card.instagram::before { background: var(--instagram-gradient); }
+      .kanban-card.linkedin::before { background: var(--linkedin-color); }
+      .kanban-card.twitter::before { background: var(--twitter-color); }
+      .kanban-card.facebook::before { background: var(--facebook-color); }
+
+      /* Priority indicators */
+      .kanban-card.overdue {
+        border-left: 4px solid #ef4444;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        animation: pulse-subtle 3s ease-in-out infinite;
+      }
+
+      .kanban-card.due-soon {
+        border-left: 4px solid #f59e0b;
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      }
+
+      @keyframes pulse-subtle {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.01); }
+      }
+
+      .card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin: 0 0 var(--space-3) 0;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .card-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        margin-bottom: var(--space-4);
+        flex-wrap: wrap;
+      }
+
+      /* Enhanced Platform Badges */
+      .platform-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: var(--space-2) var(--space-3);
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-      }
-      
-      .platform-instagram {
-        background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
         color: white;
-        box-shadow: 0 2px 8px rgba(240, 148, 51, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       }
-      
-      .platform-linkedin {
-        background: #0077b5;
-        color: white;
-        box-shadow: 0 2px 8px rgba(0, 119, 181, 0.3);
-      }
-      
-      .platform-twitter {
-        background: #1da1f2;
-        color: white;
-        box-shadow: 0 2px 8px rgba(29, 161, 242, 0.3);
-      }
-      
-      .platform-facebook {
-        background: #1877f2;
-        color: white;
-        box-shadow: 0 2px 8px rgba(24, 119, 242, 0.3);
-      }
-      
-      .card-content-preview {
-        margin: 12px 0;
-        font-size: 0.9rem;
-        color: #64748b;
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        line-height: 1.4;
-        background: #f8fafc;
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-      }
-      
-      .details-content-box {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 16px 0;
-        white-space: pre-wrap;
-        font-family: 'Inter', sans-serif;
-        line-height: 1.6;
-        color: #1d1d1f;
-        max-height: 300px;
-        overflow-y: auto;
-      }
-      
-      .platform-display {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        background: #f1f5f9;
+
+      .platform-badge.instagram { background: var(--instagram-gradient); }
+      .platform-badge.linkedin { background: var(--linkedin-color); }
+      .platform-badge.twitter { background: var(--twitter-color); }
+      .platform-badge.facebook { background: var(--facebook-color); }
+
+      /* Status Indicators */
+      .status-badge {
+        padding: var(--space-1) var(--space-3);
         border-radius: 20px;
-        font-weight: 500;
-        border: 1px solid #e2e8f0;
-      }
-      
-      .status-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         font-weight: 600;
         text-transform: capitalize;
       }
-      
-      .status-proposed {
+
+      .status-badge.proposed {
         background: rgba(251, 146, 60, 0.1);
         color: #ea580c;
         border: 1px solid rgba(251, 146, 60, 0.3);
       }
-      
-      .status-approved {
+
+      .status-badge.approved {
         background: rgba(34, 197, 94, 0.1);
         color: #16a34a;
         border: 1px solid rgba(34, 197, 94, 0.3);
       }
-      
-      .status-assigned {
+
+      .status-badge.assigned {
         background: rgba(59, 130, 246, 0.1);
         color: #2563eb;
         border: 1px solid rgba(59, 130, 246, 0.3);
       }
-      
-      .status-posted {
+
+      .status-badge.posted {
         background: rgba(139, 69, 193, 0.1);
         color: #9333ea;
         border: 1px solid rgba(139, 69, 193, 0.3);
       }
 
-      .status-rejected {
+      .status-badge.rejected {
         background: rgba(239, 68, 68, 0.1);
         color: #dc2626;
         border: 1px solid rgba(239, 68, 68, 0.3);
       }
 
-      /* Form Validation */
-      #post-form.was-validated input:invalid,
-      #post-form.was-validated textarea:invalid,
-      #post-form.was-validated select:invalid {
-        border-color: var(--danger-color);
-        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+      .card-content-preview {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--radius);
+        padding: var(--space-3);
+        margin: var(--space-3) 0;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        color: #64748b;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: var(--space-4);
+        padding-top: var(--space-3);
+        border-top: 1px solid rgba(226, 232, 240, 0.6);
+      }
+
+      .card-author {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex: 1;
+        min-width: 0;
+      }
+
+      .card-author .user-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .card-author span {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .card-deadline {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        padding: var(--space-1) var(--space-2);
+        background: rgba(0, 0, 0, 0.04);
+        border-radius: var(--radius-sm);
+        white-space: nowrap;
+      }
+
+      .card-deadline.due-today {
+        background: linear-gradient(135deg, #fef3c7, #fbbf24);
+        color: #92400e;
+      }
+
+      .card-deadline.overdue {
+        background: linear-gradient(135deg, #fee2e2, #fca5a5);
+        color: #dc2626;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      /* Assignment Info */
+      .card-assignment {
+        margin-top: var(--space-3);
+        padding: var(--space-2) var(--space-3);
+        background: linear-gradient(135deg, #e0f2fe, #b3e5fc);
+        border-radius: var(--radius);
+        font-size: 0.8rem;
+        text-align: center;
+        color: #0277bd;
+        font-weight: 600;
+      }
+
+      /* Empty States */
+      .empty-column {
+        text-align: center;
+        padding: var(--space-8) var(--space-4);
+        color: #94a3b8;
+      }
+
+      .empty-column-icon {
+        font-size: 3rem;
+        margin-bottom: var(--space-4);
+        opacity: 0.6;
+      }
+
+      .empty-column-text {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: var(--space-2);
+      }
+
+      .empty-column-subtext {
+        font-size: 0.9rem;
+        opacity: 0.8;
+      }
+
+      /* Floating Action Button */
+      .fab {
+        position: fixed;
+        bottom: 32px;
+        right: 32px;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        color: white;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        box-shadow: 0 8px 32px rgba(0, 122, 255, 0.4);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .fab:hover {
+        transform: scale(1.1) translateY(-2px);
+        box-shadow: 0 16px 48px rgba(0, 122, 255, 0.6);
+      }
+
+      /* Enhanced Modal */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: var(--space-6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: var(--radius-xl);
+        box-shadow: 
+          0 25px 50px -12px rgba(0, 0, 0, 0.25),
+          0 0 0 1px rgba(255, 255, 255, 0.05);
+        max-width: 95vw;
+        max-height: 95vh;
+        overflow: hidden;
+        position: relative;
+        animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      @keyframes modalSlideIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95) translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      .modal-content.form-modal {
+        max-width: 600px;
+        width: 100%;
+      }
+
+      .modal-content.details-modal {
+        max-width: 1200px;
+        width: 100%;
+        height: 80vh;
+      }
+
+      /* Enhanced Form Styles */
+      .form-container {
+        padding: var(--space-6);
+      }
+
+      .form-grid {
+        display: grid;
+        gap: var(--space-5);
+      }
+
+      .form-group {
+        position: relative;
+      }
+
+      .form-group label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: var(--space-2);
+        font-size: 0.9rem;
+      }
+
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: var(--space-3) var(--space-4);
+        border: 2px solid #e2e8f0;
+        border-radius: var(--radius-lg);
+        font-size: 0.95rem;
+        background: #ffffff;
+        color: var(--text-color);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: inherit;
+      }
+
+      .form-group input:focus,
+      .form-group textarea:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+        background: #ffffff;
       }
 
       .form-help {
-        margin-top: 6px;
-      }
-      .form-help small {
-          color: #64748b;
-          font-size: 0.85rem;
-          font-style: italic;
+        margin-top: var(--space-2);
+        font-size: 0.85rem;
+        color: #64748b;
+        font-style: italic;
       }
 
-      .header-title-section {
-          flex-grow: 1;
+      .character-counter {
+        position: absolute;
+        bottom: var(--space-2);
+        right: var(--space-3);
+        font-size: 0.8rem;
+        color: #94a3b8;
+        background: rgba(255, 255, 255, 0.9);
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-sm);
       }
 
-      .header-subtitle {
-          margin: 8px 0 0 0;
-          color: #64748b;
-          font-size: 0.95rem;
-          font-weight: 400;
-      }
+      .character-counter.warning { color: #f59e0b; }
+      .character-counter.error { color: #ef4444; }
 
-      /* Activity Feed Styling */
-      .activity-feed { 
-        max-height: 400px; 
-        overflow-y: auto; 
-        margin-top: 16px; 
+      /* Platform Preview */
+      .platform-preview {
+        margin-top: var(--space-4);
+        padding: var(--space-4);
+        background: #f8fafc;
+        border-radius: var(--radius-lg);
         border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        background: #fafbfc;
       }
-      
-      .activity-item { 
-        padding: 16px; 
+
+      .platform-preview-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: var(--space-3);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      .platform-preview-content {
+        background: white;
+        padding: var(--space-3);
+        border-radius: var(--radius);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        min-height: 60px;
+        color: var(--text-secondary);
+        font-style: italic;
+      }
+
+      /* Enhanced Details Modal */
+      .details-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        height: 100%;
+      }
+
+      .details-main {
+        padding: var(--space-6);
+        overflow-y: auto;
+        border-right: 1px solid #e2e8f0;
+      }
+
+      .details-sidebar {
+        padding: var(--space-6);
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        overflow-y: auto;
+      }
+
+      .details-section {
+        margin-bottom: var(--space-6);
+      }
+
+      .details-section h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin: 0 0 var(--space-4) 0;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      .content-display {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .sidebar-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--radius-lg);
+        padding: var(--space-4);
+        margin-bottom: var(--space-4);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      }
+
+      .sidebar-card h4 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin: 0 0 var(--space-3) 0;
+      }
+
+      /* Activity Feed */
+      .activity-feed {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--radius-lg);
+        background: white;
+      }
+
+      .activity-item {
+        padding: var(--space-4);
         border-bottom: 1px solid #f1f5f9;
         transition: background-color 0.2s ease;
       }
-      
+
       .activity-item:last-child {
         border-bottom: none;
       }
-      
+
       .activity-item:hover {
         background: rgba(0, 122, 255, 0.02);
       }
-      
-      .activity-comment { 
-        background: #fff;
-        border-left: 3px solid #3b82f6; 
+
+      .activity-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-2);
       }
-      
-      .activity-system { 
-        background: #f8fafc;
-        border-left: 3px solid #64748b; 
+
+      .activity-user {
+        font-weight: 600;
+        color: var(--text-color);
+        font-size: 0.9rem;
       }
-      
-      .activity-header { 
-        display: flex; 
-        justify-content: space-between; 
-        margin-bottom: 6px; 
-        font-size: 0.85rem; 
-      }
-      
-      .activity-user { 
-        font-weight: 600; 
-        color: #1e293b; 
-      }
-      
-      .activity-time { 
-        color: #64748b; 
+
+      .activity-time {
         font-size: 0.8rem;
+        color: #94a3b8;
       }
-      
-      .activity-message { 
-        font-size: 0.9rem; 
-        color: #374151; 
-        white-space: pre-wrap; 
+
+      .activity-message {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
         line-height: 1.5;
       }
-      
-      .comment-box { 
-        display: flex; 
-        flex-direction: column; 
-        gap: 12px; 
-        padding: 16px; 
-        background: var(--surface-color);
+
+      .activity-comment {
+        background: rgba(59, 130, 246, 0.02);
+        border-left: 3px solid #3b82f6;
+      }
+
+      /* Comment Box */
+      .comment-box {
+        background: white;
         border: 1px solid #e2e8f0;
-        border-radius: 12px; 
-        margin-bottom: 16px; 
+        border-radius: var(--radius-lg);
+        padding: var(--space-4);
+        margin-bottom: var(--space-4);
       }
-      
-      .comment-box textarea { 
-        resize: vertical; 
-        min-height: 80px; 
-        border: 1px solid #d1d5db; 
-        border-radius: 8px; 
-        padding: 12px; 
+
+      .comment-box textarea {
+        width: 100%;
+        min-height: 80px;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--radius);
+        padding: var(--space-3);
+        resize: vertical;
         font-family: inherit;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        font-size: 0.9rem;
       }
 
-      .comment-box textarea:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px var(--primary-light);
-      }
-      
-      .comment-box button { 
-        align-self: flex-end; 
-      }
-      
-      .detail-section { 
-        margin-bottom: 32px; 
-      }
-      
-      .detail-section h4 { 
-        margin: 0 0 16px 0; 
-        color: #1e293b; 
-        font-weight: 600; 
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .overdue { 
-        color: #ef4444 !important; 
-        font-weight: 600; 
-        animation: pulse 2s ease-in-out infinite;
-      }
-      
-      .empty-column-message { 
-        text-align: center; 
-        padding: 60px 20px; 
-        color: #94a3b8; 
-        font-style: italic; 
-        font-size: 0.9rem; 
-        background: #f8fafc;
-        border-radius: 12px;
-        border: 2px dashed #e2e8f0;
+      .comment-box .btn-primary {
+        margin-top: var(--space-3);
+        align-self: flex-end;
       }
 
-      /* Character Counter */
-      .character-counter {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 4px;
-        font-size: 0.8rem;
-        color: #64748b;
-      }
-
-      .character-counter.warning {
-        color: #f59e0b;
-      }
-
-      .character-counter.error {
-        color: #ef4444;
-      }
-
-      /* Enhanced Card Styling */
-      .kanban-card.overdue-card {
-        border-left: 4px solid #ef4444;
-        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-      }
-
-      .kanban-card.due-soon-card {
-        border-left: 4px solid #f59e0b;
-        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-      }
-
-      /* Platform Icons */
-      .platform-icon {
-        font-size: 1.2rem;
-        margin-right: 4px;
-      }
-
-      /* Success Messages */
-      .success-message {
+      /* Notifications */
+      .notification {
         position: fixed;
-        top: 20px;
-        right: 20px;
+        top: 24px;
+        right: 24px;
+        padding: var(--space-4) var(--space-5);
+        border-radius: var(--radius-lg);
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        z-index: 10000;
+        transform: translateX(400px);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        max-width: 350px;
+      }
+
+      .notification.success {
         background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-        padding: 16px 24px;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-        z-index: 10000;
-        transform: translateX(400px);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        max-width: 300px;
-        font-weight: 500;
       }
 
-      .error-message-toast {
-        position: fixed;
-        top: 20px;
-        right: 20px;
+      .notification.error {
         background: linear-gradient(135deg, #ef4444, #dc2626);
-        color: white;
-        padding: 16px 24px;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
-        z-index: 10000;
-        transform: translateX(400px);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        max-width: 300px;
-        font-weight: 500;
+      }
+
+      .notification.show {
+        transform: translateX(0);
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1024px) {
+        .kanban-board {
+          grid-template-columns: 1fr;
+          gap: var(--space-4);
+        }
+
+        .social-stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .details-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .details-sidebar {
+          border-top: 1px solid #e2e8f0;
+          border-right: none;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .social-header {
+          padding: var(--space-6) var(--space-4);
+          text-align: center;
+        }
+
+        .social-stats {
+          grid-template-columns: 1fr;
+        }
+
+        .kanban-board {
+          padding: var(--space-2);
+        }
+
+        .fab {
+          bottom: 24px;
+          right: 24px;
+          width: 56px;
+          height: 56px;
+          font-size: 1.3rem;
+        }
+
+        .modal-content {
+          margin: var(--space-4);
+          max-width: calc(100vw - 2rem);
+        }
+
+        .modal-content.details-modal {
+          height: 90vh;
+        }
       }
 
       /* Loading States */
@@ -354,61 +834,22 @@
         100% { background-position: 200% 0; }
       }
 
-      /* Enhanced Hover Effects */
-      .assignee-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 8px;
-        padding: 8px 12px;
-        background: #f1f5f9;
-        border-radius: 8px;
-        font-size: 0.9rem;
-      }
-
-      .assignee-avatar {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: var(--primary-color);
-        color: white;
-        font-size: 11px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      /* Responsive Enhancements */
-      @media (max-width: 768px) {
-        .details-grid {
-          grid-template-columns: 1fr;
-        }
-        
-        .details-sidebar {
-          border-top: 1px solid var(--border-color);
-          border-right: none;
-        }
-        
-        .platform-badge {
-          font-size: 0.75rem;
-          padding: 3px 8px;
-        }
-        
-        .modal-content.large {
-          width: 95vw;
-          height: 90vh;
-        }
-      }
+      /* Column-specific styling */
+      .column-proposed { --column-color: #fb923c; --column-color-dark: #ea580c; }
+      .column-approved { --column-color: #22c55e; --column-color-dark: #16a34a; }
+      .column-assigned { --column-color: #3b82f6; --column-color-dark: #2563eb; }
+      .column-posted { --column-color: #a855f7; --column-color-dark: #9333ea; }
     </style>
   </head>
+  
   <body>
     <div id="loader" class="loader-container">
-      <div class="loader" role="status" aria-label="Loading"></div>
-      <p style="margin-top: 20px; color: #64748b;">Loading Social Media Planner...</p>
+      <div class="loader"></div>
+      <p>Loading Social Media Planner...</p>
     </div>
 
     <div id="app-container" class="app-container" style="display: none">
+      <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sidebar-header">
           <img src="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png" alt="Catalyst Logo" class="logo-img">
@@ -417,11 +858,11 @@
 
         <nav class="sidebar-nav" aria-label="Primary">
           <p class="nav-heading">Views</p>
-          <a href="dashboard.html" id="nav-dashboard" class="nav-item">
+          <a href="dashboard.html" class="nav-item">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
             <span>Dashboard</span>
           </a>
-          <a href="social.html" id="nav-social" class="nav-item active" aria-current="page">
+          <a href="social.html" class="nav-item active" aria-current="page">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
             <span>Social Media</span>
           </a>
@@ -429,7 +870,7 @@
 
         <div class="sidebar-footer">
           <div class="user-profile">
-            <div class="user-avatar" id="user-avatar" aria-hidden="true">U</div>
+            <div class="user-avatar" id="user-avatar">U</div>
             <div class="user-details">
               <span id="user-name">Loading...</span>
               <span id="user-role">writer</span>
@@ -444,113 +885,113 @@
         </div>
       </aside>
 
+      <!-- Main Content -->
       <main class="main-content">
-        <header class="main-header">
-          <div class="header-title-section">
-            <h1 id="board-title">Social Media Planner</h1>
-            <p class="header-subtitle">Coordinate and schedule social media content across platforms</p>
-          </div>
-          <div class="header-actions">
-            <button id="add-post-button" class="add-project-btn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              Propose New Post
-            </button>
-          </div>
-        </header>
-
-        <div id="board-view">
-          <div id="kanban-board" class="kanban-board" aria-live="polite">
-            <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
-              <div class="loader" style="margin: 0 auto 20px;"></div>
-              <p>Loading social media posts...</p>
+        <!-- Enhanced Header -->
+        <div class="social-header">
+          <h1>Social Media Planner</h1>
+          <p>Create, manage, and schedule engaging content across all platforms</p>
+          
+          <div class="social-stats" id="social-stats">
+            <div class="stat-card">
+              <span class="stat-number" id="stat-total">0</span>
+              <span class="stat-label">Total Posts</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number" id="stat-pending">0</span>
+              <span class="stat-label">Pending</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number" id="stat-scheduled">0</span>
+              <span class="stat-label">Scheduled</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number" id="stat-posted">0</span>
+              <span class="stat-label">Posted</span>
             </div>
           </div>
         </div>
+
+        <!-- Kanban Board -->
+        <div id="kanban-board" class="kanban-board">
+          <!-- Columns will be dynamically generated -->
+        </div>
+
+        <!-- Floating Action Button -->
+        <button class="fab" id="fab-new-post" title="Create New Post">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
       </main>
     </div>
 
     <!-- New Post Modal -->
-    <div id="post-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
-      <div class="modal-content">
+    <div id="post-modal" class="modal-overlay">
+      <div class="modal-content form-modal">
         <div class="modal-header">
-          <h2 id="modal-title">Propose New Social Media Post</h2>
-          <button class="close-button" aria-label="Close">×</button>
+          <h2>Create New Social Media Post</h2>
+          <button class="close-button" type="button">×</button>
         </div>
-        <form id="post-form" novalidate>
-          <div style="padding: var(--space-6);">
+        
+        <form id="post-form" class="form-container">
+          <div class="form-grid">
             <div class="form-group">
-              <label for="post-title">Post Title / Topic</label>
-              <input
-                type="text"
-                id="post-title"
-                required
-                maxlength="100"
-                placeholder="e.g., Announcing our new article on AI in Neuroscience"
-              />
-              <div class="form-help">
-                <small>💡 Keep it descriptive but concise for easy identification</small>
-              </div>
+              <label for="post-title">Post Title</label>
+              <input type="text" id="post-title" required maxlength="100" placeholder="Give your post a descriptive title...">
+              <div class="form-help">This helps identify the post in your dashboard</div>
             </div>
-            
+
             <div class="form-group">
               <label for="post-platform">Platform</label>
               <select id="post-platform" required>
-                <option value="">Select Platform...</option>
-                <option value="Instagram">📸 Instagram</option>
-                <option value="LinkedIn">💼 LinkedIn</option>
-                <option value="Twitter">🐦 Twitter</option>
-                <option value="Facebook">📘 Facebook</option>
+                <option value="">Choose platform...</option>
+                <option value="instagram">📸 Instagram</option>
+                <option value="linkedin">💼 LinkedIn</option>
+                <option value="twitter">🐦 Twitter</option>
+                <option value="facebook">📘 Facebook</option>
               </select>
-              <div class="form-help">
-                <small>Choose the primary platform for this post</small>
-              </div>
+              <div class="form-help">Select where this post will be published</div>
             </div>
-            
+
             <div class="form-group">
               <label for="post-content">Post Content</label>
-              <textarea
-                id="post-content"
-                rows="8"
-                required
-                maxlength="2000"
-                placeholder="Write the full content of the post here, including links and hashtags. Make it ready to copy and paste for posting."
-              ></textarea>
+              <textarea id="post-content" required rows="6" maxlength="2000" placeholder="Write your post content here... Include hashtags, mentions, and links as they should appear."></textarea>
               <div class="character-counter" id="character-counter">0 / 2000</div>
-              <div class="form-help">
-                <small>💡 Include hashtags, mentions, and links exactly as they should appear</small>
-              </div>
+              <div class="form-help" id="content-help">Write engaging content that resonates with your audience</div>
             </div>
-            
+
             <div class="form-group">
-              <label for="post-deadline">Target Post Date</label>
-              <input type="date" id="post-deadline" required />
-              <div class="form-help">
-                <small>📅 When should this be scheduled to be posted?</small>
-              </div>
+              <label for="post-deadline">Target Publish Date</label>
+              <input type="date" id="post-deadline" required>
+              <div class="form-help">When should this post go live?</div>
             </div>
-            
+
             <div class="form-group">
               <label for="post-notes">Additional Notes (Optional)</label>
-              <textarea
-                id="post-notes"
-                rows="3"
-                maxlength="500"
-                placeholder="Any specific instructions? e.g., Best times to post, related articles to cross-promote, image suggestions, etc."
-              ></textarea>
-              <div class="form-help">
-                <small>Any special instructions for the social media manager</small>
-              </div>
+              <textarea id="post-notes" rows="3" maxlength="500" placeholder="Any special instructions, image suggestions, or scheduling preferences..."></textarea>
+              <div class="form-help">Instructions for the social media manager</div>
             </div>
           </div>
-          
+
+          <!-- Platform Preview -->
+          <div class="platform-preview" id="platform-preview" style="display: none;">
+            <div class="platform-preview-title">
+              <span id="preview-icon">📱</span>
+              <span id="preview-title">Preview</span>
+            </div>
+            <div class="platform-preview-content" id="preview-content">
+              Your content will appear here...
+            </div>
+          </div>
+
           <div class="modal-footer">
-            <button type="button" class="btn-secondary close-button">
-              Cancel
-            </button>
-            <button type="submit" id="save-post-button" class="btn-primary">
+            <button type="button" class="btn-secondary close-button">Cancel</button>
+            <button type="submit" class="btn-primary" id="submit-post">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20,6 9,17 4,12"></polyline>
+              </svg>
               Submit Proposal
             </button>
           </div>
@@ -559,1151 +1000,1019 @@
     </div>
 
     <!-- Post Details Modal -->
-    <div id="details-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h2 id="details-title">Post Details</h2>
-                <button class="close-button" aria-label="Close">×</button>
-            </div>
-            <div class="details-container">
-                <div class="details-grid">
-                    <div class="details-main">
-                        <div class="detail-section">
-                            <h4>
-                              <span class="emoji">📝</span>
-                              Post Content
-                            </h4>
-                            <div id="details-content" class="details-content-box">Loading content...</div>
-                        </div>
-                        
-                        <div id="notes-section" class="detail-section" style="display: none;">
-                            <h4>
-                              <span class="emoji">📋</span>
-                              Additional Notes
-                            </h4>
-                            <div id="details-notes" class="details-content-box">No additional notes provided.</div>
-                        </div>
-                        
-                        <div class="detail-section">
-                            <h4>
-                              <span class="emoji">💬</span>
-                              Activity & Comments
-                            </h4>
-                            <div class="comment-box">
-                                <textarea id="comment-input" placeholder="Add a comment or update about this post..." maxlength="500"></textarea>
-                                <button id="add-comment-button" class="btn-primary">Post Comment</button>
-                            </div>
-                            <div id="details-activity-feed" class="activity-feed">
-                                <div class="activity-item">
-                                    <p style="color: #64748b; font-style: italic; text-align: center;">No comments yet. Be the first to add one!</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-        
-                    <aside class="details-sidebar">
-                        <div class="sidebar-section">
-                            <h4>Status</h4>
-                            <div id="details-status-container">
-                                <div id="details-status" class="status-indicator">Loading...</div>
-                            </div>
-                        </div>
-    
-                        <div class="sidebar-section">
-                            <h4>Platform</h4>
-                            <div id="details-platform-container">
-                                <div id="details-platform" class="platform-display">
-                                    <span>🔄</span>
-                                    <span>Loading...</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="sidebar-section">
-                            <h4>Key People</h4>
-                            <p><strong>Proposed by:</strong> <span id="details-proposer">Unknown</span></p>
-                            <div id="assignment-display">
-                                <p><strong>Assigned to:</strong> <span id="details-assignee">Not Assigned</span></p>
-                                <div id="assignee-info" class="assignee-info" style="display: none;">
-                                    <div id="assignee-avatar" class="assignee-avatar">A</div>
-                                    <span id="assignee-name">Assignee Name</span>
-                                </div>
-                            </div>
-                            
-                            <div id="assign-user-section" class="admin-only details-form" style="margin-top: 12px; display: none;">
-                                <label for="user-dropdown" style="font-size: 0.9rem; margin-bottom: 8px; display: block;">Assign to:</label>
-                                <div style="display: flex; gap: 8px;">
-                                    <select id="user-dropdown" style="flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
-                                        <option value="">Select User</option>
-                                    </select>
-                                    <button id="assign-user-button" class="btn-secondary">Assign</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="sidebar-section">
-                            <h4>Target Post Date</h4>
-                            <p id="details-deadline" style="font-weight: 500; color: #007AFF; font-size: 1.1rem;">Not set</p>
-                            <div id="deadline-urgency" style="margin-top: 8px; font-size: 0.85rem;"></div>
-                        </div>
-    
-                        <div id="admin-approval-section" class="sidebar-section admin-only" style="display: none;">
-                            <h4>Admin Actions</h4>
-                            <div class="button-group" style="gap: 8px;">
-                                <button id="approve-button" class="btn-success">
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="20,6 9,17 4,12"></polyline>
-                                  </svg>
-                                  Approve
-                                </button>
-                                <button id="reject-button" class="btn-danger">
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                  </svg>
-                                  Reject
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div id="mark-posted-section" class="sidebar-section" style="display: none;">
-                            <h4>Mark as Posted</h4>
-                            <button id="mark-posted-button" class="btn-success" style="width: 100%;">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20,6 9,17 4,12"></polyline>
-                              </svg>
-                              Mark as Posted
-                            </button>
-                            <div class="form-help" style="text-align: center; margin-top: 8px;">
-                              <small>Click when the post has been published</small>
-                            </div>
-                        </div>
-                        
-                        <div id="delete-section" class="sidebar-section" style="display: none;">
-                            <h4 style="color: #ef4444;">Danger Zone</h4>
-                            <button id="delete-post-button" class="btn-danger" style="width: 100%;">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3,6 5,6 21,6"></polyline>
-                                <path d="m19,6v14a2,2 0 0 1 -2,2H7a2,2 0 0 1 -2,-2V6m3,0V4a2,2 0 0 1 2,-2h4a2,2 0 0 1 2,2v2"></path>
-                              </svg>
-                              Delete Post
-                            </button>
-                        </div>
-                    </aside>
-                </div>
-            </div>
+    <div id="details-modal" class="modal-overlay">
+      <div class="modal-content details-modal">
+        <div class="modal-header">
+          <h2 id="details-title">Post Details</h2>
+          <button class="close-button" type="button">×</button>
         </div>
+
+        <div class="details-grid">
+          <!-- Main Content -->
+          <div class="details-main">
+            <div class="details-section">
+              <h3>
+                <span>📝</span>
+                Post Content
+              </h3>
+              <div class="content-display" id="details-content">
+                Loading content...
+              </div>
+            </div>
+
+            <div class="details-section" id="notes-section" style="display: none;">
+              <h3>
+                <span>📋</span>
+                Additional Notes
+              </h3>
+              <div class="content-display" id="details-notes">
+                No notes provided.
+              </div>
+            </div>
+
+            <div class="details-section">
+              <h3>
+                <span>💬</span>
+                Activity & Comments
+              </h3>
+              
+              <div class="comment-box">
+                <textarea id="comment-input" placeholder="Add a comment or update..." maxlength="500" rows="3"></textarea>
+                <button class="btn-primary" id="add-comment">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                  </svg>
+                  Post Comment
+                </button>
+              </div>
+
+              <div class="activity-feed" id="activity-feed">
+                <div class="activity-item">
+                  <p style="text-align: center; color: #94a3b8; font-style: italic;">Loading activity...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sidebar -->
+          <div class="details-sidebar">
+            <div class="sidebar-card">
+              <h4>Status</h4>
+              <div id="details-status" class="status-badge proposed">Proposed</div>
+            </div>
+
+            <div class="sidebar-card">
+              <h4>Platform</h4>
+              <div id="details-platform" class="platform-badge instagram">
+                <span>📸</span>
+                <span>Instagram</span>
+              </div>
+            </div>
+
+            <div class="sidebar-card">
+              <h4>Timeline</h4>
+              <p><strong>Created:</strong> <span id="details-created">Loading...</span></p>
+              <p><strong>Deadline:</strong> <span id="details-deadline">Loading...</span></p>
+              <div id="deadline-status"></div>
+            </div>
+
+            <div class="sidebar-card">
+              <h4>Team</h4>
+              <p><strong>Proposed by:</strong> <span id="details-proposer">Loading...</span></p>
+              <p><strong>Assigned to:</strong> <span id="details-assignee">Not assigned</span></p>
+              
+              <div id="assignment-section" class="admin-only" style="display: none; margin-top: 16px;">
+                <select id="assignee-select" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                  <option value="">Select assignee...</option>
+                </select>
+                <button class="btn-secondary" id="assign-btn" style="width: 100%;">Assign</button>
+              </div>
+            </div>
+
+            <!-- Admin Actions -->
+            <div class="sidebar-card admin-only" id="admin-actions" style="display: none;">
+              <h4>Admin Actions</h4>
+              <div style="display: grid; gap: 8px;">
+                <button class="btn-success" id="approve-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20,6 9,17 4,12"></polyline>
+                  </svg>
+                  Approve
+                </button>
+                <button class="btn-danger" id="reject-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                  Reject
+                </button>
+              </div>
+            </div>
+
+            <!-- Status Actions -->
+            <div class="sidebar-card" id="status-actions">
+              <h4>Actions</h4>
+              <div id="action-buttons"></div>
+            </div>
+
+            <!-- Delete Section -->
+            <div class="sidebar-card" id="delete-section" style="display: none;">
+              <h4 style="color: #ef4444;">Danger Zone</h4>
+              <button class="btn-danger" id="delete-btn" style="width: 100%;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3,6 5,6 21,6"></polyline>
+                  <path d="m19,6v14a2,2 0 0 1 -2,2H7a2,2 0 0 1 -2,-2V6m3,0V4a2,2 0 0 1 2,-2h4a2,2 0 0 1 2,2v2"></path>
+                </svg>
+                Delete Post
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
+    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
+
     <script>
-// ===============================
-// Catalyst Tracker - Social Media Planner JS
-// ===============================
+      // ===============================
+      // Enhanced Social Media Planner
+      // ===============================
 
-// ---- Firebase Configuration ----
-const firebaseConfig = {
-    apiKey: "AIzaSyBT6urJvPCtuYQ1c2iH77QTDfzE3yGw-Xk",
-    authDomain: "catalystmonday.firebaseapp.com",
-    projectId: "catalystmonday",
-    storageBucket: "catalystmonday.appspot.com",
-    messagingSenderId: "394311851220",
-    appId: "1:394311851220:web:86e4939b7d5a085b46d75d"
-};
+      // Firebase Configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyBT6urJvPCtuYQ1c2iH77QTDfzE3yGw-Xk",
+        authDomain: "catalystmonday.firebaseapp.com",
+        projectId: "catalystmonday",
+        storageBucket: "catalystmonday.appspot.com",
+        messagingSenderId: "394311851220",
+        appId: "1:394311851220:web:86e4939b7d5a085b46d75d"
+      };
 
-// Initialize Firebase with error handling
-try {
-    if (!firebase.apps.length) {
+      // Initialize Firebase
+      if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
-        console.log("[FIREBASE] Firebase initialized successfully");
-    }
-} catch (initError) {
-    console.error("[FIREBASE] Firebase initialization failed:", initError);
-    showNotification("Failed to connect to the database. Please refresh the page.", 'error');
-}
+      }
 
-const auth = firebase.auth();
-const db = firebase.firestore();
+      const auth = firebase.auth();
+      const db = firebase.firestore();
 
-// ---- App State ----
-let currentUser = null, currentUserName = null, currentUserRole = null;
-let allPosts = [], allUsers = [];
-let currentlyViewedPostId = null;
+      // App State
+      let currentUser = null;
+      let currentUserName = null;
+      let currentUserRole = null;
+      let allPosts = [];
+      let allUsers = [];
+      let currentPostId = null;
 
-// ======================
-//  Initialization
-// ======================
-auth.onAuthStateChanged(async (user) => {
-    if (!user) {
-        window.location.href = 'index.html';
-        return;
-    }
-    currentUser = user;
+      // Platform Configuration
+      const PLATFORMS = {
+        instagram: {
+          name: 'Instagram',
+          icon: '📸',
+          color: 'instagram',
+          charLimit: 2200,
+          suggestions: 'Use engaging visuals, relevant hashtags (5-10), and clear CTAs. Stories perform well with polls and questions.'
+        },
+        linkedin: {
+          name: 'LinkedIn',
+          icon: '💼',
+          color: 'linkedin',
+          charLimit: 1300,
+          suggestions: 'Professional tone, industry insights, and networking opportunities. Ask thoughtful questions to drive engagement.'
+        },
+        twitter: {
+          name: 'Twitter',
+          icon: '🐦',
+          color: 'twitter',
+          charLimit: 280,
+          suggestions: 'Concise, timely content with relevant hashtags (1-2). Use threads for longer stories.'
+        },
+        facebook: {
+          name: 'Facebook',
+          icon: '📘',
+          color: 'facebook',
+          charLimit: 2000,
+          suggestions: 'Community-focused content that encourages discussion. Use native video when possible.'
+        }
+      };
 
-    try {
-        console.log("[INIT] User authenticated:", user.uid);
-        
-        // Get user profile
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        
-        if (!userDoc.exists) {
-            console.warn("[INIT] User document not found, creating default profile");
-            const defaultUserData = {
-                name: user.displayName || user.email.split('@')[0],
-                email: user.email,
-                role: 'writer',
-                createdAt: new Date()
-            };
-            
-            await db.collection('users').doc(user.uid).set(defaultUserData);
-            currentUserName = defaultUserData.name;
-            currentUserRole = defaultUserData.role;
-        } else {
-            const userData = userDoc.data();
-            currentUserName = userData.name || user.displayName || user.email.split('@')[0];
-            currentUserRole = userData.role || 'writer';
+      // Column Configuration
+      const COLUMNS = {
+        proposed: { title: 'Proposed', icon: '💡', color: 'column-proposed' },
+        approved: { title: 'Approved', icon: '✅', color: 'column-approved' },
+        assigned: { title: 'Assigned', icon: '👤', color: 'column-assigned' },
+        posted: { title: 'Posted', icon: '🚀', color: 'column-posted' }
+      };
+
+      // ===============================
+      // Initialization
+      // ===============================
+
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+          window.location.href = 'index.html';
+          return;
         }
 
-        await fetchAllUsers();
-        setupUI();
-        setupListeners();
-        subscribeToPosts();
+        try {
+          currentUser = user;
+          await loadUserProfile();
+          await loadUsers();
+          setupUI();
+          setupEventListeners();
+          subscribeToPosts();
 
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('app-container').style.display = 'flex';
-        
-        console.log("[INIT] Social Media Planner initialized successfully");
-        
-    } catch (error) {
-        console.error("Initialization Error:", error);
-        showNotification("Could not load your profile. Please refresh and try again.", 'error');
-    }
-});
+          document.getElementById('loader').style.display = 'none';
+          document.getElementById('app-container').style.display = 'flex';
+        } catch (error) {
+          console.error('Initialization error:', error);
+          showNotification('Failed to load the application. Please refresh and try again.', 'error');
+        }
+      });
 
-async function fetchAllUsers() {
-    try {
-        console.log("[INIT] Fetching all users...");
+      async function loadUserProfile() {
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          currentUserName = userData.name;
+          currentUserRole = userData.role;
+        } else {
+          // Create default user profile
+          currentUserName = currentUser.displayName || currentUser.email.split('@')[0];
+          currentUserRole = 'writer';
+          await db.collection('users').doc(currentUser.uid).set({
+            name: currentUserName,
+            email: currentUser.email,
+            role: currentUserRole,
+            createdAt: new Date()
+          });
+        }
+      }
+
+      async function loadUsers() {
         const usersSnapshot = await db.collection('users').get();
         allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log("[INIT] Found", allUsers.length, "users");
-    } catch (error) {
-        console.error("Error fetching users:", error);
-        allUsers = [];
-    }
-}
+      }
 
-function setupUI() {
-    // Set up user info in sidebar
-    document.getElementById('user-name').textContent = currentUserName;
-    document.getElementById('user-role').textContent = currentUserRole;
-    const avatar = document.getElementById('user-avatar');
-    avatar.textContent = currentUserName.charAt(0).toUpperCase();
-    avatar.style.backgroundColor = stringToColor(currentUserName);
-    
-    // Show admin features if user is admin
-    if (currentUserRole === 'admin') {
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
-    }
+      function setupUI() {
+        // Update user info
+        document.getElementById('user-name').textContent = currentUserName;
+        document.getElementById('user-role').textContent = currentUserRole;
+        const avatar = document.getElementById('user-avatar');
+        avatar.textContent = currentUserName.charAt(0).toUpperCase();
+        avatar.style.backgroundColor = stringToColor(currentUserName);
 
-    // Set default deadline to tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    document.getElementById('post-deadline').value = tomorrow.toISOString().split('T')[0];
-}
-
-// ==================
-//  Event Listeners
-// ==================
-function setupListeners() {
-    // Navigation and basic controls
-    document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-    document.getElementById('add-post-button').addEventListener('click', openPostModal);
-    document.getElementById('post-form').addEventListener('submit', handlePostFormSubmit);
-    
-    // Modal close listeners
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-        modal.addEventListener('click', e => {
-            if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('close-button')) {
-                closeAllModals();
-            }
-        });
-    });
-
-    // Action buttons
-    document.getElementById('approve-button').addEventListener('click', () => updatePostStatus('approved'));
-    document.getElementById('reject-button').addEventListener('click', () => handleRejectPost());
-    document.getElementById('assign-user-button').addEventListener('click', handleAssignUser);
-    document.getElementById('mark-posted-button').addEventListener('click', () => updatePostStatus('posted'));
-    document.getElementById('add-comment-button').addEventListener('click', handleAddComment);
-    document.getElementById('delete-post-button').addEventListener('click', handleDeletePost);
-
-    // Character counter for content
-    const contentTextarea = document.getElementById('post-content');
-    const characterCounter = document.getElementById('character-counter');
-    
-    contentTextarea.addEventListener('input', () => {
-        const length = contentTextarea.value.length;
-        characterCounter.textContent = `${length} / 2000`;
-        
-        characterCounter.className = 'character-counter';
-        if (length > 1800) {
-            characterCounter.classList.add('error');
-        } else if (length > 1500) {
-            characterCounter.classList.add('warning');
+        // Show admin features
+        if (currentUserRole === 'admin') {
+          document.querySelectorAll('.admin-only').forEach(el => {
+            el.style.display = 'block';
+          });
         }
-    });
 
-    // Form validation
-    setupFormValidation();
-}
+        // Set default deadline
+        setDefaultDeadline();
+      }
 
-function setupFormValidation() {
-    const form = document.getElementById('post-form');
-    const inputs = form.querySelectorAll('input[required], textarea[required], select[required]');
-    
-    inputs.forEach(input => {
-        input.addEventListener('blur', () => {
-            if (input.value.trim()) {
-                input.style.borderColor = '#10b981';
-            }
+      function setDefaultDeadline() {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('post-deadline').value = tomorrow.toISOString().split('T')[0];
+      }
+
+      // ===============================
+      // Event Listeners
+      // ===============================
+
+      function setupEventListeners() {
+        // Navigation
+        document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+
+        // Modal controls
+        document.getElementById('fab-new-post').addEventListener('click', openPostModal);
+        document.querySelectorAll('.close-button').forEach(btn => {
+          btn.addEventListener('click', closeAllModals);
         });
-        
-        input.addEventListener('invalid', () => {
-            input.style.borderColor = '#ef4444';
-        });
-    });
-}
 
-// ==================
-//  Data Handling
-// ==================
-function subscribeToPosts() {
-    console.log("[FIREBASE] Setting up social posts subscription...");
-    
-    db.collection('social_posts').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
-        console.log("[FIREBASE] Social posts updated, processing...");
-        
-        allPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderKanbanBoard(allPosts);
-        
-        // Update details modal if open
-        if (currentlyViewedPostId) {
-            const post = allPosts.find(p => p.id === currentlyViewedPostId);
+        // Form submission
+        document.getElementById('post-form').addEventListener('submit', handleFormSubmit);
+
+        // Content input handlers
+        setupContentHandlers();
+
+        // Details modal handlers
+        setupDetailsHandlers();
+
+        // Click outside to close modals
+        document.addEventListener('click', (e) => {
+          if (e.target.classList.contains('modal-overlay')) {
+            closeAllModals();
+          }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeAllModals();
+          if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            openPostModal();
+          }
+        });
+      }
+
+      function setupContentHandlers() {
+        const contentTextarea = document.getElementById('post-content');
+        const platformSelect = document.getElementById('post-platform');
+        const characterCounter = document.getElementById('character-counter');
+        const contentHelp = document.getElementById('content-help');
+        const preview = document.getElementById('platform-preview');
+        const previewContent = document.getElementById('preview-content');
+
+        // Character counter
+        contentTextarea.addEventListener('input', () => {
+          const length = contentTextarea.value.length;
+          characterCounter.textContent = `${length} / 2000`;
+
+          characterCounter.className = 'character-counter';
+          if (length > 1800) characterCounter.classList.add('error');
+          else if (length > 1500) characterCounter.classList.add('warning');
+
+          updatePreview();
+        });
+
+        // Platform-specific guidance
+        platformSelect.addEventListener('change', () => {
+          const platform = platformSelect.value;
+          if (platform && PLATFORMS[platform]) {
+            const config = PLATFORMS[platform];
+            contentHelp.textContent = config.suggestions;
+            
+            // Show preview
+            document.getElementById('preview-icon').textContent = config.icon;
+            document.getElementById('preview-title').textContent = `${config.name} Preview`;
+            preview.style.display = 'block';
+            updatePreview();
+          } else {
+            preview.style.display = 'none';
+            contentHelp.textContent = 'Write engaging content that resonates with your audience';
+          }
+        });
+
+        function updatePreview() {
+          const content = contentTextarea.value;
+          const platform = platformSelect.value;
+          
+          if (content && platform && PLATFORMS[platform]) {
+            previewContent.textContent = content || 'Your content will appear here...';
+            previewContent.style.fontStyle = content ? 'normal' : 'italic';
+            previewContent.style.color = content ? '#1d1d1f' : '#94a3b8';
+          }
+        }
+      }
+
+      function setupDetailsHandlers() {
+        document.getElementById('add-comment').addEventListener('click', handleAddComment);
+        document.getElementById('approve-btn').addEventListener('click', () => updatePostStatus('approved'));
+        document.getElementById('reject-btn').addEventListener('click', handleRejectPost);
+        document.getElementById('assign-btn').addEventListener('click', handleAssignPost);
+        document.getElementById('delete-btn').addEventListener('click', handleDeletePost);
+      }
+
+      // ===============================
+      // Data Management
+      // ===============================
+
+      function subscribeToPosts() {
+        db.collection('social_posts').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+          allPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          renderBoard();
+          updateStats();
+          
+          // Update details modal if open
+          if (currentPostId) {
+            const post = allPosts.find(p => p.id === currentPostId);
             if (post) {
-                refreshDetailsModal(post);
+              updateDetailsModal(post);
             } else {
-                closeAllModals();
+              closeAllModals();
             }
-        }
-    }, error => {
-        console.error("[FIREBASE ERROR] Social posts subscription failed:", error);
-        showNotification("Failed to load social posts. Please refresh the page.", 'error');
-    });
-}
+          }
+        });
+      }
 
-// ==================
-//  Kanban Board
-// ==================
-function renderKanbanBoard(posts) {
-    console.log(`[RENDER] Rendering ${posts.length} social media posts`);
-    const board = document.getElementById('kanban-board');
-    board.innerHTML = '';
-    
-    const columns = [
-        { title: "Proposed", status: "proposed", color: "#fb923c", icon: "💡" },
-        { title: "Approved", status: "approved", color: "#22c55e", icon: "✅" }, 
-        { title: "Assigned", status: "assigned", color: "#3b82f6", icon: "👤" },
-        { title: "Posted", status: "posted", color: "#a855f7", icon: "🚀" }
-    ];
-    
-    columns.forEach(column => {
-        const columnPosts = posts.filter(post => post.status === column.status);
-        console.log(`[COLUMN] "${column.title}" has ${columnPosts.length} posts`);
-        
-        const columnEl = document.createElement('div');
-        columnEl.className = 'kanban-column';
-        columnEl.innerHTML = `
-            <div class="column-header">
-                <div class="column-title">
-                    <span class="column-title-text">${column.icon} ${column.title}</span>
-                    <span class="task-count" style="background-color: ${column.color}20; color: ${column.color};">${columnPosts.length}</span>
-                </div>
+      function updateStats() {
+        const stats = {
+          total: allPosts.length,
+          pending: allPosts.filter(p => p.status === 'proposed').length,
+          scheduled: allPosts.filter(p => p.status === 'approved' || p.status === 'assigned').length,
+          posted: allPosts.filter(p => p.status === 'posted').length
+        };
+
+        document.getElementById('stat-total').textContent = stats.total;
+        document.getElementById('stat-pending').textContent = stats.pending;
+        document.getElementById('stat-scheduled').textContent = stats.scheduled;
+        document.getElementById('stat-posted').textContent = stats.posted;
+      }
+
+      // ===============================
+      // Board Rendering
+      // ===============================
+
+      function renderBoard() {
+        const board = document.getElementById('kanban-board');
+        board.innerHTML = '';
+
+        Object.entries(COLUMNS).forEach(([status, config]) => {
+          const posts = allPosts.filter(post => post.status === status);
+          const column = createColumn(status, config, posts);
+          board.appendChild(column);
+        });
+      }
+
+      function createColumn(status, config, posts) {
+        const column = document.createElement('div');
+        column.className = `kanban-column ${config.color}`;
+
+        column.innerHTML = `
+          <div class="column-header">
+            <div class="column-title">
+              <div class="column-title-main">
+                <span class="column-icon">${config.icon}</span>
+                <span class="column-title-text">${config.title}</span>
+              </div>
+              <span class="task-count">${posts.length}</span>
             </div>
-            <div class="column-content">
-                <div class="kanban-cards"></div>
-            </div>
+          </div>
+          <div class="column-content">
+            <div class="kanban-cards"></div>
+          </div>
         `;
-        
-        const cardsContainer = columnEl.querySelector('.kanban-cards');
-        if (columnPosts.length === 0) {
-            cardsContainer.innerHTML = `
-                <div class="empty-column-message">
-                    <div style="font-size: 2rem; margin-bottom: 12px; opacity: 0.5;">${column.icon}</div>
-                    No ${column.title.toLowerCase()} posts yet
-                </div>
-            `;
-        } else {
-            columnPosts.forEach(post => {
-                cardsContainer.appendChild(createPostCard(post));
-            });
-        }
-        
-        board.appendChild(columnEl);
-    });
-}
 
-function createPostCard(post) {
-    const card = document.createElement('div');
-    card.className = 'kanban-card';
-    card.dataset.id = post.id;
-    
-    // Determine card styling based on status and urgency
-    const today = new Date();
-    const postDate = new Date(post.deadline + 'T23:59:59');
-    const daysUntil = Math.ceil((postDate - today) / (1000 * 60 * 60 * 24));
-    
-    let cardClass = '';
-    if (post.status !== 'posted') {
-        if (daysUntil < 0) {
-            cardClass = 'overdue-card';
-        } else if (daysUntil <= 2) {
-            cardClass = 'due-soon-card';
+        const cardsContainer = column.querySelector('.kanban-cards');
+
+        if (posts.length === 0) {
+          cardsContainer.appendChild(createEmptyState(status));
+        } else {
+          posts.forEach(post => {
+            cardsContainer.appendChild(createPostCard(post));
+          });
         }
-    }
-    
-    if (cardClass) {
-        card.classList.add(cardClass);
-    }
-    
-    // Platform styling
-    const platformClass = `platform-${post.platform.toLowerCase()}`;
-    const platformIcon = getPlatformIcon(post.platform);
-    
-    // Truncate content for card preview
-    const truncatedContent = post.content.length > 150 ? post.content.substring(0, 150) + '...' : post.content;
-    
-    // Deadline formatting
-    const deadlineText = postDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        year: postDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-    });
-    
-    let deadlineClass = '';
-    let urgencyIndicator = '';
-    if (post.status !== 'posted') {
-        if (daysUntil < 0) {
-            deadlineClass = 'overdue';
-            urgencyIndicator = `<span style="color: #ef4444; font-weight: 700;">⚠️ ${Math.abs(daysUntil)} days overdue</span>`;
-        } else if (daysUntil <= 2) {
-            deadlineClass = 'due-soon';
-            urgencyIndicator = `<span style="color: #f59e0b; font-weight: 600;">⏰ Due in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}</span>`;
-        }
-    }
-    
-    card.innerHTML = `
-        <h4 class="card-title">${post.title}</h4>
-        <div class="card-meta" style="margin-bottom: 12px;">
-            <span class="platform-badge ${platformClass}">${platformIcon} ${post.platform}</span>
-            <span class="card-status status-${post.status}">${post.status.charAt(0).toUpperCase() + post.status.slice(1)}</span>
-        </div>
-        <div class="card-content-preview">${truncatedContent}</div>
-        <div class="card-footer">
+
+        return column;
+      }
+
+      function createEmptyState(status) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-column';
+
+        const messages = {
+          proposed: { icon: '💡', text: 'No proposals yet', sub: 'Create your first post!' },
+          approved: { icon: '⏳', text: 'No approved posts', sub: 'Waiting for approvals...' },
+          assigned: { icon: '👤', text: 'No assigned posts', sub: 'Ready for assignment' },
+          posted: { icon: '🎉', text: 'No posted content', sub: 'Published posts appear here' }
+        };
+
+        const msg = messages[status];
+        empty.innerHTML = `
+          <div class="empty-column-icon">${msg.icon}</div>
+          <div class="empty-column-text">${msg.text}</div>
+          <div class="empty-column-subtext">${msg.sub}</div>
+        `;
+
+        return empty;
+      }
+
+      function createPostCard(post) {
+        const card = document.createElement('div');
+        card.className = `kanban-card ${PLATFORMS[post.platform]?.color || ''}`;
+        card.dataset.id = post.id;
+
+        // Calculate deadline status
+        const deadlineInfo = getDeadlineInfo(post.deadline);
+        if (deadlineInfo.isOverdue) card.classList.add('overdue');
+        else if (deadlineInfo.isDueSoon) card.classList.add('due-soon');
+
+        const platform = PLATFORMS[post.platform] || { name: post.platform, icon: '📱' };
+        
+        card.innerHTML = `
+          <div class="card-title">${post.title}</div>
+          <div class="card-meta">
+            <span class="platform-badge ${platform.color}">
+              <span>${platform.icon}</span>
+              <span>${platform.name}</span>
+            </span>
+            <span class="status-badge ${post.status}">${post.status}</span>
+          </div>
+          <div class="card-content-preview">${truncateText(post.content, 120)}</div>
+          <div class="card-footer">
             <div class="card-author">
-                <div class="user-avatar" style="background: ${stringToColor(post.proposerName)}; width: 24px; height: 24px; font-size: 11px;">
-                    ${post.proposerName.charAt(0)}
-                </div>
-                <span>By ${post.proposerName}</span>
+              <div class="user-avatar" style="background: ${stringToColor(post.proposerName)}">
+                ${post.proposerName.charAt(0)}
+              </div>
+              <span>${post.proposerName}</span>
             </div>
-            <div class="card-deadline ${deadlineClass}">
-                ${deadlineText}
+            <div class="card-deadline ${deadlineInfo.class}">
+              ${deadlineInfo.text}
             </div>
-        </div>
-        ${urgencyIndicator ? `<div style="margin-top: 8px; text-align: center; font-size: 0.8rem;">${urgencyIndicator}</div>` : ''}
-        ${post.assigneeName && post.status === 'assigned' ? `
-            <div style="margin-top: 8px; padding: 6px 10px; background: #e0f2fe; border-radius: 6px; font-size: 0.8rem; text-align: center;">
-                📌 Assigned to ${post.assigneeName}
+          </div>
+          ${post.assigneeName && post.status === 'assigned' ? `
+            <div class="card-assignment">
+              📌 Assigned to ${post.assigneeName}
             </div>
-        ` : ''}
-    `;
-    
-    card.addEventListener('click', () => openDetailsModal(post.id));
-    return card;
-}
+          ` : ''}
+        `;
 
-function getPlatformIcon(platform) {
-    const icons = {
-        'Instagram': '📸',
-        'LinkedIn': '💼', 
-        'Twitter': '🐦',
-        'Facebook': '📘'
-    };
-    return icons[platform] || '📱';
-}
+        card.addEventListener('click', () => openDetailsModal(post.id));
+        return card;
+      }
 
-// =================
-// Modals
-// =================
-function openPostModal() {
-    const postForm = document.getElementById('post-form');
-    postForm.reset();
-    postForm.classList.remove('was-validated');
+      // ===============================
+      // Modal Management
+      // ===============================
 
-    // Set default deadline to tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    document.getElementById('post-deadline').value = tomorrow.toISOString().split('T')[0];
-    
-    // Reset character counter
-    document.getElementById('character-counter').textContent = '0 / 2000';
-    document.getElementById('character-counter').className = 'character-counter';
-    
-    document.getElementById('modal-title').textContent = 'Propose New Social Media Post';
-    document.getElementById('post-modal').style.display = 'flex';
-    
-    // Focus on title field
-    setTimeout(() => document.getElementById('post-title').focus(), 100);
-}
+      function openPostModal() {
+        document.getElementById('post-form').reset();
+        setDefaultDeadline();
+        document.getElementById('character-counter').textContent = '0 / 2000';
+        document.getElementById('character-counter').className = 'character-counter';
+        document.getElementById('platform-preview').style.display = 'none';
+        document.getElementById('post-modal').style.display = 'flex';
+        setTimeout(() => document.getElementById('post-title').focus(), 100);
+      }
 
-function openDetailsModal(postId) {
-    const post = allPosts.find(p => p.id === postId);
-    if (!post) return;
-    currentlyViewedPostId = postId;
-    refreshDetailsModal(post);
-    document.getElementById('details-modal').style.display = 'flex';
-}
+      function openDetailsModal(postId) {
+        currentPostId = postId;
+        const post = allPosts.find(p => p.id === postId);
+        if (!post) return;
 
-function closeAllModals() {
-    document.querySelectorAll('.modal-overlay').forEach(modal => modal.style.display = 'none');
-    currentlyViewedPostId = null;
-}
+        updateDetailsModal(post);
+        loadActivity(postId);
+        document.getElementById('details-modal').style.display = 'flex';
+      }
 
-function refreshDetailsModal(post) {
-    // Basic information
-    document.getElementById('details-title').textContent = post.title;
-    document.getElementById('details-content').textContent = post.content;
-    document.getElementById('details-proposer').textContent = post.proposerName;
-    
-    // Platform display with icon
-    const platformIcon = getPlatformIcon(post.platform);
-    const platformContainer = document.getElementById('details-platform-container');
-    platformContainer.innerHTML = `
-        <div class="platform-display">
-            <span class="platform-icon">${platformIcon}</span>
-            <span>${post.platform}</span>
-        </div>
-    `;
+      function updateDetailsModal(post) {
+        // Basic info
+        document.getElementById('details-title').textContent = post.title;
+        document.getElementById('details-content').textContent = post.content;
+        document.getElementById('details-proposer').textContent = post.proposerName;
+        document.getElementById('details-assignee').textContent = post.assigneeName || 'Not assigned';
 
-    // Status display with proper styling
-    const statusContainer = document.getElementById('details-status-container');
-    const statusClass = `status-${post.status}`;
-    statusContainer.innerHTML = `<div class="status-indicator ${statusClass}">${post.status.charAt(0).toUpperCase() + post.status.slice(1)}</div>`;
+        // Platform
+        const platform = PLATFORMS[post.platform] || { name: post.platform, icon: '📱' };
+        const platformEl = document.getElementById('details-platform');
+        platformEl.className = `platform-badge ${platform.color}`;
+        platformEl.innerHTML = `<span>${platform.icon}</span><span>${platform.name}</span>`;
 
-    // Assignment information
-    const assigneeDisplay = document.getElementById('details-assignee');
-    const assigneeInfo = document.getElementById('assignee-info');
-    const assigneeAvatar = document.getElementById('assignee-avatar');
-    const assigneeName = document.getElementById('assignee-name');
-    
-    if (post.assigneeName) {
-        assigneeDisplay.textContent = post.assigneeName;
-        assigneeAvatar.textContent = post.assigneeName.charAt(0);
-        assigneeAvatar.style.backgroundColor = stringToColor(post.assigneeName);
-        assigneeName.textContent = post.assigneeName;
-        assigneeInfo.style.display = 'flex';
-    } else {
-        assigneeDisplay.textContent = 'Not Assigned';
-        assigneeInfo.style.display = 'none';
-    }
-    
-    // Deadline with urgency indicator
-    const postDate = new Date(post.deadline + 'T23:59:59');
-    const today = new Date();
-    const daysUntil = Math.ceil((postDate - today) / (1000 * 60 * 60 * 24));
-    
-    document.getElementById('details-deadline').textContent = postDate.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        weekday: 'long'
-    });
+        // Status
+        const statusEl = document.getElementById('details-status');
+        statusEl.className = `status-badge ${post.status}`;
+        statusEl.textContent = post.status.charAt(0).toUpperCase() + post.status.slice(1);
 
-    // Urgency indicator
-    const urgencyElement = document.getElementById('deadline-urgency');
-    if (post.status !== 'posted') {
-        if (daysUntil < 0) {
-            urgencyElement.innerHTML = `<span style="color: #ef4444; font-weight: 600;">⚠️ ${Math.abs(daysUntil)} days overdue</span>`;
-        } else if (daysUntil === 0) {
-            urgencyElement.innerHTML = `<span style="color: #f59e0b; font-weight: 600;">📅 Due today</span>`;
-        } else if (daysUntil <= 2) {
-            urgencyElement.innerHTML = `<span style="color: #f59e0b; font-weight: 600;">⏰ Due in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}</span>`;
+        // Dates
+        document.getElementById('details-created').textContent = formatDate(post.createdAt);
+        document.getElementById('details-deadline').textContent = formatDate(post.deadline, true);
+
+        // Deadline status
+        const deadlineInfo = getDeadlineInfo(post.deadline);
+        const deadlineStatus = document.getElementById('deadline-status');
+        deadlineStatus.innerHTML = deadlineInfo.isOverdue ? 
+          `<span style="color: #ef4444; font-weight: 600;">⚠️ ${Math.abs(deadlineInfo.daysUntil)} days overdue</span>` :
+          deadlineInfo.isDueSoon ?
+          `<span style="color: #f59e0b; font-weight: 600;">⏰ Due in ${deadlineInfo.daysUntil} days</span>` :
+          `<span style="color: #64748b;">📅 ${deadlineInfo.daysUntil} days remaining</span>`;
+
+        // Notes
+        const notesSection = document.getElementById('notes-section');
+        const notesEl = document.getElementById('details-notes');
+        if (post.notes && post.notes.trim()) {
+          notesEl.textContent = post.notes;
+          notesSection.style.display = 'block';
         } else {
-            urgencyElement.innerHTML = `<span style="color: #64748b;">📆 ${daysUntil} days remaining</span>`;
+          notesSection.style.display = 'none';
         }
-    } else {
-        urgencyElement.innerHTML = `<span style="color: #10b981; font-weight: 600;">✅ Posted</span>`;
-    }
 
-    // Notes section
-    const notesSection = document.getElementById('notes-section');
-    const notesContent = document.getElementById('details-notes');
-    if (post.notes && post.notes.trim()) {
-        notesContent.textContent = post.notes;
-        notesSection.style.display = 'block';
-    } else {
-        notesSection.style.display = 'none';
-    }
+        // Action buttons based on permissions and status
+        updateActionButtons(post);
+      }
 
-    // Permission-based UI
-    const isAdmin = currentUserRole === 'admin';
-    const isAssignee = currentUser.uid === post.assigneeId;
-    const isProposer = currentUser.uid === post.proposerId;
+      function updateActionButtons(post) {
+        const isAdmin = currentUserRole === 'admin';
+        const isProposer = currentUser.uid === post.proposerId;
+        const isAssignee = currentUser.uid === post.assigneeId;
 
-    document.getElementById('admin-approval-section').style.display = 
-        isAdmin && post.status === 'proposed' ? 'block' : 'none';
-    
-    document.getElementById('assign-user-section').style.display = 
-        isAdmin && post.status === 'approved' ? 'flex' : 'none';
-    
-    document.getElementById('mark-posted-section').style.display = 
-        (isAdmin || isAssignee) && post.status === 'assigned' ? 'block' : 'none';
-    
-    document.getElementById('delete-section').style.display = 
-        (isAdmin || (isProposer && (post.status === 'proposed' || post.status === 'rejected'))) ? 'block' : 'none';
-    
-    if (isAdmin && post.status === 'approved') {
-        populateUserDropdown(post.assigneeId);
-    }
+        // Admin actions
+        const adminActions = document.getElementById('admin-actions');
+        adminActions.style.display = isAdmin && post.status === 'proposed' ? 'block' : 'none';
 
-    loadPostActivity(post.id);
-}
+        // Assignment section
+        const assignmentSection = document.getElementById('assignment-section');
+        if (isAdmin && post.status === 'approved') {
+          assignmentSection.style.display = 'block';
+          populateAssigneeSelect(post.assigneeId);
+        } else {
+          assignmentSection.style.display = 'none';
+        }
 
-function populateUserDropdown(currentAssigneeId) {
-    const dropdown = document.getElementById('user-dropdown');
-    dropdown.innerHTML = '<option value="">Select User</option>';
-    
-    // Filter to show all users, but prioritize those who might handle social media
-    const sortedUsers = [...allUsers].sort((a, b) => {
-        // Prioritize admins and editors, then writers
-        const aScore = a.role === 'admin' ? 3 : a.role === 'editor' ? 2 : 1;
-        const bScore = b.role === 'admin' ? 3 : b.role === 'editor' ? 2 : 1;
-        if (aScore !== bScore) return bScore - aScore;
-        return a.name.localeCompare(b.name);
-    });
-    
-    sortedUsers.forEach(user => {
-        const option = document.createElement('option');
-        option.value = user.id;
-        option.textContent = `${user.name} (${user.role})`;
-        if (user.id === currentAssigneeId) option.selected = true;
-        dropdown.appendChild(option);
-    });
-}
+        // Status-specific actions
+        const actionButtons = document.getElementById('action-buttons');
+        actionButtons.innerHTML = '';
 
-// =================
-// Actions
-// =================
-async function handlePostFormSubmit(e) {
-    e.preventDefault();
-    const form = e.target;
-    form.classList.add('was-validated');
+        if ((isAdmin || isAssignee) && post.status === 'assigned') {
+          actionButtons.innerHTML = `
+            <button class="btn-success" id="mark-posted-btn" style="width: 100%;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20,6 9,17 4,12"></polyline>
+              </svg>
+              Mark as Posted
+            </button>
+          `;
+          document.getElementById('mark-posted-btn').addEventListener('click', () => updatePostStatus('posted'));
+        }
 
-    if (!form.checkValidity()) {
-        showNotification('Please fill out all required fields correctly.', 'error');
-        return;
-    }
-    
-    const submitButton = document.getElementById('save-post-button');
-    const originalText = submitButton.textContent;
-    submitButton.disabled = true;
-    submitButton.innerHTML = `
-        <div class="loader" style="width: 16px; height: 16px; border-width: 2px; margin-right: 8px;"></div>
-        Saving...
-    `;
-    
-    const newPost = {
-        title: document.getElementById('post-title').value.trim(), 
-        platform: document.getElementById('post-platform').value,
-        content: document.getElementById('post-content').value.trim(),
-        notes: document.getElementById('post-notes').value.trim(),
-        deadline: document.getElementById('post-deadline').value,
-        proposerId: currentUser.uid, 
-        proposerName: currentUserName,
-        assigneeId: null,
-        assigneeName: null,
-        status: 'proposed',
-        createdAt: new Date(),
-        updatedAt: new Date()
-    };
-    
-    try {
-        const docRef = await db.collection('social_posts').add(newPost);
+        // Delete button
+        const deleteSection = document.getElementById('delete-section');
+        const canDelete = isAdmin || (isProposer && (post.status === 'proposed' || post.status === 'rejected'));
+        deleteSection.style.display = canDelete ? 'block' : 'none';
+      }
+
+      function populateAssigneeSelect(currentAssigneeId) {
+        const select = document.getElementById('assignee-select');
+        select.innerHTML = '<option value="">Select assignee...</option>';
         
-        // Add initial activity log
-        await addActivityLog(docRef.id, `Post proposal created for ${newPost.platform}`, 'system');
-        
-        closeAllModals();
-        showNotification(`${newPost.platform} post proposal submitted successfully!`, 'success');
-        
-    } catch (error) {
-        console.error("Failed to create post:", error);
-        showNotification('Failed to create post. Please try again.', 'error');
-    } finally {
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalText;
-    }
-}
+        allUsers.forEach(user => {
+          const option = document.createElement('option');
+          option.value = user.id;
+          option.textContent = `${user.name} (${user.role})`;
+          if (user.id === currentAssigneeId) option.selected = true;
+          select.appendChild(option);
+        });
+      }
 
-async function updatePostStatus(newStatus) {
-    if (!currentlyViewedPostId) return;
-    
-    const post = allPosts.find(p => p.id === currentlyViewedPostId);
-    if (!post) return;
-    
-    try {
-        const updates = {
+      function closeAllModals() {
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+          modal.style.display = 'none';
+        });
+        currentPostId = null;
+      }
+
+      // ===============================
+      // Form Handling
+      // ===============================
+
+      async function handleFormSubmit(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submit-post');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `
+          <div class="loading-shimmer" style="width: 16px; height: 16px; border-radius: 50%; margin-right: 8px;"></div>
+          Creating...
+        `;
+
+        try {
+          const formData = {
+            title: document.getElementById('post-title').value.trim(),
+            platform: document.getElementById('post-platform').value,
+            content: document.getElementById('post-content').value.trim(),
+            notes: document.getElementById('post-notes').value.trim(),
+            deadline: document.getElementById('post-deadline').value,
+            proposerId: currentUser.uid,
+            proposerName: currentUserName,
+            status: 'proposed',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+
+          const docRef = await db.collection('social_posts').add(formData);
+          await addActivity(docRef.id, `Post proposal created for ${PLATFORMS[formData.platform].name}`, 'system');
+
+          closeAllModals();
+          showNotification(`${PLATFORMS[formData.platform].name} post proposal submitted successfully!`, 'success');
+
+        } catch (error) {
+          console.error('Error creating post:', error);
+          showNotification('Failed to create post. Please try again.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }
+      }
+
+      // ===============================
+      // Post Actions
+      // ===============================
+
+      async function updatePostStatus(newStatus) {
+        if (!currentPostId) return;
+
+        try {
+          const updates = {
             status: newStatus,
             updatedAt: new Date()
-        };
-        
-        // Add timestamp for posting
-        if (newStatus === 'posted') {
-            updates.postedAt = new Date();
-        }
-        
-        await db.collection('social_posts').doc(currentlyViewedPostId).update(updates);
-        
-        const actionText = newStatus === 'posted' ? 'marked the post as posted' : `changed status to ${newStatus}`;
-        await addActivityLog(currentlyViewedPostId, actionText, 'system');
-        
-        const statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
-        showNotification(`Post status updated to ${statusText}`, 'success');
-        
-    } catch (error) {
-        console.error(`Failed to update post status to ${newStatus}:`, error);
-        showNotification('Failed to update post status. Please try again.', 'error');
-    }
-}
+          };
 
-async function handleRejectPost() {
-    if (!currentlyViewedPostId) return;
-    
-    const reason = prompt('Please provide a reason for rejecting this post proposal (optional):');
-    
-    try {
-        const updates = {
+          if (newStatus === 'posted') {
+            updates.postedAt = new Date();
+          }
+
+          await db.collection('social_posts').doc(currentPostId).update(updates);
+          
+          const statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+          const actionText = newStatus === 'posted' ? 'marked post as posted' : `changed status to ${statusText}`;
+          await addActivity(currentPostId, actionText, 'system');
+
+          showNotification(`Post ${statusText.toLowerCase()} successfully!`, 'success');
+
+        } catch (error) {
+          console.error('Error updating status:', error);
+          showNotification('Failed to update post status.', 'error');
+        }
+      }
+
+      async function handleRejectPost() {
+        const reason = prompt('Please provide a reason for rejecting this post (optional):');
+        
+        try {
+          const updates = {
             status: 'rejected',
             updatedAt: new Date()
-        };
-        
-        if (reason && reason.trim()) {
-            updates.rejectionReason = reason.trim();
-        }
-        
-        await db.collection('social_posts').doc(currentlyViewedPostId).update(updates);
-        
-        const reasonText = reason ? ` Reason: ${reason.trim()}` : '';
-        await addActivityLog(currentlyViewedPostId, `rejected the post proposal.${reasonText}`, 'system');
-        
-        showNotification('Post proposal rejected', 'success');
-        
-    } catch (error) {
-        console.error('Failed to reject post:', error);
-        showNotification('Failed to reject post. Please try again.', 'error');
-    }
-}
+          };
 
-async function handleAssignUser() {
-    const dropdown = document.getElementById('user-dropdown');
-    const userId = dropdown.value;
-    if (!userId || !currentlyViewedPostId) {
-        showNotification('Please select a user to assign.', 'error');
-        return;
-    }
-    
-    const selectedUser = allUsers.find(u => u.id === userId);
-    if (!selectedUser) {
-        showNotification('Selected user not found.', 'error');
-        return;
-    }
-    
-    const assignButton = document.getElementById('assign-user-button');
-    const originalText = assignButton.textContent;
-    assignButton.disabled = true;
-    assignButton.textContent = 'Assigning...';
-    
-    try {
-        await db.collection('social_posts').doc(currentlyViewedPostId).update({
+          if (reason && reason.trim()) {
+            updates.rejectionReason = reason.trim();
+          }
+
+          await db.collection('social_posts').doc(currentPostId).update(updates);
+          
+          const reasonText = reason ? ` Reason: ${reason.trim()}` : '';
+          await addActivity(currentPostId, `rejected post proposal.${reasonText}`, 'system');
+
+          showNotification('Post proposal rejected', 'success');
+
+        } catch (error) {
+          console.error('Error rejecting post:', error);
+          showNotification('Failed to reject post.', 'error');
+        }
+      }
+
+      async function handleAssignPost() {
+        const select = document.getElementById('assignee-select');
+        const userId = select.value;
+        
+        if (!userId) {
+          showNotification('Please select an assignee.', 'error');
+          return;
+        }
+
+        const user = allUsers.find(u => u.id === userId);
+        if (!user) return;
+
+        try {
+          await db.collection('social_posts').doc(currentPostId).update({
             assigneeId: userId,
-            assigneeName: selectedUser.name,
+            assigneeName: user.name,
             status: 'assigned',
             assignedAt: new Date(),
             updatedAt: new Date()
+          });
+
+          await addActivity(currentPostId, `assigned post to ${user.name}`, 'system');
+          showNotification(`Post assigned to ${user.name}`, 'success');
+
+        } catch (error) {
+          console.error('Error assigning post:', error);
+          showNotification('Failed to assign post.', 'error');
+        }
+      }
+
+      async function handleDeletePost() {
+        const post = allPosts.find(p => p.id === currentPostId);
+        if (!post) return;
+
+        if (!confirm(`Are you sure you want to delete "${post.title}"? This action cannot be undone.`)) {
+          return;
+        }
+
+        try {
+          // Delete activity first
+          const activitySnapshot = await db.collection('social_post_activity')
+            .where('postId', '==', currentPostId).get();
+          
+          const batch = db.batch();
+          activitySnapshot.docs.forEach(doc => batch.delete(doc.ref));
+          batch.delete(db.collection('social_posts').doc(currentPostId));
+          
+          await batch.commit();
+
+          closeAllModals();
+          showNotification('Post deleted successfully', 'success');
+
+        } catch (error) {
+          console.error('Error deleting post:', error);
+          showNotification('Failed to delete post.', 'error');
+        }
+      }
+
+      // ===============================
+      // Comments & Activity
+      // ===============================
+
+      async function handleAddComment() {
+        const input = document.getElementById('comment-input');
+        const comment = input.value.trim();
+        
+        if (!comment) return;
+
+        try {
+          await addActivity(currentPostId, comment, 'comment');
+          input.value = '';
+          showNotification('Comment added', 'success');
+        } catch (error) {
+          console.error('Error adding comment:', error);
+          showNotification('Failed to add comment.', 'error');
+        }
+      }
+
+      async function addActivity(postId, message, type = 'system') {
+        return db.collection('social_post_activity').add({
+          postId,
+          message,
+          type,
+          userId: currentUser.uid,
+          userName: currentUserName,
+          timestamp: new Date()
         });
-        
-        await addActivityLog(currentlyViewedPostId, `assigned post to ${selectedUser.name}`, 'system');
-        showNotification(`Post assigned to ${selectedUser.name}`, 'success');
-        
-    } catch (error) {
-        console.error('Failed to assign user:', error);
-        showNotification('Failed to assign user. Please try again.', 'error');
-    } finally {
-        assignButton.disabled = false;
-        assignButton.textContent = originalText;
-    }
-}
+      }
 
-async function handleAddComment() {
-    const commentInput = document.getElementById('comment-input');
-    const comment = commentInput.value.trim();
-    if (!comment || !currentlyViewedPostId) return;
-    
-    if (comment.length > 500) {
-        showNotification('Comment is too long. Please keep it under 500 characters.', 'error');
-        return;
-    }
-    
-    const addButton = document.getElementById('add-comment-button');
-    const originalText = addButton.textContent;
-    addButton.disabled = true;
-    addButton.textContent = 'Posting...';
-    
-    try {
-        await addActivityLog(currentlyViewedPostId, comment, 'comment');
-        commentInput.value = '';
-        showNotification('Comment added successfully', 'success');
-    } catch (error) {
-        console.error('Failed to add comment:', error);
-        showNotification('Failed to add comment. Please try again.', 'error');
-    } finally {
-        addButton.disabled = false;
-        addButton.textContent = originalText;
-    }
-}
+      function loadActivity(postId) {
+        const feed = document.getElementById('activity-feed');
+        feed.innerHTML = '<div class="activity-item loading-shimmer" style="height: 60px;"></div>';
 
-async function handleDeletePost() {
-    if (!currentlyViewedPostId) return;
-    
-    const post = allPosts.find(p => p.id === currentlyViewedPostId);
-    if (!post) return;
-    
-    // Permission check
-    const isAdmin = currentUserRole === 'admin';
-    const isProposer = currentUser.uid === post.proposerId;
-    
-    if (!isAdmin && !isProposer) {
-        showNotification('You can only delete your own post proposals.', 'error');
-        return;
-    }
-    
-    if (post.status === 'posted') {
-        showNotification('Cannot delete a post that has already been posted.', 'error');
-        return;
-    }
-    
-    if (!confirm(`Are you sure you want to delete "${post.title}"? This action cannot be undone.`)) return;
-    
-    try {
-        // Delete activity logs first
-        const activitySnapshot = await db.collection('social_post_activity')
-            .where('postId', '==', currentlyViewedPostId).get();
-        
-        const batch = db.batch();
-        activitySnapshot.docs.forEach(doc => batch.delete(doc.ref));
-        batch.delete(db.collection('social_posts').doc(currentlyViewedPostId));
-        
-        await batch.commit();
-        
-        closeAllModals();
-        showNotification('Post deleted successfully', 'success');
-        
-    } catch (error) {
-        console.error('Failed to delete post:', error);
-        showNotification('Failed to delete post. Please try again.', 'error');
-    }
-}
-
-// =================
-// Activity & Comments
-// =================
-async function addActivityLog(postId, message, type = 'system') {
-    try {
-        await db.collection('social_post_activity').add({
-            postId: postId, 
-            message, 
-            type, 
-            userId: currentUser.uid, 
-            userName: currentUserName, 
-            timestamp: new Date()
-        });
-    } catch (error) {
-        console.error('Failed to add activity log:', error);
-        throw error;
-    }
-}
-
-function loadPostActivity(postId) {
-    const activityFeed = document.getElementById('details-activity-feed');
-    activityFeed.innerHTML = `
-        <div class="activity-item">
-            <div class="loading-shimmer" style="height: 60px; border-radius: 8px;"></div>
-        </div>
-    `;
-    
-    db.collection('social_post_activity')
-        .where('postId', '==', postId)
-        .orderBy('timestamp', 'desc')
-        .onSnapshot(snapshot => {
+        db.collection('social_post_activity')
+          .where('postId', '==', postId)
+          .orderBy('timestamp', 'desc')
+          .onSnapshot(snapshot => {
             const activities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderActivityFeed(activities);
-        }, error => {
-            console.error('Error loading activity:', error);
-            activityFeed.innerHTML = `
-                <div class="activity-item">
-                    <p style="color: #ef4444; text-align: center;">Failed to load activity. Please refresh.</p>
-                </div>
-            `;
-        });
-}
+            renderActivity(activities);
+          });
+      }
 
-function renderActivityFeed(activities) {
-    const activityFeed = document.getElementById('details-activity-feed');
-    
-    if (activities.length === 0) {
-        activityFeed.innerHTML = `
+      function renderActivity(activities) {
+        const feed = document.getElementById('activity-feed');
+        
+        if (activities.length === 0) {
+          feed.innerHTML = `
             <div class="activity-item">
-                <p style="color: #64748b; font-style: italic; text-align: center;">No activity yet. Add the first comment!</p>
+              <p style="text-align: center; color: #94a3b8; font-style: italic;">No activity yet. Be the first to comment!</p>
             </div>
-        `;
-        return;
-    }
-    
-    activityFeed.innerHTML = activities.map(activity => {
-        const timeAgo = getTimeAgo(activity.timestamp.toDate());
-        const isComment = activity.type === 'comment';
-        const activityClass = isComment ? 'activity-comment' : 'activity-system';
-        
-        return `
-            <div class="activity-item ${activityClass}">
-                <div class="activity-header">
-                    <span class="activity-user">
-                        ${isComment ? '💬 ' : '🔄 '}${activity.userName}
-                    </span>
-                    <span class="activity-time">${timeAgo}</span>
-                </div>
-                <div class="activity-message">${activity.message}</div>
+          `;
+          return;
+        }
+
+        feed.innerHTML = activities.map(activity => {
+          const isComment = activity.type === 'comment';
+          const timeAgo = getTimeAgo(activity.timestamp.toDate());
+          
+          return `
+            <div class="activity-item ${isComment ? 'activity-comment' : ''}">
+              <div class="activity-header">
+                <span class="activity-user">
+                  ${isComment ? '💬 ' : '🔄 '}${activity.userName}
+                </span>
+                <span class="activity-time">${timeAgo}</span>
+              </div>
+              <div class="activity-message">${activity.message}</div>
             </div>
-        `;
-    }).join('');
-}
+          `;
+        }).join('');
+      }
 
-function getTimeAgo(date) {
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 7) return `${diffDays}d ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-    
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
+      // ===============================
+      // Utility Functions
+      // ===============================
 
-// =================
-// Utilities
-// =================
-function showNotification(message, type = 'info') {
-    // Remove any existing notifications
-    document.querySelectorAll('.success-message, .error-message-toast').forEach(el => el.remove());
-    
-    const notification = document.createElement('div');
-    const isError = type === 'error';
-    notification.className = isError ? 'error-message-toast' : 'success-message';
-    
-    const icon = isError ? '❌' : type === 'success' ? '✅' : 'ℹ️';
-    notification.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span>${icon}</span>
-            <span>${message}</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Animate in
-    setTimeout(() => notification.style.transform = 'translateX(0)', 100);
-    
-    // Animate out and remove
-    setTimeout(() => {
-        notification.style.transform = 'translateX(400px)';
-        setTimeout(() => notification.remove(), 300);
-    }, 4000);
-}
-
-function stringToColor(str) {
-    if (!str) return '#cccccc';
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    
-    // Generate a pleasant color
-    const hue = Math.abs(hash) % 360;
-    const saturation = 65 + (Math.abs(hash) % 20); // 65-85%
-    const lightness = 45 + (Math.abs(hash) % 15);  // 45-60%
-    
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-}
-
-function validateDateInput(dateInput) {
-    const selectedDate = new Date(dateInput.value + 'T23:59:59');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (selectedDate < today) {
-        dateInput.style.borderColor = '#f59e0b';
-        return false;
-    } else {
-        dateInput.style.borderColor = '#10b981';
-        return true;
-    }
-}
-
-// Enhanced form validation
-function setupAdvancedFormValidation() {
-    const titleInput = document.getElementById('post-title');
-    const contentInput = document.getElementById('post-content');
-    const deadlineInput = document.getElementById('post-deadline');
-    
-    // Real-time title validation
-    titleInput.addEventListener('input', () => {
-        const length = titleInput.value.length;
-        if (length > 80) {
-            titleInput.style.borderColor = '#f59e0b';
-        } else if (length > 10) {
-            titleInput.style.borderColor = '#10b981';
-        } else {
-            titleInput.style.borderColor = '#d1d5db';
-        }
-    });
-    
-    // Content validation with platform-specific suggestions
-    contentInput.addEventListener('input', () => {
-        const platform = document.getElementById('post-platform').value;
-        const length = contentInput.value.length;
-        let suggestion = '';
+      function getTimeAgo(date) {
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
         
-        // Platform-specific character recommendations
-        switch(platform) {
-            case 'Twitter':
-                if (length > 280) suggestion = '⚠️ Twitter has a 280 character limit';
-                else if (length > 250) suggestion = '⏰ Getting close to Twitter limit';
-                break;
-            case 'Instagram':
-                if (length > 2200) suggestion = '⚠️ Instagram captions work best under 2200 characters';
-                break;
-            case 'LinkedIn':
-                if (length > 1300) suggestion = '💡 LinkedIn posts perform best around 1300 characters or less';
-                break;
-        }
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
         
-        // Update suggestion text
-        const helpElement = contentInput.parentElement.querySelector('.form-help small');
-        if (suggestion) {
-            helpElement.textContent = suggestion;
-            helpElement.style.color = length > 2000 ? '#ef4444' : '#f59e0b';
-        } else {
-            helpElement.textContent = '💡 Include hashtags, mentions, and links exactly as they should appear';
-            helpElement.style.color = '#64748b';
-        }
-    });
-    
-    // Deadline validation
-    deadlineInput.addEventListener('change', () => validateDateInput(deadlineInput));
-}
-
-// =================
-// Enhanced Error Handling
-// =================
-window.addEventListener('error', function(e) {
-    console.error('[GLOBAL ERROR]', e.error || e.message);
-    showNotification('An unexpected error occurred. Please refresh if problems persist.', 'error');
-});
-
-// Check Firebase loading
-setTimeout(() => {
-    if (typeof firebase === 'undefined') {
-        console.error('[FIREBASE ERROR] Firebase not loaded after 3 seconds');
-        const loader = document.getElementById('loader');
-        if (loader) {
-            loader.innerHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <h3 style="color: #ef4444; margin-bottom: 16px;">Connection Error</h3>
-                    <p style="color: #64748b; margin-bottom: 20px;">Unable to connect to the database. Please check your internet connection.</p>
-                    <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007AFF; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        Try Again
-                    </button>
-                </div>
-            `;
-        }
-    }
-}, 3000);
-
-// =================
-// Keyboard Shortcuts
-// =================
-document.addEventListener('keydown', (e) => {
-    // Ctrl/Cmd + N to create new post
-    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-        e.preventDefault();
-        openPostModal();
-    }
-    
-    // Escape to close modals
-    if (e.key === 'Escape') {
-        closeAllModals();
-    }
-});
-
-// =================
-// Initialize Enhanced Features
-// =================
-document.addEventListener('DOMContentLoaded', () => {
-    setupAdvancedFormValidation();
-    
-    // Add platform change handler for dynamic suggestions
-    const platformSelect = document.getElementById('post-platform');
-    const contentTextarea = document.getElementById('post-content');
-    
-    platformSelect.addEventListener('change', () => {
-        // Trigger content validation with new platform
-        contentTextarea.dispatchEvent(new Event('input'));
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
         
-        // Add platform-specific placeholder suggestions
-        const platform = platformSelect.value;
-        const placeholders = {
-            'Instagram': 'Write engaging copy with relevant hashtags. Consider:\n\n🌟 Eye-catching opening line\n📸 Describe the visual content\n#️⃣ Relevant hashtags (5-10 recommended)\n🔗 Link in bio reference\n\nExample: "Just published our latest piece on AI in neuroscience! 🧠✨ Link in bio to read the full interview with Dr. Smith. #AI #Neuroscience #CatalystMag #ScienceWriting"',
-            'LinkedIn': 'Professional tone with industry insights:\n\n💼 Professional opening\n📊 Key insights or data points\n🤝 Call to action for engagement\n#️⃣ Professional hashtags\n\nExample: "Our latest article explores the intersection of AI and neuroscience. Key takeaways include... What are your thoughts on AI\'s role in advancing brain research? #ArtificialIntelligence #Neuroscience #Innovation"',
-            'Twitter': 'Concise and engaging (280 characters max):\n\n🎯 Clear, punchy message\n🔗 Shortened link\n#️⃣ 2-3 relevant hashtags\n\nExample: "New article: How AI is revolutionizing neuroscience research 🧠🤖 Fascinating insights from leading researchers. Read more: [link] #AI #Neuroscience #Innovation"',
-            'Facebook': 'Conversational and community-focused:\n\n👥 Community-oriented language\n📖 Story-telling approach\n❓ Questions to encourage comments\n🔗 Direct link\n\nExample: "We\'re excited to share our latest deep-dive into AI and neuroscience! This topic has been generating so much discussion lately. Have you seen AI making an impact in your field? Read our full investigation: [link]"'
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 7) return `${diffDays}d ago`;
+        
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+
+      function getDeadlineInfo(deadline) {
+        const today = new Date();
+        const deadlineDate = new Date(deadline + 'T23:59:59');
+        const daysUntil = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
+        
+        return {
+          daysUntil,
+          isOverdue: daysUntil < 0,
+          isDueSoon: daysUntil >= 0 && daysUntil <= 2,
+          text: deadlineDate.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+          }),
+          class: daysUntil < 0 ? 'overdue' : daysUntil === 0 ? 'due-today' : ''
+        };
+      }
+
+      function formatDate(date, isDeadline = false) {
+        if (!date) return 'Not set';
+        
+        const dateObj = date.toDate ? date.toDate() : new Date(date);
+        const options = { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
         };
         
-        if (platform && placeholders[platform]) {
-            contentTextarea.placeholder = placeholders[platform];
+        if (isDeadline) {
+          options.weekday = 'long';
         }
-    });
-});
+        
+        return dateObj.toLocaleDateString('en-US', options);
+      }
 
-console.log("[SOCIAL] Social Media Planner script loaded successfully");
+      function truncateText(text, maxLength) {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+      }
+
+      function stringToColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        
+        const hue = Math.abs(hash) % 360;
+        return `hsl(${hue}, 65%, 50%)`;
+      }
+
+      function showNotification(message, type = 'success') {
+        // Remove existing notifications
+        document.querySelectorAll('.notification').forEach(n => n.remove());
+
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 1.2rem;">
+              ${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}
+            </span>
+            <span>${message}</span>
+          </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Show notification
+        setTimeout(() => notification.classList.add('show'), 100);
+
+        // Hide and remove
+        setTimeout(() => {
+          notification.classList.remove('show');
+          setTimeout(() => notification.remove(), 300);
+        }, 4000);
+      }
+
+      // ===============================
+      // Error Handling
+      // ===============================
+
+      window.addEventListener('error', (e) => {
+        console.error('Global error:', e.error);
+        showNotification('An unexpected error occurred. Please refresh if problems persist.', 'error');
+      });
+
+      // Check Firebase connection
+      setTimeout(() => {
+        if (typeof firebase === 'undefined') {
+          document.getElementById('loader').innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+              <h3 style="color: #ef4444;">Connection Error</h3>
+              <p style="color: #64748b; margin: 20px 0;">Unable to connect to the database.</p>
+              <button onclick="location.reload()" style="padding: 12px 24px; background: #007AFF; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                Try Again
+              </button>
+            </div>
+          `;
+        }
+      }, 5000);
+
+      console.log('🚀 Social Media Planner loaded successfully');
     </script>
   </body>
 </html>
