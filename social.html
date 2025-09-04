@@ -12,26 +12,37 @@
   </head>
   
   <body>
+    <!-- Loading State -->
     <div id="loader" class="loader-container">
       <div class="loader"></div>
       <p>Loading Social Media Planner...</p>
     </div>
 
+    <!-- Main Application Container -->
     <div id="app-container" class="app-container" style="display: none">
+      <!-- Sidebar Navigation -->
       <aside class="sidebar">
         <div class="sidebar-header">
           <img src="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png" alt="Catalyst Logo" class="logo-img">
           <h2>Catalyst Tracker</h2>
         </div>
 
-        <nav class="sidebar-nav" aria-label="Primary">
+        <nav class="sidebar-nav" aria-label="Primary Navigation">
           <p class="nav-heading">Views</p>
           <a href="dashboard.html" class="nav-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
             <span>Dashboard</span>
           </a>
           <a href="social.html" class="nav-item active" aria-current="page">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path>
+            </svg>
             <span>Social Media</span>
           </a>
         </nav>
@@ -53,35 +64,48 @@
         </div>
       </aside>
 
+      <!-- Main Content Area -->
       <main class="main-content">
-        <div class="social-header">
-          <h1>Social Media Planner</h1>
-          <p>Create, manage, and schedule engaging content across all platforms</p>
-          
-          <div class="social-stats" id="social-stats">
-            <div class="stat-card">
-              <span class="stat-number" id="stat-total">0</span>
-              <span class="stat-label">Total Posts</span>
+        <!-- Enhanced Header Section -->
+        <header class="social-header">
+          <div class="header-content">
+            <h1>Social Media Planner</h1>
+            <p>Create, manage, and schedule engaging content across all platforms</p>
+            
+            <div class="social-stats" id="social-stats">
+              <div class="stat-card">
+                <div class="stat-number" id="stat-total">0</div>
+                <div class="stat-label">Total Posts</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="stat-pending">0</div>
+                <div class="stat-label">Pending</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="stat-scheduled">0</div>
+                <div class="stat-label">Scheduled</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="stat-posted">0</div>
+                <div class="stat-label">Posted</div>
+              </div>
             </div>
-            <div class="stat-card">
-              <span class="stat-number" id="stat-pending">0</span>
-              <span class="stat-label">Pending</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-number" id="stat-scheduled">0</span>
-              <span class="stat-label">Scheduled</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-number" id="stat-posted">0</span>
-              <span class="stat-label">Posted</span>
+          </div>
+        </header>
+
+        <!-- Kanban Board Container -->
+        <div class="board-container">
+          <div id="kanban-board" class="kanban-board">
+            <!-- Loading placeholder -->
+            <div class="loading-placeholder">
+              <div class="loader"></div>
+              <p>Loading social media posts...</p>
             </div>
           </div>
         </div>
 
-        <div id="kanban-board" class="kanban-board">
-          </div>
-
-        <button class="fab" id="fab-new-post" title="Create New Post">
+        <!-- Floating Action Button -->
+        <button class="fab" id="fab-new-post" title="Create New Post" aria-label="Create New Social Media Post">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -90,18 +114,26 @@
       </main>
     </div>
 
-    <div id="post-modal" class="modal-overlay">
+    <!-- New Post Modal -->
+    <div id="post-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="post-modal-title">
       <div class="modal-content form-modal">
         <div class="modal-header">
-          <h2>Create New Social Media Post</h2>
-          <button class="close-button" type="button">×</button>
+          <h2 id="post-modal-title">Create New Social Media Post</h2>
+          <button class="close-button" type="button" aria-label="Close Modal">×</button>
         </div>
         
         <form id="post-form" class="form-container">
           <div class="form-grid">
             <div class="form-group">
               <label for="post-title">Post Title</label>
-              <input type="text" id="post-title" required maxlength="100" placeholder="Give your post a descriptive title...">
+              <input 
+                type="text" 
+                id="post-title" 
+                required 
+                maxlength="100" 
+                placeholder="Give your post a descriptive title..."
+                autocomplete="off"
+              />
               <div class="form-help">This helps identify the post in your dashboard</div>
             </div>
 
@@ -119,24 +151,36 @@
 
             <div class="form-group">
               <label for="post-content">Post Content</label>
-              <textarea id="post-content" required rows="6" maxlength="2000" placeholder="Write your post content here... Include hashtags, mentions, and links as they should appear."></textarea>
+              <textarea 
+                id="post-content" 
+                required 
+                rows="6" 
+                maxlength="2000" 
+                placeholder="Write your post content here... Include hashtags, mentions, and links as they should appear."
+              ></textarea>
               <div class="character-counter" id="character-counter">0 / 2000</div>
               <div class="form-help" id="content-help">Write engaging content that resonates with your audience</div>
             </div>
 
             <div class="form-group">
               <label for="post-deadline">Target Publish Date</label>
-              <input type="date" id="post-deadline" required>
+              <input type="date" id="post-deadline" required />
               <div class="form-help">When should this post go live?</div>
             </div>
 
             <div class="form-group">
               <label for="post-notes">Additional Notes (Optional)</label>
-              <textarea id="post-notes" rows="3" maxlength="500" placeholder="Any special instructions, image suggestions, or scheduling preferences..."></textarea>
+              <textarea 
+                id="post-notes" 
+                rows="3" 
+                maxlength="500" 
+                placeholder="Any special instructions, image suggestions, or scheduling preferences..."
+              ></textarea>
               <div class="form-help">Instructions for the social media manager</div>
             </div>
           </div>
 
+          <!-- Platform Preview -->
           <div class="platform-preview" id="platform-preview" style="display: none;">
             <div class="platform-preview-title">
               <span id="preview-icon">📱</span>
@@ -160,14 +204,16 @@
       </div>
     </div>
 
-    <div id="details-modal" class="modal-overlay">
+    <!-- Post Details Modal -->
+    <div id="details-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="details-modal-title">
       <div class="modal-content details-modal">
         <div class="modal-header">
-          <h2 id="details-title">Post Details</h2>
-          <button class="close-button" type="button">×</button>
+          <h2 id="details-modal-title">Post Details</h2>
+          <button class="close-button" type="button" aria-label="Close Modal">×</button>
         </div>
 
         <div class="details-grid">
+          <!-- Main Content Area -->
           <div class="details-main">
             <div class="details-section">
               <h3>
@@ -196,7 +242,12 @@
               </h3>
               
               <div class="comment-box">
-                <textarea id="comment-input" placeholder="Add a comment or update..." maxlength="500" rows="3"></textarea>
+                <textarea 
+                  id="comment-input" 
+                  placeholder="Add a comment or update..." 
+                  maxlength="500" 
+                  rows="3"
+                ></textarea>
                 <button class="btn-primary" id="add-comment">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -208,12 +259,13 @@
 
               <div class="activity-feed" id="activity-feed">
                 <div class="activity-item">
-                  <p style="text-align: center; color: #94a3b8; font-style: italic;">Loading activity...</p>
+                  <p class="loading-text">Loading activity...</p>
                 </div>
               </div>
             </div>
           </div>
 
+          <!-- Sidebar Information -->
           <div class="details-sidebar">
             <div class="sidebar-card">
               <h4>Status</h4>
@@ -241,16 +293,16 @@
               <p><strong>Assigned to:</strong> <span id="details-assignee">Not assigned</span></p>
               
               <div id="assignment-section" class="admin-only" style="display: none; margin-top: 16px;">
-                <select id="assignee-select" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <select id="assignee-select" class="form-select">
                   <option value="">Select assignee...</option>
                 </select>
-                <button class="btn-secondary" id="assign-btn" style="width: 100%;">Assign</button>
+                <button class="btn-secondary" id="assign-btn">Assign</button>
               </div>
             </div>
 
             <div class="sidebar-card admin-only" id="admin-actions" style="display: none;">
               <h4>Admin Actions</h4>
-              <div style="display: grid; gap: 8px;">
+              <div class="action-buttons">
                 <button class="btn-success" id="approve-btn">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="20,6 9,17 4,12"></polyline>
@@ -272,9 +324,9 @@
               <div id="action-buttons"></div>
             </div>
 
-            <div class="sidebar-card" id="delete-section" style="display: none;">
-              <h4 style="color: #ef4444;">Danger Zone</h4>
-              <button class="btn-danger" id="delete-btn" style="width: 100%;">
+            <div class="sidebar-card danger-zone" id="delete-section" style="display: none;">
+              <h4>Danger Zone</h4>
+              <button class="btn-danger" id="delete-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3,6 5,6 21,6"></polyline>
                   <path d="m19,6v14a2,2 0 0 1 -2,2H7a2,2 0 0 1 -2,-2V6m3,0V4a2,2 0 0 1 2,-2h4a2,2 0 0 1 2,2v2"></path>
@@ -287,11 +339,13 @@
       </div>
     </div>
 
+    <!-- Notification Container -->
+    <div id="notification-container" class="notification-container"></div>
+
+    <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
     <script src="social.js"></script>
-
   </body>
 </html>
