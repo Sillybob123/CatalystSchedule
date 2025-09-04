@@ -1593,8 +1593,22 @@
       // ===============================
 
       function subscribeToPosts() {
+        console.log('Setting up posts subscription...');
+        
         db.collection('social_posts').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
-          allPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          console.log('Posts updated:', snapshot.docs.length, 'posts found');
+          allPosts = snapshot.docs.map(doc => {
+            const data = doc.data();
+            // Convert Firestore timestamps to dates
+            if (data.createdAt && data.createdAt.toDate) {
+              data.createdAt = data.createdAt.toDate();
+            }
+            if (data.updatedAt && data.updatedAt.toDate) {
+              data.updatedAt = data.updatedAt.toDate();
+            }
+            return { id: doc.id, ...data };
+          });
+          
           renderBoard();
           updateStats();
           
@@ -1607,6 +1621,9 @@
               closeAllModals();
             }
           }
+        }, error => {
+          console.error('Error in posts subscription:', error);
+          showNotification('Error loading posts. Please refresh the page.', 'error');
         });
       }
 
