@@ -31,9 +31,9 @@
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
             <span>Dashboard</span>
           </a>
-          <a href="social.html" id="nav-social" class="nav-item">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
-            <span>Social Media</span>
+          <a href="#" id="nav-tasks" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            <span>Tasks</span>
           </a>
           <a href="#" id="nav-my-assignments" class="nav-item" aria-current="false">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -167,6 +167,9 @@
             <button id="add-project-button" class="add-project-btn">
               + Propose New Article
             </button>
+            <button id="add-task-button" class="add-project-btn" style="display: none;">
+              + Create Task
+            </button>
           </div>
         </header>
 
@@ -174,6 +177,15 @@
           <div id="kanban-board" class="kanban-board" aria-live="polite">
             <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
               <p>Loading projects...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tasks View -->
+        <div id="tasks-view" style="display: none">
+          <div id="tasks-board" class="kanban-board" aria-live="polite">
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
+              <p>Loading tasks...</p>
             </div>
           </div>
         </div>
@@ -250,6 +262,132 @@
       </main>
     </div>
 
+    <!-- Task Modal -->
+    <div id="task-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="task-modal-title">Create New Task</h2>
+          <button class="close-button" aria-label="Close">×</button>
+        </div>
+        <form id="task-form">
+          <div class="form-group">
+            <label for="task-title">Task Title</label>
+            <input
+              type="text"
+              id="task-title"
+              required
+              placeholder="e.g., Contact Nature Journal about Catalyst feature"
+            />
+          </div>
+          <div class="form-group">
+            <label for="task-description">Description</label>
+            <textarea
+              id="task-description"
+              rows="4"
+              placeholder="Describe what needs to be done, any specific requirements, contacts, or additional context."
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="task-assignee">Assign To</label>
+            <select id="task-assignee" required>
+              <option value="">Select person to assign task to</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="task-deadline">Deadline</label>
+            <input type="date" id="task-deadline" required />
+          </div>
+          <div class="form-group">
+            <label for="task-priority">Priority</label>
+            <select id="task-priority" required>
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary close-button">
+              Cancel
+            </button>
+            <button type="submit" id="save-task-button" class="btn-primary">
+              Create Task
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Task Details Modal -->
+    <div id="task-details-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 id="task-details-title">Task Details</h2>
+                <button class="close-button" aria-label="Close">×</button>
+            </div>
+            <div class="details-container">
+                <div class="details-grid">
+                    <div class="details-main">
+                        <h4>Description</h4>
+                        <p id="task-details-description">Loading...</p>
+        
+                        <hr>
+                        <h4>Comments & Activity</h4>
+                        <div class="comment-box">
+                            <textarea id="task-comment-input" placeholder="Add a comment or update..."></textarea>
+                            <button id="add-task-comment-button" class="btn-primary">Post</button>
+                        </div>
+                        <div id="task-details-activity-feed" class="activity-feed">
+                          <p>No activity yet.</p>
+                        </div>
+                    </div>
+        
+                    <aside class="details-sidebar">
+                        <div class="sidebar-section">
+                            <h4>Status</h4>
+                            <p id="task-details-status">Loading...</p>
+                        </div>
+        
+                        <div class="sidebar-section">
+                            <h4>Assignment</h4>
+                            <p><strong>Created by:</strong> <span id="task-details-creator">Unknown</span></p>
+                            <p><strong>Assigned to:</strong> <span id="task-details-assignee">Not Assigned</span></p>
+                        </div>
+        
+                        <div class="sidebar-section">
+                            <h4>Timeline</h4>
+                            <p><strong>Created:</strong> <span id="task-details-created">Loading...</span></p>
+                            <p><strong>Deadline:</strong> <span id="task-details-deadline">Not set</span></p>
+                            <p><strong>Priority:</strong> <span id="task-details-priority">Medium</span></p>
+                        </div>
+
+                        <div id="task-admin-approval-section" class="sidebar-section admin-only" style="display: none;">
+                            <h4>Admin Actions</h4>
+                            <div class="button-group">
+                                <button id="approve-task-button" class="btn-success">Approve</button>
+                                <button id="reject-task-button" class="btn-danger">Reject</button>
+                            </div>
+                        </div>
+
+                        <div id="task-assignee-actions" class="sidebar-section" style="display: none;">
+                            <h4>Task Actions</h4>
+                            <div class="button-group">
+                                <button id="complete-task-button" class="btn-success">Mark Complete</button>
+                                <button id="request-extension-button" class="btn-secondary">Request Extension</button>
+                            </div>
+                        </div>
+        
+                        <div id="task-delete-section" class="sidebar-section">
+                            <h4>Delete Task</h4>
+                            <button id="delete-task-button" class="btn-danger" style="display: none;">Delete Forever</button>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keep existing project modal and details modal -->
     <div id="project-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
       <div class="modal-content">
         <div class="modal-header">
