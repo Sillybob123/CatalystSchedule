@@ -4594,3 +4594,681 @@
     display: none !important;
   }
 }
+
+/* ===============================
+   APPLE-INSPIRED TASK MANAGEMENT STYLES
+   =============================== */
+
+/* Task View Root Variables */
+:root {
+  /* Apple-inspired color palette */
+  --apple-blue: #007AFF;
+  --apple-blue-dark: #0051D5;
+  --apple-green: #34C759;
+  --apple-green-dark: #248A3D;
+  --apple-orange: #FF9500;
+  --apple-orange-dark: #FF8C00;
+  --apple-red: #FF3B30;
+  --apple-red-dark: #D70015;
+  --apple-purple: #AF52DE;
+  --apple-purple-dark: #8E44AD;
+  
+  /* Apple glass effects */
+  --apple-glass: rgba(255, 255, 255, 0.8);
+  --apple-glass-dark: rgba(255, 255, 255, 0.1);
+  --apple-shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --apple-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --apple-shadow-heavy: 0 8px 32px rgba(0, 0, 0, 0.15);
+  --apple-shadow-floating: 0 16px 64px rgba(0, 0, 0, 0.2);
+  
+  /* Apple typography */
+  --apple-font-weight-light: 300;
+  --apple-font-weight-regular: 400;
+  --apple-font-weight-medium: 500;
+  --apple-font-weight-semibold: 600;
+  --apple-font-weight-bold: 700;
+  
+  /* Apple spacing (based on 8px grid) */
+  --apple-space-xs: 4px;
+  --apple-space-sm: 8px;
+  --apple-space-md: 16px;
+  --apple-space-lg: 24px;
+  --apple-space-xl: 32px;
+  --apple-space-2xl: 48px;
+  --apple-space-3xl: 64px;
+  
+  /* Apple border radius */
+  --apple-radius-sm: 8px;
+  --apple-radius-md: 12px;
+  --apple-radius-lg: 16px;
+  --apple-radius-xl: 20px;
+  --apple-radius-2xl: 24px;
+}
+
+/* ===============================
+   TASK VIEW CONTAINER
+   =============================== */
+
+#tasks-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 140px);
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+#tasks-view::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 206, 84, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* ===============================
+   TASK BOARD LAYOUT
+   =============================== */
+
+#tasks-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--apple-space-lg);
+  padding: var(--apple-space-xl);
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* ===============================
+   APPLE-STYLE KANBAN COLUMNS
+   =============================== */
+
+.tasks-view .kanban-column {
+  background: var(--apple-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--apple-radius-2xl);
+  box-shadow: 
+    var(--apple-shadow-floating),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 220px);
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  position: relative;
+}
+
+.tasks-view .kanban-column:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 
+    0 24px 80px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* Column-specific glass tints */
+.tasks-view .kanban-column:nth-child(1) {
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.1) 0%, var(--apple-glass) 100%);
+}
+
+.tasks-view .kanban-column:nth-child(2) {
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.1) 0%, var(--apple-glass) 100%);
+}
+
+.tasks-view .kanban-column:nth-child(3) {
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, var(--apple-glass) 100%);
+}
+
+.tasks-view .kanban-column:nth-child(4) {
+  background: linear-gradient(135deg, rgba(175, 82, 222, 0.1) 0%, var(--apple-glass) 100%);
+}
+
+/* ===============================
+   APPLE-STYLE COLUMN HEADERS
+   =============================== */
+
+.tasks-view .column-header {
+  padding: var(--apple-space-lg) var(--apple-space-xl);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: var(--apple-radius-2xl) var(--apple-radius-2xl) 0 0;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.tasks-view .column-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--column-accent, var(--apple-blue));
+  border-radius: var(--apple-radius-2xl) var(--apple-radius-2xl) 0 0;
+}
+
+.tasks-view .column-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.tasks-view .column-title-main {
+  display: flex;
+  align-items: center;
+  gap: var(--apple-space-md);
+}
+
+.tasks-view .column-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+  transform: scale(1);
+  transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.tasks-view .kanban-column:hover .column-icon {
+  transform: scale(1.1);
+}
+
+.tasks-view .column-title-text {
+  font-size: 18px;
+  font-weight: var(--apple-font-weight-semibold);
+  color: #1d1d1f;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.tasks-view .task-count {
+  background: linear-gradient(135deg, var(--column-accent, var(--apple-blue)), var(--column-accent-dark, var(--apple-blue-dark)));
+  color: white;
+  font-size: 13px;
+  font-weight: var(--apple-font-weight-bold);
+  padding: var(--apple-space-sm) var(--apple-space-md);
+  border-radius: 20px;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Column accent colors */
+.tasks-view .kanban-column:nth-child(1) { 
+  --column-accent: var(--apple-orange); 
+  --column-accent-dark: var(--apple-orange-dark); 
+}
+.tasks-view .kanban-column:nth-child(2) { 
+  --column-accent: var(--apple-green); 
+  --column-accent-dark: var(--apple-green-dark); 
+}
+.tasks-view .kanban-column:nth-child(3) { 
+  --column-accent: var(--apple-blue); 
+  --column-accent-dark: var(--apple-blue-dark); 
+}
+.tasks-view .kanban-column:nth-child(4) { 
+  --column-accent: var(--apple-purple); 
+  --column-accent-dark: var(--apple-purple-dark); 
+}
+
+/* ===============================
+   COLUMN CONTENT AREA
+   =============================== */
+
+.tasks-view .column-content {
+  flex: 1;
+  padding: var(--apple-space-lg);
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  
+  /* Custom Apple-style scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.tasks-view .column-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tasks-view .column-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tasks-view .column-content::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.3));
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.tasks-view .column-content::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.4));
+}
+
+/* ===============================
+   APPLE-STYLE TASK CARDS
+   =============================== */
+
+.tasks-view .kanban-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--apple-radius-lg);
+  padding: var(--apple-space-xl);
+  margin-bottom: var(--apple-space-lg);
+  box-shadow: 
+    var(--apple-shadow-medium),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0); /* Force hardware acceleration */
+}
+
+.tasks-view .kanban-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--card-accent, #e5e7eb), var(--card-accent, #e5e7eb));
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.tasks-view .kanban-card:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.tasks-view .kanban-card:hover::before {
+  height: 4px;
+  background: linear-gradient(90deg, var(--card-accent, #e5e7eb), var(--card-accent-light, #f3f4f6));
+}
+
+/* Priority-based card styling */
+.tasks-view .kanban-card.priority-urgent {
+  --card-accent: var(--apple-red);
+  --card-accent-light: #ff6b6b;
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.05) 0%, rgba(255, 255, 255, 0.9) 50%);
+}
+
+.tasks-view .kanban-card.priority-high {
+  --card-accent: var(--apple-orange);
+  --card-accent-light: #ffb347;
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.05) 0%, rgba(255, 255, 255, 0.9) 50%);
+}
+
+.tasks-view .kanban-card.priority-medium {
+  --card-accent: var(--apple-blue);
+  --card-accent-light: #66b3ff;
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.05) 0%, rgba(255, 255, 255, 0.9) 50%);
+}
+
+.tasks-view .kanban-card.priority-low {
+  --card-accent: var(--apple-green);
+  --card-accent-light: #66d9a6;
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.05) 0%, rgba(255, 255, 255, 0.9) 50%);
+}
+
+/* Overdue and due soon with Apple-style urgency */
+.tasks-view .kanban-card.overdue {
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.1) 0%, rgba(255, 255, 255, 0.9) 100%);
+  border-color: rgba(255, 59, 48, 0.3);
+  animation: apple-pulse 3s ease-in-out infinite;
+}
+
+.tasks-view .kanban-card.due-soon {
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.1) 0%, rgba(255, 255, 255, 0.9) 100%);
+  border-color: rgba(255, 149, 0, 0.3);
+}
+
+@keyframes apple-pulse {
+  0%, 100% { 
+    transform: scale(1); 
+    box-shadow: var(--apple-shadow-medium), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  50% { 
+    transform: scale(1.01); 
+    box-shadow: 
+      0 8px 32px rgba(255, 59, 48, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+}
+
+/* ===============================
+   TASK CARD CONTENT
+   =============================== */
+
+.tasks-view .card-title {
+  font-size: 16px;
+  font-weight: var(--apple-font-weight-semibold);
+  color: #1d1d1f;
+  margin: 0 0 var(--apple-space-md) 0;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tasks-view .card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--apple-space-sm);
+  margin-bottom: var(--apple-space-lg);
+  flex-wrap: wrap;
+}
+
+.tasks-view .priority-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--apple-space-xs) var(--apple-space-md);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: var(--apple-font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tasks-view .priority-badge.urgent { 
+  background: linear-gradient(135deg, var(--apple-red), var(--apple-red-dark)); 
+}
+.tasks-view .priority-badge.high { 
+  background: linear-gradient(135deg, var(--apple-orange), var(--apple-orange-dark)); 
+}
+.tasks-view .priority-badge.medium { 
+  background: linear-gradient(135deg, var(--apple-blue), var(--apple-blue-dark)); 
+}
+.tasks-view .priority-badge.low { 
+  background: linear-gradient(135deg, var(--apple-green), var(--apple-green-dark)); 
+}
+
+.tasks-view .status-badge {
+  padding: var(--apple-space-xs) var(--apple-space-md);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: var(--apple-font-weight-medium);
+  text-transform: capitalize;
+  background: rgba(0, 0, 0, 0.05);
+  color: #6e6e73;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.tasks-view .card-content-preview {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: var(--apple-radius-sm);
+  padding: var(--apple-space-md);
+  margin: var(--apple-space-md) 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #6e6e73;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-weight: var(--apple-font-weight-regular);
+}
+
+/* ===============================
+   TASK CARD FOOTER
+   =============================== */
+
+.tasks-view .card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--apple-space-lg);
+  padding-top: var(--apple-space-md);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  gap: var(--apple-space-md);
+}
+
+.tasks-view .card-author {
+  display: flex;
+  align-items: center;
+  gap: var(--apple-space-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.tasks-view .card-author .user-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+  font-weight: var(--apple-font-weight-bold);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.tasks-view .card-author span {
+  font-size: 12px;
+  font-weight: var(--apple-font-weight-medium);
+  color: #6e6e73;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tasks-view .card-deadline {
+  font-size: 11px;
+  font-weight: var(--apple-font-weight-bold);
+  color: #8e8e93;
+  padding: var(--apple-space-xs) var(--apple-space-sm);
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: var(--apple-radius-sm);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tasks-view .card-deadline.due-today {
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.1), rgba(255, 149, 0, 0.2));
+  color: var(--apple-orange-dark);
+  border-color: rgba(255, 149, 0, 0.3);
+}
+
+.tasks-view .card-deadline.overdue {
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.1), rgba(255, 59, 48, 0.2));
+  color: var(--apple-red-dark);
+  border-color: rgba(255, 59, 48, 0.3);
+  animation: deadline-pulse 2s ease-in-out infinite;
+}
+
+@keyframes deadline-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ===============================
+   APPLE-STYLE EMPTY STATES
+   =============================== */
+
+.tasks-view .empty-column {
+  text-align: center;
+  padding: var(--apple-space-3xl) var(--apple-space-lg);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.3) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px dashed rgba(0, 0, 0, 0.1);
+  border-radius: var(--apple-radius-lg);
+  margin: var(--apple-space-lg) 0;
+}
+
+.tasks-view .empty-column-icon {
+  font-size: 48px;
+  margin-bottom: var(--apple-space-lg);
+  opacity: 0.6;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+  transform: scale(1);
+  transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.tasks-view .kanban-column:hover .empty-column-icon {
+  transform: scale(1.1);
+}
+
+.tasks-view .empty-column-text {
+  font-size: 16px;
+  font-weight: var(--apple-font-weight-semibold);
+  color: #6e6e73;
+  margin-bottom: var(--apple-space-sm);
+  letter-spacing: -0.01em;
+}
+
+.tasks-view .empty-column-subtext {
+  font-size: 13px;
+  color: #8e8e93;
+  line-height: 1.4;
+  font-weight: var(--apple-font-weight-regular);
+}
+
+/* ===============================
+   RESPONSIVE DESIGN
+   =============================== */
+
+@media (max-width: 1200px) {
+  #tasks-board {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--apple-space-lg);
+  }
+  
+  .tasks-view .kanban-column {
+    height: auto;
+    min-height: 400px;
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  #tasks-view {
+    height: auto;
+  }
+  
+  #tasks-board {
+    display: flex;
+    flex-direction: column;
+    gap: var(--apple-space-lg);
+    padding: var(--apple-space-lg);
+    height: auto;
+  }
+  
+  .tasks-view .kanban-column {
+    min-height: 300px;
+    height: auto;
+    max-height: none;
+  }
+  
+  .tasks-view .empty-column {
+    padding: var(--apple-space-2xl) var(--apple-space-md);
+  }
+  
+  .tasks-view .empty-column-icon {
+    font-size: 36px;
+  }
+}
+
+/* ===============================
+   LOADING AND ANIMATION STATES
+   =============================== */
+
+.tasks-view .kanban-card {
+  animation: apple-card-entrance 0.6s cubic-bezier(0.23, 1, 0.32, 1) backwards;
+}
+
+@keyframes apple-card-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tasks-view .kanban-column.loading .column-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.tasks-view .kanban-column.loading .column-content::before {
+  content: '';
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--apple-blue);
+  border-radius: 50%;
+  animation: apple-spin 1s linear infinite;
+}
+
+@keyframes apple-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===============================
+   ACCESSIBILITY AND FOCUS STATES
+   =============================== */
+
+.tasks-view .kanban-card:focus {
+  outline: 2px solid var(--apple-blue);
+  outline-offset: 4px;
+  box-shadow: 
+    var(--apple-shadow-medium),
+    0 0 0 4px rgba(0, 122, 255, 0.2);
+}
+
+/* ===============================
+   REDUCED MOTION SUPPORT
+   =============================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .tasks-view .kanban-column,
+  .tasks-view .kanban-card,
+  .tasks-view .column-icon,
+  .tasks-view .empty-column-icon {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+  
+  .tasks-view .kanban-column:hover,
+  .tasks-view .kanban-card:hover {
+    transform: none !important;
+  }
+}
