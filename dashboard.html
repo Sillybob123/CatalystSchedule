@@ -1,645 +1,924 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard - Catalyst Tracker</title>
-    <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png">
-    <link rel="stylesheet" href="base.css" />
-    <link rel="stylesheet" href="components.css" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div id="loader" class="loader-container">
-      <div class="loader" role="status" aria-label="Loading"></div>
-      <p style="margin-top: 20px; color: #64748b;">Loading Catalyst Tracker...</p>
-    </div>
-
-    <div id="app-container" class="app-container" style="display: none">
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <img src="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png" alt="Catalyst Logo" class="logo-img">
-          <h2>Catalyst Tracker</h2>
-        </div>
-
-        <nav class="sidebar-nav" aria-label="Primary">
-          <p class="nav-heading">Views</p>
-          <a href="dashboard.html" id="nav-dashboard" class="nav-item active" aria-current="page">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-            <span>Dashboard</span>
-          </a>
-          <a href="#" id="nav-tasks" class="nav-item">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-            <span>Tasks</span>
-          </a>
-          <a href="#" id="nav-my-assignments" class="nav-item" aria-current="false">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
-              ></path>
-              <circle
-                stroke="currentColor"
-                stroke-width="2"
-                cx="12"
-                cy="7"
-                r="4"
-              ></circle>
-            </svg>
-            <span>My Assignments</span>
-          </a>
-          <a href="#" id="nav-calendar" class="nav-item" aria-current="false">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <rect
-                stroke="currentColor"
-                stroke-width="2"
-                x="3"
-                y="4"
-                width="18"
-                height="18"
-                rx="2"
-                ry="2"
-              ></rect>
-              <line
-                x1="16"
-                y1="2"
-                x2="16"
-                y2="6"
-                stroke="currentColor"
-                stroke-width="2"
-              ></line>
-              <line
-                x1="8"
-                y1="2"
-                x2="8"
-                y2="6"
-                stroke="currentColor"
-                stroke-width="2"
-              ></line>
-              <line
-                x1="3"
-                y1="10"
-                x2="21"
-                y2="10"
-                stroke="currentColor"
-                stroke-width="2"
-              ></line>
-            </svg>
-            <span>Calendar</span>
-          </a>
-
-          <p class="nav-heading">Workflows</p>
-          <a
-            href="#"
-            id="nav-interviews"
-            class="nav-item"
-            aria-current="false"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
-              ></path>
-            </svg>
-            <span>In The Capital</span>
-          </a>
-          <a href="#" id="nav-opeds" class="nav-item" aria-current="false">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              ></path>
-              <path
-                d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              ></path>
-            </svg>
-            <span>Op-Eds</span>
-          </a>
-        </nav>
-
-        <div class="sidebar-footer">
-          <div class="user-profile">
-            <div class="user-avatar" id="user-avatar" aria-hidden="true">U</div>
-            <div class="user-details">
-              <span id="user-name">Loading...</span>
-              <span id="user-role">writer</span>
-            </div>
-          </div>
-          <button id="logout-button" class="logout-btn">
-            <svg width="24" height="24" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
-              />
-            </svg>
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      <main class="main-content">
-        <header class="main-header">
-          <h1 id="board-title">Catalyst in the Capital</h1>
-          <div class="header-actions">
-            <button
-              id="status-report-button"
-              class="btn-secondary admin-only"
-              style="display: none;"
-            >
-              Generate Status Report
-            </button>
-            <button id="add-project-button" class="add-project-btn">
-              + Propose New Article
-            </button>
-            <button id="add-task-button" class="add-project-btn" style="display: none;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              Create Task
-            </button>
-          </div>
-        </header>
-
-        <div id="board-view">
-          <div id="kanban-board" class="kanban-board" aria-live="polite">
-            <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
-              <p>Loading projects...</p>
-            </div>
-          </div>
-        </div>
-
-        <div id="tasks-view" style="display: none">
-          <div id="tasks-board" class="kanban-board" aria-live="polite">
-            <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
-              <p>Loading tasks...</p>
-            </div>
-          </div>
-        </div>
-
-        <div id="calendar-view" style="display: none">
-            <div class="calendar-container">
-                <div class="calendar-header">
-                    <div class="calendar-nav">
-                        <button class="calendar-nav-btn" id="prev-month" aria-label="Previous month">‹</button>
-                        <h2 id="month-year">Calendar</h2>
-                        <button class="calendar-nav-btn" id="next-month" aria-label="Next month">›</button>
-                    </div>
-                    
-                    <div class="calendar-controls">
-                        <div class="view-toggle">
-                            <button class="active">Month</button>
-                            <button>Week</button>
-                            <button>Day</button>
-                        </div>
-                        <button class="today-btn" id="today-btn">Today</button>
-                    </div>
-                </div>
-                
-                <div class="calendar-content">
-                    <div class="calendar-day-names">
-                        <div class="calendar-day-name">Sun</div>
-                        <div class="calendar-day-name">Mon</div>
-                        <div class="calendar-day-name">Tue</div>
-                        <div class="calendar-day-name">Wed</div>
-                        <div class="calendar-day-name">Thu</div>
-                        <div class="calendar-day-name">Fri</div>
-                        <div class="calendar-day-name">Sat</div>
-                    </div>
-                    
-                    <div class="calendar-days-grid" id="calendar-grid">
-                        </div>
-                </div>
-            
-                <div class="calendar-legend">
-                    <div class="legend-item">
-                        <div class="legend-color publication"></div>
-                        <span>Publication</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color interview"></div>
-                        <span>Interview</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color due-soon"></div>
-                        <span>Due Soon</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color overdue"></div>
-                        <span>Overdue</span>
-                    </div>
-                    
-                    <div class="calendar-stats">
-                        <div class="stat-item">
-                            <div class="stat-number" id="stat-month">0</div>
-                            <div class="stat-label">This Month</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number" id="stat-week">0</div>
-                            <div class="stat-label">This Week</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number" id="stat-overdue">0</div>
-                            <div class="stat-label">Overdue</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-      </main>
-    </div>
-
-<!-- Replace the existing task modal in your dashboard.html with this enhanced version -->
-
-<div id="task-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 id="task-modal-title">Create New Task</h2>
-      <button class="close-button" aria-label="Close">×</button>
-    </div>
-    <form id="task-form">
-      <div class="form-group">
-        <label for="task-title">Task Title</label>
-        <input
-          type="text"
-          id="task-title"
-          required
-          placeholder="e.g., Contact Nature Journal about Catalyst feature"
-        />
-      </div>
-      
-      <div class="form-group">
-        <label for="task-description">Description</label>
-        <textarea
-          id="task-description"
-          rows="4"
-          placeholder="Describe what needs to be done, any specific requirements, contacts, or additional context."
-        ></textarea>
-      </div>
-      
-      <div class="form-group">
-        <label for="task-assignee">Assign To</label>
-        <div class="multi-select-container" id="multi-select-container">
-          <div class="selection-counter" id="selection-counter">0</div>
-          <div class="multi-select-header">
-            <div class="selected-assignees" id="selected-assignees"></div>
-            <div class="assignee-search-container">
-              <input 
-                type="text" 
-                id="assignee-search" 
-                class="assignee-search"
-                placeholder="Search team members..."
-                autocomplete="off"
-              >
-            </div>
-            <div class="dropdown-toggle" id="dropdown-toggle">
-              <span>▼</span>
-            </div>
-          </div>
-          <div class="assignee-dropdown" id="assignee-dropdown"></div>
-        </div>
-        <div class="form-help">
-          Search and select multiple team members to assign this task to. Click on selected members to remove them.
-        </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="task-deadline">Deadline</label>
-        <input type="date" id="task-deadline" required />
-      </div>
-      
-      <div class="form-group">
-        <label for="task-priority">Priority</label>
-        <select id="task-priority" required>
-          <option value="low">Low Priority</option>
-          <option value="medium" selected>Medium Priority</option>
-          <option value="high">High Priority</option>
-          <option value="urgent">Urgent Priority</option>
-        </select>
-      </div>
-      
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary close-button">Cancel</button>
-        <button type="submit" id="save-task-button" class="btn-primary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20,6 9,17 4,12"></polyline>
-          </svg>
-          Create Task
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-
-    <div id="task-details-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h2 id="task-details-title">Task Details</h2>
-                <button class="close-button" aria-label="Close">×</button>
-            </div>
-            <div class="details-container">
-                <div class="details-grid">
-                    <div class="details-main">
-                        <h4>Description</h4>
-                        <p id="task-details-description">Loading...</p>
-        
-                        <hr>
-                        <h4>Comments & Activity</h4>
-                        <div class="comment-box">
-                            <textarea id="task-comment-input" placeholder="Add a comment or update..."></textarea>
-                            <button id="add-task-comment-button" class="btn-primary">Post</button>
-                        </div>
-                        <div id="task-details-activity-feed" class="activity-feed">
-                          <p>No activity yet.</p>
-                        </div>
-                    </div>
-        
-                    <aside class="details-sidebar">
-                        <div class="sidebar-section">
-                            <h4>Status</h4>
-                            <p id="task-details-status">Loading...</p>
-                        </div>
-        
-                        <div class="sidebar-section">
-                            <h4>Assignment</h4>
-                            <p><strong>Created by:</strong> <span id="task-details-creator">Unknown</span></p>
-                            <p><strong>Assigned to:</strong> <span id="task-details-assignee">Not Assigned</span></p>
-                        </div>
-        
-                        <div class="sidebar-section">
-                            <h4>Timeline</h4>
-                            <p><strong>Created:</strong> <span id="task-details-created">Loading...</span></p>
-                            <p><strong>Deadline:</strong> <span id="task-details-deadline">Not set</span></p>
-                            <p><strong>Priority:</strong> <span id="task-details-priority">Medium</span></p>
-                        </div>
-
-                        <div id="task-admin-approval-section" class="sidebar-section admin-only" style="display: none;">
-                            <h4>Admin Actions</h4>
-                            <div class="button-group">
-                                <button id="approve-task-button" class="btn-success">Approve</button>
-                                <button id="reject-task-button" class="btn-danger">Reject</button>
-                            </div>
-                        </div>
-
-                        <div id="task-assignee-actions" class="sidebar-section" style="display: none;">
-                            <h4>Task Actions</h4>
-                            <div class="button-group">
-                                <button id="complete-task-button" class="btn-success">Mark Complete</button>
-                                <button id="request-extension-button" class="btn-secondary">Request Extension</button>
-                            </div>
-                        </div>
-        
-                        <div id="task-delete-section" class="sidebar-section">
-                            <h4>Delete Task</h4>
-                            <button id="delete-task-button" class="btn-danger" style="display: none;">Delete Forever</button>
-                        </div>
-                    </aside>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="project-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 id="modal-title">Propose New Article</h2>
-          <button class="close-button" aria-label="Close">×</button>
-        </div>
-        <form id="project-form">
-          <div class="form-group">
-            <label for="project-title">Article Title / Topic</label>
-            <input
-              type="text"
-              id="project-title"
-              required
-              placeholder="e.g., The Future of AI in Neuroscience"
-            />
-          </div>
-          <div class="form-group">
-            <label for="project-type">Project Type</label>
-            <select id="project-type" required>
-              <option value="Interview">Catalyst in the Capital (Interview)</option>
-              <option value="Op-Ed">Op-Ed</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="project-proposal">Brief Proposal</label>
-            <textarea
-              id="project-proposal"
-              rows="4"
-              placeholder="Describe your article idea, potential interviewees, and the main angle."
-            ></textarea>
-          </div>
-          <div class="form-group">
-            <label for="project-deadline">Target Publication Deadline</label>
-            <input type="date" id="project-deadline" required />
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary close-button">
-              Cancel
-            </button>
-            <button type="submit" id="save-project-button" class="btn-primary">
-              Save Proposal
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div id="details-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h2 id="details-title">Project Details</h2>
-                <button class="close-button" aria-label="Close">×</button>
-            </div>
-            <div class="details-container">
-                <div class="details-grid">
-                    <div class="details-main">
-                        <h4>Proposal
-                            <button id="edit-proposal-button" class="btn-secondary" style="display: none; margin-left: 12px;">Edit</button>
-                            <button id="save-proposal-button" class="btn-success" style="display: none; margin-left: 12px;">Save</button>
-                            <button id="cancel-proposal-button" class="btn-secondary" style="display: none; margin-left: 6px;">Cancel</button>
-                        </h4>
-                        <p id="details-proposal">No proposal provided.</p>
-        
-                        <hr>
-                        <h4>Progress Checklist</h4>
-                        <div id="details-timeline">
-                          <p>No tasks available.</p>
-                        </div>
-        
-                        <hr>
-                        <h4>Comments & Activity</h4>
-                        <div class="comment-box">
-                            <textarea id="comment-input" placeholder="Add a comment or update..."></textarea>
-                            <button id="add-comment-button" class="btn-primary">Post</button>
-                        </div>
-                        <div id="details-activity-feed" class="activity-feed">
-                          <p>No activity yet.</p>
-                        </div>
-                    </div>
-        
-                    <aside class="details-sidebar">
-                        <div class="sidebar-section">
-                            <h4>Status</h4>
-                            <p id="details-status">Loading...</p>
-                        </div>
-        
-                        <div class="sidebar-section">
-                            <h4>Key People</h4>
-                            <p><strong>Author:</strong> <span id="details-author">Unknown</span></p>
-                            <p><strong>Editor:</strong> <span id="details-editor">Not Assigned</span></p>
-                            <div id="assign-editor-section" class="admin-only details-form" style="margin-top: 12px; display: none;">
-                                <select id="editor-dropdown">
-                                  <option value="">Select Editor</option>
-                                </select>
-                                <button id="assign-editor-button" class="btn-secondary">Assign</button>
-                            </div>
-                        </div>
-        
-                        <div class="sidebar-section">
-                            <h4>Publication Deadline</h4>
-                            <p id="details-publication-deadline">Not set</p>
-                        </div>
-
-                        <div id="deadline-request-section" class="sidebar-section" style="display: none;">
-                            </div>
-        
-                        <div id="deadlines-section" class="sidebar-section">
-                            <h4>Task Deadlines</h4>
-                            <div id="details-deadlines-list">
-                              <p>No deadlines set.</p>
-                            </div>
-                            <button id="set-deadlines-button" class="btn-secondary" style="width: 100%; margin-top: 12px; display: none;">Set Remaining Deadlines</button>
-                            <button id="request-deadline-change-button" class="btn-secondary" style="width: 100%; margin-top: 8px; display: none;">Request Deadline Changes</button>
-                        </div>
-        
-                        <div id="admin-approval-section" class="sidebar-section admin-only" style="display: none;">
-                            <h4>Admin Actions</h4>
-                            <div class="button-group">
-                                <button id="approve-button" class="btn-success">Approve</button>
-                                <button id="reject-button" class="btn-danger">Reject</button>
-                            </div>
-                        </div>
-        
-                        <div id="delete-section" class="sidebar-section">
-                            <h4>Delete Project</h4>
-                            <button id="delete-project-button" class="btn-danger" style="display: none;">Delete Forever</button>
-                        </div>
-                    </aside>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="report-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
-      <div class="modal-content large report-modal-content">
-        <div class="modal-header">
-          <h2>Overall Status Report</h2>
-          <button class="close-button" aria-label="Close">×</button>
-        </div>
-        <div id="report-content" class="report-content-body">
-          <p>Loading report...</p>
-        </div>
-      </div>
-    </div>
-
-    <script>
-    window.addEventListener('error', function(e) {
-        console.error('[GLOBAL ERROR]', e.error || e.message);
-        
-        // Show user-friendly error if app fails to load
-        const loader = document.getElementById('loader');
-        if (loader && loader.style.display !== 'none') {
-            setTimeout(() => {
-                if (loader.style.display !== 'none') {
-                    loader.innerHTML = `
-                        <div style="text-align: center; padding: 40px;">
-                            <h3 style="color: #ef4444; margin-bottom: 16px;">Loading Error</h3>
-                            <p style="color: #64748b; margin-bottom: 20px;">There was an issue loading the application.</p>
-                            <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007AFF; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 10px;">
-                                Refresh Page
-                            </button>
-                            <button onclick="window.location.href = 'index.html'" style="padding: 10px 20px; background: #64748b; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                                Back to Login
-                            </button>
-                        </div>
-                    `;
-                }
-            }, 3000);
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Task Form - Multi-Select Assignees</title>
+    <style>
+        /* Enhanced Multi-Select Task Assignment Styles */
+        :root {
+            --primary-color: #007AFF;
+            --primary-hover: #0056D6;
+            --primary-light: rgba(0, 122, 255, 0.1);
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --surface-color: #ffffff;
+            --background-color: #f8fafc;
+            --text-color: #1d1d1f;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-lg: 16px;
         }
-    });
-    
-    // Check if Firebase loads properly
-    setTimeout(() => {
-        if (typeof firebase === 'undefined') {
-            console.error('[FIREBASE ERROR] Firebase not loaded after 3 seconds');
-            const loader = document.getElementById('loader');
-            if (loader) {
-                loader.innerHTML = `
-                    <div style="text-align: center; padding: 40px;">
-                        <h3 style="color: #ef4444; margin-bottom: 16px;">Connection Error</h3>
-                        <p style="color: #64748b; margin-bottom: 20px;">Unable to connect to the database. Please check your internet connection.</p>
-                        <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007AFF; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                            Try Again
-                        </button>
-                    </div>
-                `;
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .demo-container {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .demo-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            padding: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .demo-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color) 0%, #3b82f6 50%, var(--primary-color) 100%);
+        }
+
+        .demo-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-color);
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        .form-container {
+            padding: 2rem;
+        }
+
+        /* Enhanced Form Group Styles */
+        .form-group {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 0.75rem;
+            font-size: 15px;
+            letter-spacing: -0.01em;
+            position: relative;
+            padding-left: 1rem;
+        }
+
+        .form-group label::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 18px;
+            background: linear-gradient(180deg, var(--primary-color), #3b82f6);
+            border-radius: 2px;
+            box-shadow: 0 2px 4px rgba(0, 122, 255, 0.3);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid rgba(226, 232, 240, 0.8);
+            border-radius: var(--radius);
+            font-size: 15px;
+            background: #ffffff;
+            color: var(--text-color);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            line-height: 1.5;
+            box-shadow: 
+                inset 0 2px 4px rgba(0, 0, 0, 0.06),
+                0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: #ffffff;
+            box-shadow: 
+                0 0 0 4px rgba(0, 122, 255, 0.1),
+                inset 0 2px 4px rgba(0, 0, 0, 0.04),
+                0 8px 32px rgba(0, 122, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+            line-height: 1.6;
+        }
+
+        /* Professional Multi-Select Component */
+        .multi-select-container {
+            position: relative;
+            border: 2px solid rgba(226, 232, 240, 0.8);
+            border-radius: var(--radius);
+            background-color: #ffffff;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: text;
+            min-height: 60px;
+            box-shadow: 
+                inset 0 2px 4px rgba(0, 0, 0, 0.06),
+                0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .multi-select-container:focus-within {
+            border-color: var(--primary-color);
+            box-shadow: 
+                0 0 0 4px rgba(0, 122, 255, 0.1),
+                inset 0 2px 4px rgba(0, 0, 0, 0.04),
+                0 8px 32px rgba(0, 122, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .multi-select-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            min-height: 60px;
+            align-items: center;
+        }
+
+        .selected-assignees {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .assignee-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, var(--primary-light), rgba(59, 130, 246, 0.1));
+            color: var(--primary-color);
+            border-radius: 20px;
+            padding: 0.5rem 0.75rem;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid rgba(0, 122, 255, 0.2);
+            transition: all 0.2s ease;
+            animation: tagSlideIn 0.3s ease-out;
+        }
+
+        @keyframes tagSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8) translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
             }
         }
-    }, 3000);
-    </script>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
-    <script>
-        // Debug mode - use simplified dashboard
-        const useDebugMode = true;
+        .assignee-tag:hover {
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(59, 130, 246, 0.15));
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
+        }
+
+        .assignee-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0, 122, 255, 0.3);
+        }
+
+        .remove-assignee {
+            cursor: pointer;
+            color: var(--primary-color);
+            font-weight: 700;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+        }
+
+        .remove-assignee:hover {
+            opacity: 1;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+            transform: scale(1.1);
+        }
+
+        .assignee-search-container {
+            position: relative;
+            min-width: 200px;
+            flex: 1;
+        }
+
+        .assignee-search {
+            border: none;
+            outline: none;
+            padding: 0.5rem 0;
+            font-size: 14px;
+            width: 100%;
+            background-color: transparent;
+            color: var(--text-color);
+        }
+
+        .assignee-search::placeholder {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .dropdown-toggle {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 18px;
+            padding: 0.5rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .dropdown-toggle:hover {
+            color: var(--primary-color);
+            background: var(--primary-light);
+            transform: scale(1.1);
+        }
+
+        .assignee-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            backdrop-filter: blur(20px);
+        }
+
+        .assignee-dropdown.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .assignee-dropdown::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .assignee-dropdown::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .assignee-dropdown::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #cbd5e1, #94a3b8);
+            border-radius: 3px;
+        }
+
+        .assignee-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+        }
+
+        .assignee-item:last-child {
+            border-bottom: none;
+        }
+
+        .assignee-item:hover {
+            background: linear-gradient(135deg, var(--primary-light), rgba(59, 130, 246, 0.05));
+            transform: translateX(4px);
+        }
+
+        .assignee-item.selected {
+            background: linear-gradient(135deg, var(--primary-light), rgba(59, 130, 246, 0.1));
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .assignee-item .user-avatar {
+            width: 36px;
+            height: 36px;
+            font-size: 14px;
+            font-weight: 700;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .assignee-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .assignee-name {
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        .assignee-role {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: capitalize;
+        }
+
+        .assignee-status {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .assignee-status.available {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .assignee-status.busy {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .no-results {
+            padding: 2rem 1rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .form-help {
+            margin-top: 0.5rem;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-style: italic;
+            line-height: 1.4;
+            background: rgba(0, 122, 255, 0.02);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .selection-counter {
+            position: absolute;
+            top: -8px;
+            right: 12px;
+            background: var(--primary-color);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 12px;
+            min-width: 24px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4);
+            transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .selection-counter.show {
+            transform: scale(1);
+        }
+
+        /* Enhanced Button Styles */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: var(--radius);
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                0 4px 16px rgba(0, 122, 255, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0051D5, #2563eb);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 12px 32px rgba(0, 122, 255, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+        /* Demo Specific Styles */
+        .demo-users {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .demo-users h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 1rem;
+        }
+
+        .demo-user-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .demo-user-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+
+        .demo-user-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .demo-container {
+                max-width: 100%;
+            }
+
+            .demo-header,
+            .form-container {
+                padding: 1.5rem;
+            }
+
+            .assignee-search-container {
+                min-width: 150px;
+            }
+
+            .demo-user-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Accessibility Improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+
+        .assignee-item:focus,
+        .dropdown-toggle:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1>Enhanced Task Creation Form</h1>
+        </div>
         
-        if (useDebugMode) {
-            console.log('[DEBUG] Using debug dashboard');
+        <div class="form-container">
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="task-title">Task Title</label>
+                    <input
+                        type="text"
+                        id="task-title"
+                        required
+                        placeholder="e.g., Contact Nature Journal about Catalyst feature"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="task-description">Description</label>
+                    <textarea
+                        id="task-description"
+                        rows="4"
+                        placeholder="Describe what needs to be done, any specific requirements, contacts, or additional context."
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="task-assignee">Assign To</label>
+                    <div class="multi-select-container" id="multi-select-container">
+                        <div class="selection-counter" id="selection-counter">0</div>
+                        <div class="multi-select-header">
+                            <div class="selected-assignees" id="selected-assignees"></div>
+                            <div class="assignee-search-container">
+                                <input 
+                                    type="text" 
+                                    id="assignee-search" 
+                                    class="assignee-search"
+                                    placeholder="Search team members..."
+                                    autocomplete="off"
+                                >
+                            </div>
+                            <div class="dropdown-toggle" id="dropdown-toggle">
+                                <span>▼</span>
+                            </div>
+                        </div>
+                        <div class="assignee-dropdown" id="assignee-dropdown"></div>
+                    </div>
+                    <div class="form-help">
+                        Search and select multiple team members to assign this task to. Click on selected members to remove them.
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="task-deadline">Deadline</label>
+                    <input type="date" id="task-deadline" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="task-priority">Priority</label>
+                    <select id="task-priority" required>
+                        <option value="low">Low Priority</option>
+                        <option value="medium" selected>Medium Priority</option>
+                        <option value="high">High Priority</option>
+                        <option value="urgent">Urgent Priority</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20,6 9,17 4,12"></polyline>
+                    </svg>
+                    Create Task
+                </button>
+            </form>
+
+            <div class="demo-users">
+                <h3>Available Team Members</h3>
+                <div class="demo-user-list" id="demo-user-list">
+                    <!-- Demo users will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Demo Data
+        const demoUsers = [
+            { id: '1', name: 'Sarah Johnson', role: 'editor', email: 'sarah@catalyst.com', status: 'available' },
+            { id: '2', name: 'Michael Chen', role: 'writer', email: 'michael@catalyst.com', status: 'available' },
+            { id: '3', name: 'Emma Rodriguez', role: 'admin', email: 'emma@catalyst.com', status: 'busy' },
+            { id: '4', name: 'David Kim', role: 'writer', email: 'david@catalyst.com', status: 'available' },
+            { id: '5', name: 'Lisa Thompson', role: 'editor', email: 'lisa@catalyst.com', status: 'available' },
+            { id: '6', name: 'James Wilson', role: 'writer', email: 'james@catalyst.com', status: 'busy' },
+            { id: '7', name: 'Anna Martinez', role: 'admin', email: 'anna@catalyst.com', status: 'available' },
+            { id: '8', name: 'Ryan O\'Connor', role: 'writer', email: 'ryan@catalyst.com', status: 'available' }
+        ];
+
+        // State Management
+        let selectedAssignees = [];
+        let filteredUsers = [...demoUsers];
+        let isDropdownOpen = false;
+
+        // DOM Elements
+        const multiSelectContainer = document.getElementById('multi-select-container');
+        const selectedAssigneesContainer = document.getElementById('selected-assignees');
+        const assigneeSearch = document.getElementById('assignee-search');
+        const assigneeDropdown = document.getElementById('assignee-dropdown');
+        const dropdownToggle = document.getElementById('dropdown-toggle');
+        const selectionCounter = document.getElementById('selection-counter');
+        const demoUserList = document.getElementById('demo-user-list');
+
+        // Utility Functions
+        function stringToColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const colors = ['#007AFF', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Initialize Demo Users Display
+        function initializeDemoUsers() {
+            demoUserList.innerHTML = demoUsers.map(user => `
+                <div class="demo-user-item">
+                    <div class="demo-user-avatar" style="background-color: ${stringToColor(user.name)}">
+                        ${user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600;">${escapeHtml(user.name)}</div>
+                        <div style="font-size: 11px; color: #94a3b8;">${user.role} • ${user.status}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Selected Assignees
+        function renderSelectedAssignees() {
+            selectedAssigneesContainer.innerHTML = selectedAssignees.map(user => `
+                <div class="assignee-tag" data-user-id="${user.id}">
+                    <div class="assignee-avatar" style="background-color: ${stringToColor(user.name)}">
+                        ${user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span>${escapeHtml(user.name)}</span>
+                    <div class="remove-assignee" onclick="removeAssignee('${user.id}')">×</div>
+                </div>
+            `).join('');
+
+            // Update counter
+            const count = selectedAssignees.length;
+            selectionCounter.textContent = count;
+            selectionCounter.classList.toggle('show', count > 0);
+        }
+
+        // Render Dropdown Options
+        function renderDropdownOptions() {
+            if (filteredUsers.length === 0) {
+                assigneeDropdown.innerHTML = '<div class="no-results">No team members found</div>';
+                return;
+            }
+
+            assigneeDropdown.innerHTML = filteredUsers.map(user => {
+                const isSelected = selectedAssignees.some(selected => selected.id === user.id);
+                return `
+                    <div class="assignee-item ${isSelected ? 'selected' : ''}" 
+                         onclick="toggleAssignee('${user.id}')"
+                         data-user-id="${user.id}">
+                        <div class="user-avatar" style="background-color: ${stringToColor(user.name)}">
+                            ${user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="assignee-info">
+                            <div class="assignee-name">${escapeHtml(user.name)}</div>
+                            <div class="assignee-role">${user.role}</div>
+                        </div>
+                        <div class="assignee-status ${user.status}">${user.status}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle Assignee Selection
+        function toggleAssignee(userId) {
+            const user = demoUsers.find(u => u.id === userId);
+            if (!user) return;
+
+            const existingIndex = selectedAssignees.findIndex(selected => selected.id === userId);
+            
+            if (existingIndex > -1) {
+                selectedAssignees.splice(existingIndex, 1);
+            } else {
+                selectedAssignees.push(user);
+            }
+
+            renderSelectedAssignees();
+            renderDropdownOptions();
+        }
+
+        // Remove Assignee
+        function removeAssignee(userId) {
+            selectedAssignees = selectedAssignees.filter(user => user.id !== userId);
+            renderSelectedAssignees();
+            renderDropdownOptions();
+        }
+
+        // Filter Users
+        const filterUsers = debounce((searchTerm) => {
+            filteredUsers = demoUsers.filter(user =>
+                user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.email.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            renderDropdownOptions();
+        }, 300);
+
+        // Toggle Dropdown
+        function toggleDropdown(show = null) {
+            isDropdownOpen = show !== null ? show : !isDropdownOpen;
+            assigneeDropdown.classList.toggle('show', isDropdownOpen);
+            dropdownToggle.style.transform = isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+
+        // Event Listeners
+        assigneeSearch.addEventListener('input', (e) => {
+            filterUsers(e.target.value);
+            if (!isDropdownOpen) toggleDropdown(true);
+        });
+
+        assigneeSearch.addEventListener('focus', () => {
+            toggleDropdown(true);
+        });
+
+        dropdownToggle.addEventListener('click', () => {
+            toggleDropdown();
+            if (isDropdownOpen) {
+                assigneeSearch.focus();
+            }
+        });
+
+        multiSelectContainer.addEventListener('click', (e) => {
+            if (e.target === multiSelectContainer || e.target.closest('.selected-assignees')) {
+                assigneeSearch.focus();
+                if (!isDropdownOpen) toggleDropdown(true);
+            }
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!multiSelectContainer.contains(e.target)) {
+                toggleDropdown(false);
+            }
+        });
+
+        // Keyboard Navigation
+        assigneeSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                toggleDropdown(false);
+                assigneeSearch.blur();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (filteredUsers.length > 0) {
+                    const firstUnselected = filteredUsers.find(user => 
+                        !selectedAssignees.some(selected => selected.id === user.id)
+                    );
+                    if (firstUnselected) {
+                        toggleAssignee(firstUnselected.id);
+                        assigneeSearch.value = '';
+                        filterUsers('');
+                    }
+                }
+            } else if (e.key === 'Backspace' && e.target.value === '' && selectedAssignees.length > 0) {
+                // Remove last selected assignee when backspacing on empty input
+                const lastAssignee = selectedAssignees[selectedAssignees.length - 1];
+                removeAssignee(lastAssignee.id);
+            }
+        });
+
+        // Form Submission Handler
+        document.getElementById('task-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                title: document.getElementById('task-title').value,
+                description: document.getElementById('task-description').value,
+                assignees: selectedAssignees,
+                deadline: document.getElementById('task-deadline').value,
+                priority: document.getElementById('task-priority').value
+            };
+
+            console.log('Task Form Data:', formData);
+            
+            // Show success message
+            alert(`Task created successfully!\n\nTitle: ${formData.title}\nAssigned to: ${formData.assignees.map(a => a.name).join(', ')}\nPriority: ${formData.priority}\nDeadline: ${formData.deadline}`);
+        });
+
+        // Initialize the form
+        function initialize() {
+            initializeDemoUsers();
+            renderSelectedAssignees();
+            renderDropdownOptions();
+            
+            // Set default deadline to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('task-deadline').value = tomorrow.toISOString().split('T')[0];
+        }
+
+        // Make functions global for onclick handlers
+        window.toggleAssignee = toggleAssignee;
+        window.removeAssignee = removeAssignee;
+
+        // Initialize when DOM is loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
         }
     </script>
-    
-    <script src="projectState.js"></script>
-    <script>
-      // Load dashboard script based on mode
-      const script = document.createElement('script');
-      script.src = window.useDebugMode ? 'debug_dashboard.js' : 'dashboard.js';
-      script.onload = () => console.log('[SCRIPT] Dashboard script loaded');
-      script.onerror = (e) => {
-        console.error('[SCRIPT] Dashboard script failed to load', e);
-        // Fallback to inline basic functionality
-        document.getElementById('loader').innerHTML = `
-          <div style="text-align: center; padding: 40px;">
-            <h3 style="color: #ef4444;">Script Loading Error</h3>
-            <p style="color: #64748b; margin: 20px 0;">Dashboard script could not load.</p>
-            <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007AFF; color: white; border: none; border-radius: 8px; cursor: pointer;">
-              Refresh Page
-            </button>
-          </div>
-        `;
-      };
-      document.head.appendChild(script);
-    </script>
-  </body>
+</body>
 </html>
