@@ -2660,3 +2660,63 @@ function refreshTaskDetailsModal(task) {
         deadlineSection.appendChild(warning);
     }
 }
+
+// ===============================
+// MULTIPLE TASK ASSIGNEES - SAFE ADDITIONS
+// ===============================
+
+// Store original functions
+const originalPopulateTaskAssigneeDropdown = window.populateTaskAssigneeDropdown;
+const originalHandleTaskFormSubmit = window.handleTaskFormSubmit;
+const originalValidateTaskForm = window.validateTaskForm;
+
+// Enhanced populate function
+window.populateTaskAssigneeDropdown = function() {
+    const dropdown = document.getElementById('task-assignee');
+    if (!dropdown) return;
+    
+    dropdown.innerHTML = '<option value="" disabled>Select people to assign task to (hold Ctrl/Cmd for multiple)</option>';
+    dropdown.multiple = true;
+    dropdown.size = 6;
+    
+    allUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.name;
+        dropdown.appendChild(option);
+    });
+};
+
+// Enhanced validation
+window.validateTaskForm = function() {
+    const title = document.getElementById('task-title').value.trim();
+    const assigneeSelect = document.getElementById('task-assignee');
+    const selectedAssignees = assigneeSelect ? Array.from(assigneeSelect.selectedOptions) : [];
+    const deadline = document.getElementById('task-deadline').value;
+    
+    const errors = [];
+    
+    if (!title || title.length < 3) {
+        errors.push('Task title must be at least 3 characters long');
+    }
+    
+    if (selectedAssignees.length === 0) {
+        errors.push('Please select at least one person to assign this task to');
+    }
+    
+    if (!deadline) {
+        errors.push('Please set a deadline for this task');
+    } else {
+        const deadlineDate = new Date(deadline);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (deadlineDate < today) {
+            errors.push('Deadline cannot be in the past');
+        }
+    }
+    
+    return errors;
+};
+
+console.log('[MULTIPLE ASSIGNEES] Multiple assignee functionality loaded!');
