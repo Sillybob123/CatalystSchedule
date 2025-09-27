@@ -266,12 +266,12 @@
     </div>
 
     <div id="task-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 id="task-modal-title">Create New Task</h2>
-          <button class="close-button" aria-label="Close">×</button>
-        </div>
-        <form id="task-form">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="task-modal-title">Create New Task</h2>
+      <button class="close-button" aria-label="Close">×</button>
+    </div>
+    <form id="task-form">
       <div class="form-group">
         <label for="task-title">Task Title</label>
         <input
@@ -291,29 +291,46 @@
         ></textarea>
       </div>
 
+      <!-- Enhanced Multi-Select Assignee Section -->
       <div class="form-group">
         <label for="task-assignee">Assign To</label>
-        <div class="multi-select-container" id="multi-select-container">
-          <div class="selection-counter" id="selection-counter">0</div>
-          <div class="multi-select-header">
-            <div class="selected-assignees" id="selected-assignees"></div>
-            <div class="assignee-search-container">
-              <input 
-                type="text" 
-                id="assignee-search" 
-                class="assignee-search"
-                placeholder="Search team members..."
-                autocomplete="off"
-              >
+        <div class="multi-select-wrapper">
+          <div class="multi-select-container" id="multi-select-container">
+            <div class="multi-select-header" id="multi-select-header">
+              <div class="selected-assignees" id="selected-assignees">
+                <!-- Selected assignees will be populated here -->
+              </div>
+              <div class="assignee-search-wrapper">
+                <input 
+                  type="text" 
+                  id="assignee-search" 
+                  class="assignee-search"
+                  placeholder="Search team members..."
+                  autocomplete="off"
+                >
+                <div class="search-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                  </svg>
+                </div>
+              </div>
+              <div class="dropdown-indicator" id="dropdown-indicator">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6,9 12,15 18,9"></polyline>
+                </svg>
+              </div>
             </div>
-            <div class="dropdown-toggle" id="dropdown-toggle">
-              <span>▼</span>
+            <div class="assignee-dropdown" id="assignee-dropdown">
+              <div class="dropdown-loading">
+                <div class="mini-loader"></div>
+                <span>Loading team members...</span>
+              </div>
             </div>
           </div>
-          <div class="assignee-dropdown" id="assignee-dropdown"></div>
-        </div>
-        <div class="form-help">
-          Search and select multiple team members to assign this task to. Click on selected members to remove them.
+          <div class="assignee-help-text">
+            Search and select team members. Click on selected members to remove them.
+          </div>
         </div>
       </div>
 
@@ -342,8 +359,8 @@
         </button>
       </div>
     </form>
-      </div>
-    </div>
+  </div>
+</div>
 
     <div id="task-details-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
         <div class="modal-content large">
