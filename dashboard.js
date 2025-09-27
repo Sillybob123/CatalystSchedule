@@ -3079,7 +3079,6 @@ setTimeout(() => {
 }, 500);
 
 // Add these enhanced multi-select functions to your dashboard.js file
-
 // ===============================
 // ENHANCED MULTI-SELECT TASK ASSIGNMENT
 // ===============================
