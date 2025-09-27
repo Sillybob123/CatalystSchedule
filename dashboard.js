@@ -2193,3 +2193,470 @@ async function handleDeleteTask() {
         }
     }
 }
+
+// Enhanced Task Rendering Function
+function renderTasksBoard(tasks) {
+    console.log(`[RENDER] Rendering ${tasks.length} tasks`);
+    const board = document.getElementById('tasks-board');
+    board.innerHTML = '';
+    
+    const columns = [
+        { id: 'pending', title: 'Pending Approval', icon: '⏳', color: '#f59e0b' },
+        { id: 'approved', title: 'Approved', icon: '✅', color: '#10b981' },
+        { id: 'in_progress', title: 'In Progress', icon: '🔄', color: '#3b82f6' },
+        { id: 'completed', title: 'Completed', icon: '🎉', color: '#8b5cf6' }
+    ];
+    
+    columns.forEach((column, index) => {
+        const columnTasks = tasks.filter(task => getTaskColumn(task) === column.id);
+        console.log(`[COLUMN] "${column.title}" has ${columnTasks.length} tasks`);
+
+        const columnEl = document.createElement('div');
+        columnEl.className = 'kanban-column';
+        columnEl.style.setProperty('--column-accent', column.color);
+        columnEl.style.setProperty('--column-accent-dark', adjustColorBrightness(column.color, -20));
+        
+        columnEl.innerHTML = `
+            <div class="column-header">
+                <div class="column-title">
+                    <div class="column-title-main">
+                        <span class="column-icon">${column.icon}</span>
+                        <span class="column-title-text">${column.title}</span>
+                    </div>
+                    <span class="task-count">${columnTasks.length}</span>
+                </div>
+            </div>
+            <div class="column-content">
+                <div class="kanban-cards"></div>
+            </div>
+        `;
+        
+        const cardsContainer = columnEl.querySelector('.kanban-cards');
+        
+        if (columnTasks.length === 0) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'empty-column';
+            emptyState.innerHTML = `
+                <div class="empty-column-icon">${column.icon}</div>
+                <div class="empty-column-text">No ${column.title.toLowerCase()}</div>
+                <div class="empty-column-subtext">Tasks will appear here when they reach this stage</div>
+            `;
+            cardsContainer.appendChild(emptyState);
+        } else {
+            columnTasks
+                .sort((a, b) => {
+                    // Sort by priority first, then by deadline
+                    const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+                    const aPriority = priorityOrder[a.priority] || 2;
+                    const bPriority = priorityOrder[b.priority] || 2;
+                    
+                    if (aPriority !== bPriority) {
+                        return bPriority - aPriority; // Higher priority first
+                    }
+                    
+                    // Then sort by deadline
+                    return new Date(a.deadline) - new Date(b.deadline);
+                })
+                .forEach(task => {
+                    cardsContainer.appendChild(createEnhancedTaskCard(task));
+                });
+        }
+        
+        board.appendChild(columnEl);
+    });
+}
+
+// Enhanced Task Card Creation
+function createEnhancedTaskCard(task) {
+    const card = document.createElement('div');
+    card.className = 'kanban-card';
+    card.classList.add(`priority-${task.priority || 'medium'}`);
+    card.dataset.id = task.id;
+    
+    // Check if overdue or due soon
+    const deadline = new Date(task.deadline);
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    
+    const isOverdue = deadline < now && task.status !== 'completed';
+    const isDueSoon = deadline < tomorrow && deadline >= now;
+    
+    if (isOverdue) card.classList.add('overdue');
+    if (isDueSoon) card.classList.add('due-soon');
+    
+    // Format deadline
+    const deadlineText = deadline.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: deadline.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+    
+    // Priority colors
+    const priorityColors = {
+        urgent: '#dc2626',
+        high: '#ea580c',
+        medium: '#f59e0b',
+        low: '#059669'
+    };
+    
+    const priorityColor = priorityColors[task.priority] || priorityColors.medium;
+    
+    // Build the card HTML
+    let cardHTML = `
+        <h4 class="card-title">${escapeHtml(task.title)}</h4>
+        <div class="card-meta">
+            <div class="priority-badge ${task.priority || 'medium'}" style="background-color: ${priorityColor};">
+                ${(task.priority || 'medium').toUpperCase()}
+            </div>
+            <div class="status-badge ${task.status || 'pending'}">
+                ${(task.status || 'pending').replace('_', ' ')}
+            </div>
+        </div>
+    `;
+    
+    // Add description preview if available
+    if (task.description && task.description.trim()) {
+        const preview = task.description.length > 120 ? 
+            task.description.substring(0, 120) + '...' : 
+            task.description;
+        cardHTML += `<div class="card-content-preview">${escapeHtml(preview)}</div>`;
+    }
+    
+    // Add footer with assignee and deadline
+    cardHTML += `
+        <div class="card-footer">
+            <div class="card-author">
+                <div class="user-avatar" style="background-color: ${stringToColor(task.creatorName)}">
+                    ${task.creatorName.charAt(0).toUpperCase()}
+                </div>
+                <span title="Created by ${escapeHtml(task.creatorName)}, assigned to ${escapeHtml(task.assigneeName)}">
+                    → ${escapeHtml(task.assigneeName)}
+                </span>
+            </div>
+            <div class="card-deadline ${isOverdue ? 'overdue' : isDueSoon ? 'due-today' : ''}" 
+                 title="Due: ${deadline.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}">
+                ${deadlineText}
+            </div>
+        </div>
+    `;
+    
+    card.innerHTML = cardHTML;
+    
+    // Add click handler
+    card.addEventListener('click', () => openTaskDetailsModal(task.id));
+    
+    return card;
+}
+
+// Enhanced task column determination
+function getTaskColumn(task) {
+    if (task.status === 'completed') return 'completed';
+    if (task.status === 'rejected') return 'pending'; // Rejected tasks go back to pending
+    if (task.status === 'approved') {
+        // Check if assignee has started working on it (look for activity)
+        if (task.activity && task.activity.some(a => 
+            a.text.includes('started working') || 
+            a.text.includes('in progress') ||
+            a.text.includes('commented:')
+        )) {
+            return 'in_progress';
+        }
+        return 'approved';
+    }
+    return 'pending'; // Default for new tasks and rejected tasks
+}
+
+// Helper function to adjust color brightness
+function adjustColorBrightness(hex, percent) {
+    // Remove # if present
+    hex = hex.replace('#', '');
+    
+    // Parse RGB values
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Adjust brightness
+    const factor = (100 + percent) / 100;
+    const newR = Math.round(Math.min(255, Math.max(0, r * factor)));
+    const newG = Math.round(Math.min(255, Math.max(0, g * factor)));
+    const newB = Math.round(Math.min(255, Math.max(0, b * factor)));
+    
+    // Convert back to hex
+    return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+}
+
+// Enhanced form validation
+function validateTaskForm() {
+    const title = document.getElementById('task-title').value.trim();
+    const assigneeId = document.getElementById('task-assignee').value;
+    const deadline = document.getElementById('task-deadline').value;
+    
+    const errors = [];
+    
+    if (!title || title.length < 3) {
+        errors.push('Task title must be at least 3 characters long');
+    }
+    
+    if (!assigneeId) {
+        errors.push('Please select someone to assign this task to');
+    }
+    
+    if (!deadline) {
+        errors.push('Please set a deadline for this task');
+    } else {
+        const deadlineDate = new Date(deadline);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (deadlineDate < today) {
+            errors.push('Deadline cannot be in the past');
+        }
+    }
+    
+    return errors;
+}
+
+// Enhanced task form submission with better error handling
+async function handleTaskFormSubmit(e) {
+    e.preventDefault();
+    
+    const submitButton = document.getElementById('save-task-button');
+    const originalText = submitButton.textContent;
+    
+    // Validate form
+    const validationErrors = validateTaskForm();
+    if (validationErrors.length > 0) {
+        showNotification(validationErrors.join('. '), 'error');
+        return;
+    }
+    
+    try {
+        // Show loading state
+        submitButton.disabled = true;
+        submitButton.classList.add('loading');
+        submitButton.textContent = 'Creating Task...';
+        
+        const assigneeId = document.getElementById('task-assignee').value;
+        const assignee = allUsers.find(u => u.id === assigneeId);
+        
+        if (!assignee) {
+            throw new Error('Selected assignee not found');
+        }
+        
+        const newTask = {
+            title: document.getElementById('task-title').value.trim(),
+            description: document.getElementById('task-description').value.trim() || null,
+            assigneeId: assigneeId,
+            assigneeName: assignee.name,
+            deadline: document.getElementById('task-deadline').value,
+            priority: document.getElementById('task-priority').value || 'medium',
+            creatorId: currentUser.uid,
+            creatorName: currentUserName,
+            status: 'pending',
+            createdAt: new Date(),
+            activity: [{
+                text: 'created this task',
+                authorName: currentUserName,
+                timestamp: new Date()
+            }]
+        };
+        
+        console.log('[TASK CREATE] Creating task:', newTask);
+        
+        const docRef = await db.collection('tasks').add(newTask);
+        console.log('[TASK CREATE] Task created with ID:', docRef.id);
+        
+        showNotification('Task created successfully! It will appear once an admin approves it.', 'success');
+        closeAllModals();
+        
+        // Reset form
+        document.getElementById('task-form').reset();
+        
+    } catch (error) {
+        console.error("[ERROR] Failed to create task:", error);
+        
+        let errorMessage = 'Failed to create task. ';
+        
+        if (error.code === 'permission-denied') {
+            errorMessage += 'You do not have permission to create tasks. Please contact an administrator.';
+        } else if (error.message) {
+            errorMessage += error.message;
+        } else {
+            errorMessage += 'Please try again or contact support.';
+        }
+        
+        showNotification(errorMessage, 'error');
+    } finally {
+        // Reset button state
+        submitButton.disabled = false;
+        submitButton.classList.remove('loading');
+        submitButton.textContent = originalText;
+    }
+}
+
+// Enhanced notification function with better styling
+function showNotification(message, type = 'success') {
+    console.log(`[NOTIFICATION ${type.toUpperCase()}] ${message}`);
+    
+    // Create notification container if it doesn't exist
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.className = 'notification-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            pointer-events: none;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.style.cssText = `
+        padding: 16px 20px;
+        margin-bottom: 8px;
+        border-radius: 12px;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        transform: translateX(400px);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        max-width: 350px;
+        pointer-events: auto;
+        position: relative;
+    `;
+    
+    // Set colors based on type
+    if (type === 'success') {
+        notification.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    } else if (type === 'error') {
+        notification.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+    } else if (type === 'warning') {
+        notification.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+    } else {
+        notification.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+    }
+    
+    notification.textContent = message;
+    
+    container.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Hide and remove notification
+    setTimeout(() => {
+        notification.style.transform = 'translateX(400px)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 4000);
+}
+
+// Enhanced task details modal with better status actions
+function refreshTaskDetailsModal(task) {
+    // Basic info
+    document.getElementById('task-details-title').textContent = task.title;
+    document.getElementById('task-details-description').textContent = task.description || 'No description provided.';
+    
+    // Status with better formatting
+    const statusElement = document.getElementById('task-details-status');
+    const statusText = (task.status || 'pending').replace('_', ' ').toUpperCase();
+    statusElement.textContent = statusText;
+    statusElement.className = `status-badge ${task.status || 'pending'}`;
+    
+    // Assignment info
+    document.getElementById('task-details-creator').textContent = task.creatorName;
+    document.getElementById('task-details-assignee').textContent = task.assigneeName || 'Not assigned';
+    
+    // Timeline with better date formatting
+    const createdDate = task.createdAt ? new Date(task.createdAt.seconds * 1000) : new Date();
+    const deadlineDate = new Date(task.deadline);
+    
+    document.getElementById('task-details-created').textContent = createdDate.toLocaleDateString('en-US', { 
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    
+    document.getElementById('task-details-deadline').textContent = deadlineDate.toLocaleDateString('en-US', { 
+        year: 'numeric', month: 'long', day: 'numeric' 
+    });
+    
+    // Priority with color coding
+    const priorityElement = document.getElementById('task-details-priority');
+    const priority = (task.priority || 'medium').toUpperCase();
+    priorityElement.textContent = priority;
+    priorityElement.className = `priority-badge ${task.priority || 'medium'}`;
+    
+    const priorityColors = {
+        urgent: '#dc2626',
+        high: '#ea580c',
+        medium: '#f59e0b',
+        low: '#059669'
+    };
+    priorityElement.style.backgroundColor = priorityColors[task.priority] || priorityColors.medium;
+    priorityElement.style.color = 'white';
+    priorityElement.style.padding = '4px 8px';
+    priorityElement.style.borderRadius = '8px';
+    priorityElement.style.fontSize = '12px';
+    priorityElement.style.fontWeight = '700';
+    
+    // Permissions and actions
+    const isAdmin = currentUserRole === 'admin';
+    const isCreator = currentUser.uid === task.creatorId;
+    const isAssignee = currentUser.uid === task.assigneeId;
+    
+    // Admin approval section
+    const adminSection = document.getElementById('task-admin-approval-section');
+    if (adminSection) {
+        adminSection.style.display = isAdmin && task.status === 'pending' ? 'block' : 'none';
+    }
+    
+    // Assignee actions
+    const assigneeActions = document.getElementById('task-assignee-actions');
+    if (assigneeActions) {
+        assigneeActions.style.display = isAssignee && task.status === 'approved' ? 'block' : 'none';
+    }
+    
+    // Delete section
+    const deleteSection = document.getElementById('task-delete-section');
+    const deleteButton = document.getElementById('delete-task-button');
+    if (deleteSection && deleteButton) {
+        deleteButton.style.display = (isAdmin || isCreator) ? 'block' : 'none';
+    }
+    
+    // Activity feed
+    renderTaskActivityFeed(task.activity || []);
+    
+    // Add deadline warning if overdue or due soon
+    const now = new Date();
+    const deadline = new Date(task.deadline);
+    const deadlineSection = document.getElementById('task-details-deadline').parentElement;
+    
+    // Remove existing warnings
+    const existingWarning = deadlineSection.querySelector('.deadline-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+    
+    if (deadline < now && task.status !== 'completed') {
+        const warning = document.createElement('div');
+        warning.className = 'deadline-warning task-deadline-critical';
+        warning.textContent = '⚠️ This task is overdue!';
+        deadlineSection.appendChild(warning);
+    } else if (deadline < new Date(now.getTime() + 24 * 60 * 60 * 1000)) {
+        const warning = document.createElement('div');
+        warning.className = 'deadline-warning task-deadline-warning';
+        warning.textContent = '⏰ This task is due soon!';
+        deadlineSection.appendChild(warning);
+    }
+}
