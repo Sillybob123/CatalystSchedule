@@ -3830,3 +3830,767 @@
     border: 1px solid #000;
   }
 }
+
+/* === TASK MANAGEMENT SPECIFIC STYLES === */
+
+/* Tasks Board Container */
+#tasks-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 140px);
+  background: var(--background-color);
+  flex: 1;
+}
+
+#tasks-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  height: 100%;
+  overflow: hidden;
+  padding: var(--space-4);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: var(--radius-lg);
+}
+
+/* Task Column Styling */
+.tasks-view .kanban-column {
+  background: var(--surface-color);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 200px);
+  min-height: 600px;
+  max-height: calc(100vh - 200px);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tasks-view .kanban-column:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Task Column Headers */
+.tasks-view .column-header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 2px solid var(--border-color);
+  background: linear-gradient(135deg, #fafbfc 0%, #f8fafc 100%);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.tasks-view .column-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--column-accent, var(--primary-color));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.tasks-view .column-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.tasks-view .column-title-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.tasks-view .column-icon {
+  font-size: 20px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.tasks-view .column-title-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-color);
+  letter-spacing: -0.02em;
+}
+
+.tasks-view .task-count {
+  background: linear-gradient(135deg, var(--column-accent, var(--primary-color)), var(--column-accent-dark, var(--primary-hover)));
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 20px;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  line-height: 1;
+}
+
+/* Column-specific accent colors */
+.tasks-view .kanban-column:nth-child(1) { 
+  --column-accent: #f59e0b; 
+  --column-accent-dark: #d97706; 
+}
+.tasks-view .kanban-column:nth-child(2) { 
+  --column-accent: #10b981; 
+  --column-accent-dark: #059669; 
+}
+.tasks-view .kanban-column:nth-child(3) { 
+  --column-accent: #3b82f6; 
+  --column-accent-dark: #2563eb; 
+}
+.tasks-view .kanban-column:nth-child(4) { 
+  --column-accent: #8b5cf6; 
+  --column-accent-dark: #7c3aed; 
+}
+
+/* Task Column Content */
+.tasks-view .column-content {
+  flex: 1;
+  padding: var(--space-4);
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+
+.tasks-view .column-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tasks-view .column-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tasks-view .column-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.tasks-view .column-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Task Cards */
+.tasks-view .kanban-card {
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--border-color);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    0 8px 16px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.tasks-view .kanban-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--card-accent, #e5e7eb);
+  transition: all 0.3s ease;
+}
+
+.tasks-view .kanban-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.12),
+    0 16px 32px rgba(0, 0, 0, 0.08);
+  border-color: var(--primary-color);
+}
+
+.tasks-view .kanban-card:hover::before {
+  height: 6px;
+}
+
+/* Priority-based card styling */
+.tasks-view .kanban-card.priority-urgent::before { 
+  background: linear-gradient(90deg, #dc2626, #ef4444); 
+}
+.tasks-view .kanban-card.priority-high::before { 
+  background: linear-gradient(90deg, #ea580c, #f97316); 
+}
+.tasks-view .kanban-card.priority-medium::before { 
+  background: linear-gradient(90deg, #f59e0b, #fbbf24); 
+}
+.tasks-view .kanban-card.priority-low::before { 
+  background: linear-gradient(90deg, #059669, #10b981); 
+}
+
+/* Overdue and due soon styling */
+.tasks-view .kanban-card.overdue {
+  border-left: 4px solid var(--danger-color);
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+.tasks-view .kanban-card.due-soon {
+  border-left: 4px solid var(--warning-color);
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.01); }
+}
+
+/* Task Card Content */
+.tasks-view .card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0 0 var(--space-3) 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tasks-view .card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.tasks-view .priority-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tasks-view .priority-badge.urgent { background: #dc2626; }
+.tasks-view .priority-badge.high { background: #ea580c; }
+.tasks-view .priority-badge.medium { background: #f59e0b; }
+.tasks-view .priority-badge.low { background: #059669; }
+
+.tasks-view .status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: capitalize;
+  border: 1px solid transparent;
+}
+
+.tasks-view .status-badge.pending {
+  background: rgba(251, 146, 60, 0.1);
+  color: #ea580c;
+  border-color: rgba(251, 146, 60, 0.3);
+}
+
+.tasks-view .status-badge.approved {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.tasks-view .status-badge.completed {
+  background: rgba(139, 69, 193, 0.1);
+  color: #9333ea;
+  border-color: rgba(139, 69, 193, 0.3);
+}
+
+/* Task Description Preview */
+.tasks-view .card-content-preview {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: var(--space-3);
+  margin: var(--space-3) 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Task Card Footer */
+.tasks-view .card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+  gap: var(--space-3);
+}
+
+.tasks-view .card-author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
+.tasks-view .card-author .user-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tasks-view .card-author span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tasks-view .card-deadline {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  white-space: nowrap;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.tasks-view .card-deadline.due-today {
+  background: linear-gradient(135deg, #fef3c7, #fbbf24);
+  color: #92400e;
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.tasks-view .card-deadline.overdue {
+  background: linear-gradient(135deg, #fee2e2, #fca5a5);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.3);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* Empty States for Tasks */
+.tasks-view .empty-column {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: #94a3b8;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  margin: var(--space-4) 0;
+}
+
+.tasks-view .empty-column-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-4);
+  opacity: 0.6;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.tasks-view .empty-column-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.tasks-view .empty-column-subtext {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+/* Task Loading States */
+.tasks-view .kanban-column.loading .column-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.tasks-view .kanban-column.loading .column-content::before {
+  content: '';
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Task Animation */
+.tasks-view .kanban-card {
+  animation: taskSlideIn 0.3s ease-out;
+}
+
+@keyframes taskSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Task Focus States */
+.tasks-view .kanban-card:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Responsive Design for Tasks */
+@media (max-width: 1200px) {
+  #tasks-board {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+  
+  .tasks-view .kanban-column {
+    height: auto;
+    min-height: 400px;
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  #tasks-view {
+    height: auto;
+  }
+  
+  #tasks-board {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-3);
+    height: auto;
+  }
+  
+  .tasks-view .kanban-column {
+    min-height: 300px;
+    height: auto;
+    max-height: none;
+  }
+  
+  .tasks-view .empty-column {
+    padding: var(--space-6) var(--space-3);
+  }
+  
+  .tasks-view .empty-column-icon {
+    font-size: 36px;
+  }
+}
+
+/* Task deadline styling */
+.task-deadline-warning {
+  background: linear-gradient(135deg, #fef3c7, #fbbf24);
+  border: 1px solid #f59e0b;
+  color: #92400e;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: var(--space-3);
+  text-align: center;
+}
+
+.task-deadline-critical {
+  background: linear-gradient(135deg, #fee2e2, #f87171);
+  border: 1px solid #ef4444;
+  color: #991b1b;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: var(--space-3);
+  text-align: center;
+  animation: pulse 2s infinite;
+}
+
+/* Notification Container */
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.notification {
+  padding: 16px 20px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  transform: translateX(400px);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 350px;
+  pointer-events: auto;
+  position: relative;
+}
+
+.notification.success {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.notification.error {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.notification.warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.notification.info {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.notification.show {
+  transform: translateX(0);
+}
+
+/* Enhanced Button Loading States */
+.btn-primary.loading,
+.btn-secondary.loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn-primary.loading::after,
+.btn-secondary.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.btn-primary.loading::after {
+  border-top-color: white;
+}
+
+.btn-secondary.loading::after {
+  border-top-color: var(--text-color);
+}
+
+/* Enhanced Modal Styles for Tasks */
+#task-modal .modal-content {
+  max-width: 600px;
+  width: 100%;
+}
+
+#task-details-modal .modal-content {
+  max-width: 1000px;
+  width: 100%;
+  height: 700px;
+}
+
+/* Task Form Enhancements */
+#task-form .form-group {
+  margin-bottom: var(--space-5);
+}
+
+#task-form .form-group label {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+#task-form .form-group label::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: var(--primary-color);
+  border-radius: 2px;
+}
+
+/* Task Assignment Dropdown */
+#task-assignee,
+#task-priority {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 16px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 50px;
+  appearance: none;
+}
+
+#task-assignee:focus,
+#task-priority:focus {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23007AFF' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+}
+
+/* Task Details Modal Enhancements */
+#task-details-modal .sidebar-section {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  box-shadow: var(--shadow-xs);
+  position: relative;
+  overflow: hidden;
+}
+
+#task-details-modal .sidebar-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-color), #3b82f6);
+}
+
+/* Task Action Buttons */
+#task-assignee-actions .button-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+#task-assignee-actions .button-group button {
+  width: 100%;
+  justify-content: center;
+  font-size: 13px;
+  padding: var(--space-3) var(--space-4);
+}
+
+#complete-task-button {
+  background: linear-gradient(135deg, var(--success-color), #059669);
+  color: white;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+#complete-task-button:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+#request-extension-button {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+#request-extension-button:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* Task Activity Feed */
+#task-details-activity-feed .feed-item {
+  border-left: 3px solid var(--primary-color);
+  padding-left: var(--space-4);
+  margin-left: var(--space-3);
+  margin-bottom: var(--space-4);
+  position: relative;
+}
+
+#task-details-activity-feed .feed-item::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .tasks-view .kanban-card {
+    border: 2px solid #000;
+    background: #fff;
+  }
+  
+  .tasks-view .priority-badge,
+  .tasks-view .status-badge {
+    border: 1px solid #000;
+  }
+}
+
+/* Dark Mode Support (Future Enhancement) */
+@media (prefers-color-scheme: dark) {
+  .tasks-view .kanban-card {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-color: #475569;
+    color: #f1f5f9;
+  }
+  
+  .tasks-view .empty-column {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-color: #475569;
+    color: #94a3b8;
+  }
+}
+
+/* Print Styles for Tasks */
+@media print {
+  .tasks-view .kanban-card::after {
+    content: ' [TASK]';
+    font-weight: bold;
+  }
+  
+  .tasks-view .priority-badge,
+  .tasks-view .status-badge {
+    border: 1px solid #000 !important;
+    background: white !important;
+    color: black !important;
+  }
+  
+  .notification-container {
+    display: none !important;
+  }
+}
