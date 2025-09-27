@@ -1,5 +1,5 @@
 // ===============================
-// Catalyst Tracker - FIXED Dashboard JS
+// Catalyst Tracker - COMPLETE FIXED Dashboard JS
 // ===============================
 
 // ---- Firebase Configuration ----
@@ -911,30 +911,62 @@ function renderTaskActivityFeed(activity) {
 }
 
 async function updateTaskStatus(newStatus) {
-    if (!currentlyViewedTaskId) return;
+    if (!currentlyViewedTaskId) {
+        console.error('[TASK STATUS] No task ID set');
+        showNotification('No task selected. Please try again.', 'error');
+        return;
+    }
+    
+    console.log(`[TASK STATUS] Updating task ${currentlyViewedTaskId} to status: ${newStatus}`);
     
     try {
+        // Prepare the update object
         const updates = {
             status: newStatus,
-            activity: firebase.firestore.FieldValue.arrayUnion({
-                text: `marked task as ${newStatus}`,
-                authorName: currentUserName,
-                timestamp: new Date()
-            })
+            updatedAt: new Date()
         };
         
+        // Add completion timestamp if completing
         if (newStatus === 'completed') {
             updates.completedAt = new Date();
         }
         
-        await db.collection('tasks').doc(currentlyViewedTaskId).update(updates);
-        showNotification(`Task ${newStatus} successfully!`, 'success');
+        // Prepare activity entry
+        const activityEntry = {
+            text: `marked task as ${newStatus.replace('_', ' ')}`,
+            authorName: currentUserName,
+            timestamp: new Date()
+        };
+        
+        console.log('[TASK STATUS] Applying updates:', updates);
+        console.log('[TASK STATUS] Adding activity:', activityEntry);
+        
+        // Update the document with both status and activity
+        await db.collection('tasks').doc(currentlyViewedTaskId).update({
+            ...updates,
+            activity: window.firebase.firestore.FieldValue.arrayUnion(activityEntry)
+        });
+        
+        console.log('[TASK STATUS] Update successful');
+        showNotification(`Task ${newStatus.replace('_', ' ')} successfully!`, 'success');
         
     } catch (error) {
-        console.error(`[ERROR] Failed to update task status:`, error);
-        showNotification(`Failed to update task. Please try again.`, 'error');
+        console.error(`[TASK STATUS ERROR] Failed to update task status:`, error);
+        let errorMessage = 'Failed to update task. ';
+        if (error.code === 'permission-denied') {
+            errorMessage += 'You do not have permission to update this task.';
+        } else if (error.code === 'not-found') {
+            errorMessage += 'Task not found.';
+        } else if (error.code === 'unavailable') {
+            errorMessage += 'Service temporarily unavailable. Please try again.';
+        } else {
+            errorMessage += 'Please try again or contact support if the problem persists.';
+        }
+        
+        showNotification(errorMessage, 'error');
     }
 }
+
 
 async function handleAddTaskComment() {
     const commentInput = document.getElementById('task-comment-input');
@@ -1997,7 +2029,7 @@ async function addActivity(projectId, text) {
     }
 }
 
-async function updateTaskStatus(projectId, taskName, isCompleted) {
+async function updateTaskStatusInProject(projectId, taskName, isCompleted) {
     const updates = {
         [`timeline.${taskName}`]: isCompleted
     };
@@ -2013,6 +2045,7 @@ async function updateTaskStatus(projectId, taskName, isCompleted) {
         alert('Failed to update task. Please try again.');
     }
 }
+
 
 async function handleAddComment() {
     const commentInput = document.getElementById('comment-input');
