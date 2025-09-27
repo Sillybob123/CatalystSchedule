@@ -3077,3 +3077,577 @@ setTimeout(() => {
         setTimeout(initializeMultipleAssigneeEnhancements, 2000);
     }
 }, 500);
+
+// Add these enhanced multi-select functions to your dashboard.js file
+
+// ===============================
+// ENHANCED MULTI-SELECT TASK ASSIGNMENT
+// ===============================
+
+// Global state for multi-select
+let selectedAssignees = [];
+let filteredUsers = [];
+let isDropdownOpen = false;
+
+// Enhanced Task Modal Functions
+function openTaskModal() {
+    document.getElementById('task-form').reset();
+    selectedAssignees = [];
+    filteredUsers = [...allUsers];
+    isDropdownOpen = false;
+    
+    populateTaskAssigneeDropdown();
+    renderSelectedAssignees();
+    renderDropdownOptions();
+    
+    document.getElementById('task-modal').style.display = 'flex';
+    
+    // Set default deadline to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('task-deadline').value = tomorrow.toISOString().split('T')[0];
+    
+    // Focus first input
+    setTimeout(() => {
+        document.getElementById('task-title').focus();
+    }, 100);
+}
+
+function populateTaskAssigneeDropdown() {
+    // Initialize multi-select functionality
+    setupMultiSelectListeners();
+    filteredUsers = [...allUsers];
+}
+
+// Multi-Select Component Functions
+function stringToColorEnhanced(str) {
+    if (!str) return '#007AFF';
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = ['#007AFF', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
+    return colors[Math.abs(hash) % colors.length];
+}
+
+function renderSelectedAssignees() {
+    const container = document.getElementById('selected-assignees');
+    if (!container) return;
+    
+    container.innerHTML = selectedAssignees.map(user => `
+        <div class="assignee-tag" data-user-id="${user.id}">
+            <div class="assignee-avatar" style="background-color: ${stringToColorEnhanced(user.name)}">
+                ${user.name.charAt(0).toUpperCase()}
+            </div>
+            <span>${escapeHtml(user.name)}</span>
+            <div class="remove-assignee" onclick="removeAssignee('${user.id}')">×</div>
+        </div>
+    `).join('');
+
+    // Update counter
+    const counter = document.getElementById('selection-counter');
+    if (counter) {
+        const count = selectedAssignees.length;
+        counter.textContent = count;
+        counter.classList.toggle('show', count > 0);
+    }
+}
+
+function renderDropdownOptions() {
+    const dropdown = document.getElementById('assignee-dropdown');
+    if (!dropdown) return;
+    
+    if (filteredUsers.length === 0) {
+        dropdown.innerHTML = '<div class="no-results">No team members found</div>';
+        return;
+    }
+
+    dropdown.innerHTML = filteredUsers.map(user => {
+        const isSelected = selectedAssignees.some(selected => selected.id === user.id);
+        return `
+            <div class="assignee-item ${isSelected ? 'selected' : ''}" 
+                 onclick="toggleAssignee('${user.id}')"
+                 data-user-id="${user.id}">
+                <div class="user-avatar" style="background-color: ${stringToColorEnhanced(user.name)}">
+                    ${user.name.charAt(0).toUpperCase()}
+                </div>
+                <div class="assignee-info">
+                    <div class="assignee-name">${escapeHtml(user.name)}</div>
+                    <div class="assignee-role">${user.role || 'member'}</div>
+                </div>
+                <div class="assignee-status available">available</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleAssignee(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+
+    const existingIndex = selectedAssignees.findIndex(selected => selected.id === userId);
+    
+    if (existingIndex > -1) {
+        selectedAssignees.splice(existingIndex, 1);
+    } else {
+        selectedAssignees.push(user);
+    }
+
+    renderSelectedAssignees();
+    renderDropdownOptions();
+}
+
+function removeAssignee(userId) {
+    selectedAssignees = selectedAssignees.filter(user => user.id !== userId);
+    renderSelectedAssignees();
+    renderDropdownOptions();
+}
+
+function filterUsers(searchTerm) {
+    filteredUsers = allUsers.filter(user =>
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.role && user.role.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    renderDropdownOptions();
+}
+
+function toggleDropdown(show = null) {
+    const dropdown = document.getElementById('assignee-dropdown');
+    const dropdownToggle = document.getElementById('dropdown-toggle');
+    
+    if (!dropdown || !dropdownToggle) return;
+    
+    isDropdownOpen = show !== null ? show : !isDropdownOpen;
+    dropdown.classList.toggle('show', isDropdownOpen);
+    dropdownToggle.style.transform = isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+// Debounce function for search
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+const debouncedFilterUsers = debounce(filterUsers, 300);
+
+function setupMultiSelectListeners() {
+    // Remove existing listeners to avoid duplicates
+    const existingSearch = document.getElementById('assignee-search');
+    const existingToggle = document.getElementById('dropdown-toggle');
+    const existingContainer = document.getElementById('multi-select-container');
+    
+    if (!existingSearch || !existingToggle || !existingContainer) return;
+
+    // Clone elements to remove all event listeners
+    const searchClone = existingSearch.cloneNode(true);
+    const toggleClone = existingToggle.cloneNode(true);
+    
+    existingSearch.parentNode.replaceChild(searchClone, existingSearch);
+    existingToggle.parentNode.replaceChild(toggleClone, existingToggle);
+    
+    const assigneeSearch = document.getElementById('assignee-search');
+    const dropdownToggle = document.getElementById('dropdown-toggle');
+    const multiSelectContainer = document.getElementById('multi-select-container');
+
+    // Search input events
+    assigneeSearch.addEventListener('input', (e) => {
+        debouncedFilterUsers(e.target.value);
+        if (!isDropdownOpen) toggleDropdown(true);
+    });
+
+    assigneeSearch.addEventListener('focus', () => {
+        toggleDropdown(true);
+    });
+
+    // Dropdown toggle events
+    dropdownToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleDropdown();
+        if (isDropdownOpen) {
+            assigneeSearch.focus();
+        }
+    });
+
+    // Container click events
+    multiSelectContainer.addEventListener('click', (e) => {
+        if (e.target === multiSelectContainer || e.target.closest('.selected-assignees')) {
+            assigneeSearch.focus();
+            if (!isDropdownOpen) toggleDropdown(true);
+        }
+    });
+
+    // Keyboard navigation
+    assigneeSearch.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            toggleDropdown(false);
+            assigneeSearch.blur();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (filteredUsers.length > 0) {
+                const firstUnselected = filteredUsers.find(user => 
+                    !selectedAssignees.some(selected => selected.id === user.id)
+                );
+                if (firstUnselected) {
+                    toggleAssignee(firstUnselected.id);
+                    assigneeSearch.value = '';
+                    filterUsers('');
+                }
+            }
+        } else if (e.key === 'Backspace' && e.target.value === '' && selectedAssignees.length > 0) {
+            // Remove last selected assignee when backspacing on empty input
+            const lastAssignee = selectedAssignees[selectedAssignees.length - 1];
+            removeAssignee(lastAssignee.id);
+        }
+    });
+
+    // Close dropdown when clicking outside (only if not already set)
+    if (!document.multiSelectClickHandler) {
+        document.multiSelectClickHandler = (e) => {
+            const container = document.getElementById('multi-select-container');
+            if (container && !container.contains(e.target)) {
+                toggleDropdown(false);
+            }
+        };
+        document.addEventListener('click', document.multiSelectClickHandler);
+    }
+}
+
+// Enhanced form validation
+function validateTaskFormEnhanced() {
+    const title = document.getElementById('task-title').value.trim();
+    const deadline = document.getElementById('task-deadline').value;
+    
+    const errors = [];
+    
+    if (!title || title.length < 3) {
+        errors.push('Task title must be at least 3 characters long');
+    }
+    
+    if (selectedAssignees.length === 0) {
+        errors.push('Please select at least one person to assign this task to');
+    }
+    
+    if (!deadline) {
+        errors.push('Please set a deadline for this task');
+    } else {
+        const deadlineDate = new Date(deadline);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (deadlineDate < today) {
+            errors.push('Deadline cannot be in the past');
+        }
+    }
+    
+    return errors;
+}
+
+// Enhanced task form submission
+async function handleTaskFormSubmitEnhanced(e) {
+    e.preventDefault();
+    
+    const submitButton = document.getElementById('save-task-button');
+    const originalText = submitButton.textContent;
+    
+    try {
+        // Validate form
+        const validationErrors = validateTaskFormEnhanced();
+        if (validationErrors.length > 0) {
+            showNotification(validationErrors.join('. '), 'error');
+            return;
+        }
+        
+        // Show loading state
+        submitButton.disabled = true;
+        submitButton.classList.add('loading');
+        submitButton.textContent = 'Creating Task...';
+        
+        // Get form values
+        const title = document.getElementById('task-title').value.trim();
+        const description = document.getElementById('task-description').value.trim();
+        const deadline = document.getElementById('task-deadline').value;
+        const priority = document.getElementById('task-priority').value || 'medium';
+        
+        // Prepare assignee data
+        const assigneeIds = selectedAssignees.map(u => u.id);
+        const assigneeNames = selectedAssignees.map(u => u.name);
+        
+        if (assigneeIds.length === 0) {
+            throw new Error('Please select at least one person to assign this task to');
+        }
+        
+        const newTask = {
+            title: title,
+            description: description || null,
+            // Multiple assignees (new format)
+            assigneeIds: assigneeIds,
+            assigneeNames: assigneeNames,
+            // Single assignee (backwards compatibility)
+            assigneeId: assigneeIds[0],
+            assigneeName: assigneeNames[0],
+            deadline: deadline,
+            priority: priority,
+            creatorId: currentUser.uid,
+            creatorName: currentUserName,
+            status: 'pending',
+            createdAt: new Date(),
+            activity: [{
+                text: assigneeIds.length === 1 ? 
+                    `created this task and assigned it to ${assigneeNames[0]}` :
+                    `created this task and assigned it to ${assigneeNames.join(', ')}`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            }]
+        };
+        
+        console.log('[MULTI-ASSIGNEE] Creating task:', newTask);
+        
+        const docRef = await db.collection('tasks').add(newTask);
+        console.log('[MULTI-ASSIGNEE] Task created with ID:', docRef.id);
+        
+        showNotification(`Task assigned to ${assigneeNames.join(', ')} successfully!`, 'success');
+        closeAllModals();
+        
+        // Reset form and state
+        document.getElementById('task-form').reset();
+        selectedAssignees = [];
+        renderSelectedAssignees();
+        
+    } catch (error) {
+        console.error("[ERROR] Failed to create task:", error);
+        showNotification(error.message || 'Failed to create task. Please try again.', 'error');
+    } finally {
+        // Reset button state
+        submitButton.disabled = false;
+        submitButton.classList.remove('loading');
+        submitButton.textContent = originalText;
+    }
+}
+
+// Enhanced task details modal for multiple assignees
+function refreshTaskDetailsModalEnhanced(task) {
+    // Call original function first for basic setup
+    if (typeof refreshTaskDetailsModal === 'function') {
+        try {
+            refreshTaskDetailsModal(task);
+        } catch (error) {
+            console.warn('[MULTI-ASSIGNEE] Error calling original refresh function:', error);
+        }
+    }
+    
+    // Enhanced assignee display
+    const assigneeElement = document.getElementById('task-details-assignee');
+    if (assigneeElement) {
+        const assigneeNames = getTaskAssigneeNames(task);
+        
+        if (assigneeNames.length > 1) {
+            // Create a nice display for multiple assignees
+            assigneeElement.innerHTML = '';
+            
+            assigneeNames.forEach((name, index) => {
+                if (index > 0) {
+                    assigneeElement.appendChild(document.createTextNode(', '));
+                }
+                
+                const badge = document.createElement('span');
+                badge.style.cssText = `
+                    background: #f0f9ff;
+                    color: #1e40af;
+                    font-size: 12px;
+                    font-weight: 500;
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    border: 1px solid #bfdbfe;
+                    margin: 2px;
+                    display: inline-block;
+                `;
+                badge.textContent = name;
+                assigneeElement.appendChild(badge);
+            });
+        } else if (assigneeNames.length === 1 && assigneeNames[0] !== 'Unassigned') {
+            assigneeElement.textContent = assigneeNames[0];
+        } else {
+            assigneeElement.textContent = 'Not assigned';
+        }
+    }
+    
+    // Update permissions for multiple assignees
+    const isAdmin = currentUserRole === 'admin';
+    const isCreator = currentUser.uid === task.creatorId;
+    const isAssignee = isUserAssignedToTaskEnhanced(task, currentUser.uid);
+    
+    // Assignee actions
+    const assigneeActions = document.getElementById('task-assignee-actions');
+    if (assigneeActions) {
+        assigneeActions.style.display = isAssignee && task.status === 'approved' ? 'block' : 'none';
+    }
+}
+
+// Helper functions for multiple assignees
+function getTaskAssigneeNames(task) {
+    if (Array.isArray(task.assigneeNames) && task.assigneeNames.length > 0) {
+        return task.assigneeNames.filter(name => name && name.trim());
+    } else if (task.assigneeName && task.assigneeName.trim()) {
+        return [task.assigneeName];
+    }
+    return ['Unassigned'];
+}
+
+function getTaskAssigneeIds(task) {
+    if (Array.isArray(task.assigneeIds) && task.assigneeIds.length > 0) {
+        return task.assigneeIds.filter(id => id && id.trim());
+    } else if (task.assigneeId && task.assigneeId.trim()) {
+        return [task.assigneeId];
+    }
+    return [];
+}
+
+function isUserAssignedToTaskEnhanced(task, userId) {
+    if (task.creatorId === userId) return true;
+    const assigneeIds = getTaskAssigneeIds(task);
+    return assigneeIds.includes(userId);
+}
+
+// Enhanced card creation for multiple assignees
+function createTaskCardForAssignmentsEnhanced(task) {
+    const card = document.createElement('div');
+    card.className = 'kanban-card task-card';
+    card.dataset.id = task.id;
+    card.dataset.type = 'task';
+    
+    // Check if overdue
+    const isOverdue = new Date(task.deadline) < new Date() && task.status !== 'completed';
+    const isDueSoon = !isOverdue && new Date(task.deadline) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    
+    if (isOverdue) card.classList.add('overdue');
+    if (isDueSoon) card.classList.add('due-soon');
+    
+    // Format deadline
+    const deadline = new Date(task.deadline);
+    const deadlineText = deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    // Priority colors
+    const priorityColors = {
+        low: '#10b981',
+        medium: '#f59e0b', 
+        high: '#ef4444',
+        urgent: '#dc2626'
+    };
+    
+    const priorityColor = priorityColors[task.priority] || priorityColors.medium;
+    
+    // Handle multiple assignees display
+    const assigneeNames = getTaskAssigneeNames(task);
+    let displayNames, multipleIndicator = '';
+    
+    if (assigneeNames.length > 2) {
+        displayNames = `${assigneeNames.slice(0, 2).join(', ')} +${assigneeNames.length - 2} more`;
+        multipleIndicator = `<span style="background: rgba(59, 130, 246, 0.1); color: #2563eb; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 8px; margin-left: 4px;">+${assigneeNames.length}</span>`;
+    } else {
+        displayNames = assigneeNames.join(', ');
+        if (assigneeNames.length > 1) {
+            multipleIndicator = `<span style="background: rgba(59, 130, 246, 0.1); color: #2563eb; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 8px; margin-left: 4px;">+${assigneeNames.length}</span>`;
+        }
+    }
+    
+    card.innerHTML = `
+        <h4 class="card-title">📋 ${escapeHtml(task.title)}</h4>
+        <div class="card-meta">
+            <span class="card-type" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white;">TASK</span>
+            <span class="card-status">${(task.status || 'pending').replace('_', ' ')}</span>
+            ${multipleIndicator}
+        </div>
+        <div class="card-footer">
+            <div class="card-author">
+                <div class="user-avatar" style="background: ${stringToColorEnhanced(task.creatorName)}">
+                    ${task.creatorName.charAt(0)}
+                </div>
+                <span title="Assigned to: ${assigneeNames.join(', ')}">→ ${escapeHtml(displayNames)}</span>
+            </div>
+            <div class="card-deadline ${isOverdue ? 'overdue' : isDueSoon ? 'due-today' : ''}">
+                ${deadlineText}
+            </div>
+        </div>
+        <div class="priority-indicator" style="background: ${priorityColor}; color: white; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 600; margin-top: 8px; text-align: center;">
+            ${(task.priority || 'medium').toUpperCase()} PRIORITY
+        </div>
+    `;
+    
+    card.addEventListener('click', () => openTaskDetailsModal(task.id));
+    return card;
+}
+
+// Make functions global for onclick handlers
+window.toggleAssignee = toggleAssignee;
+window.removeAssignee = removeAssignee;
+
+// Enhanced initialization function
+function initializeEnhancedTaskManagement() {
+    console.log('[MULTI-ASSIGNEE] Initializing enhanced task management...');
+    
+    // Override existing functions
+    if (typeof openTaskModal !== 'undefined') {
+        window.openTaskModal = openTaskModal;
+    }
+    
+    if (typeof createTaskCardForAssignments !== 'undefined') {
+        window.createTaskCardForAssignments = createTaskCardForAssignmentsEnhanced;
+    }
+    
+    // Setup enhanced task form submission
+    const taskForm = document.getElementById('task-form');
+    if (taskForm) {
+        // Remove existing listeners
+        const newTaskForm = taskForm.cloneNode(true);
+        taskForm.parentNode.replaceChild(newTaskForm, taskForm);
+        
+        // Add enhanced listener
+        document.getElementById('task-form').addEventListener('submit', handleTaskFormSubmitEnhanced);
+        console.log('[MULTI-ASSIGNEE] Enhanced task form listener added');
+    }
+    
+    // Setup enhanced task details refresh
+    const originalOpenTaskDetailsModal = window.openTaskDetailsModal;
+    if (originalOpenTaskDetailsModal) {
+        window.openTaskDetailsModal = function(taskId) {
+            const task = allTasks.find(t => t.id === taskId);
+            if (!task) {
+                console.error("[MODAL] Task not found:", taskId);
+                return;
+            }
+            
+            currentlyViewedTaskId = taskId;
+            refreshTaskDetailsModalEnhanced(task);
+            document.getElementById('task-details-modal').style.display = 'flex';
+        };
+    }
+    
+    console.log('[MULTI-ASSIGNEE] Enhanced functionality initialized successfully!');
+}
+
+// Auto-initialize when DOM and dependencies are ready
+function checkAndInitialize() {
+    if (typeof allUsers !== 'undefined' && 
+        typeof currentUser !== 'undefined' && 
+        document.getElementById('task-form')) {
+        initializeEnhancedTaskManagement();
+    } else {
+        console.log('[MULTI-ASSIGNEE] Dependencies not ready, retrying in 1 second...');
+        setTimeout(checkAndInitialize, 1000);
+    }
+}
+
+// Initialize when the script loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkAndInitialize);
+} else {
+    checkAndInitialize();
+}
