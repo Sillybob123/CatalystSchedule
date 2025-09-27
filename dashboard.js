@@ -2661,7 +2661,6 @@ function refreshTaskDetailsModal(task) {
     }
 }
 
-
 // ===============================
 // MULTIPLE TASK ASSIGNEES - SAFE ADDITIONS
 // ===============================
