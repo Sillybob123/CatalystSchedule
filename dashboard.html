@@ -185,7 +185,6 @@
           </div>
         </div>
 
-        <!-- Tasks View -->
         <div id="tasks-view" style="display: none">
           <div id="tasks-board" class="kanban-board" aria-live="polite">
             <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
@@ -266,7 +265,6 @@
       </main>
     </div>
 
-    <!-- Task Modal -->
     <div id="task-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
       <div class="modal-content">
         <div class="modal-header">
@@ -291,13 +289,15 @@
               placeholder="Describe what needs to be done, any specific requirements, contacts, or additional context."
             ></textarea>
           </div>
-            <div class="form-group">
-            <label for="task-assignee">Assign To (Multiple People)</label>
-            <select id="task-assignee" required multiple>
-            <option value="" disabled>Hold Ctrl/Cmd to select multiple people</option>
-            </select>
+          <div class="form-group">
+            <label for="task-assignee">Assign To</label>
+            <div class="multi-select-container">
+              <div class="selected-assignees" id="selected-assignees"></div>
+              <input type="text" id="assignee-search" placeholder="Search for team members...">
+              <div class="assignee-dropdown" id="assignee-dropdown"></div>
+            </div>
             <div class="task-form-help">
-            Hold Ctrl (Windows) or Cmd (Mac) to select multiple people. You can assign this task to multiple team members.
+              You can assign this task to multiple team members.
             </div>
           </div>
           <div class="form-group">
@@ -325,7 +325,7 @@
       </div>
     </div>
 
-    <!-- Task Details Modal -->
+
     <div id="task-details-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
         <div class="modal-content large">
             <div class="modal-header">
@@ -394,7 +394,6 @@
         </div>
     </div>
 
-    <!-- Keep existing project modal and details modal -->
     <div id="project-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
       <div class="modal-content">
         <div class="modal-header">
