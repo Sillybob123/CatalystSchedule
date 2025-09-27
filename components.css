@@ -5906,3 +5906,332 @@
   border-radius: 12px;
   border: 1px solid #bfdbfe;
 }
+
+/* ===============================
+   ENHANCED MULTIPLE TASK ASSIGNEES CSS
+   Add this to the END of components.css
+   =============================== */
+
+/* Multi-select task assignee dropdown styling */
+#task-assignee[multiple] {
+  min-height: 120px;
+  max-height: 200px;
+  padding: 8px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-color);
+  font-family: inherit;
+  font-size: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+}
+
+#task-assignee[multiple]:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+  background: #ffffff;
+}
+
+/* Individual options in multi-select */
+#task-assignee[multiple] option {
+  padding: 10px 12px;
+  margin: 2px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-color);
+  background: transparent;
+  border: none;
+}
+
+#task-assignee[multiple] option:hover {
+  background-color: #f0f9ff;
+  color: #1e40af;
+}
+
+/* Selected options styling */
+#task-assignee[multiple] option:checked {
+  background: linear-gradient(135deg, #007AFF, #0056D6) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 4px rgba(0, 122, 255, 0.3);
+}
+
+/* Disabled placeholder option */
+#task-assignee[multiple] option:disabled {
+  background: #f8fafc !important;
+  color: #9ca3af !important;
+  font-style: italic;
+  cursor: not-allowed;
+  font-weight: normal !important;
+}
+
+/* Form help text for multi-select */
+.task-form-help {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+  line-height: 1.4;
+  background: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border-left: 3px solid #3b82f6;
+}
+
+/* Multiple assignee indicators in task cards */
+.multiple-assignees-indicator {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Task assignee badges in details modal */
+.task-assignee-badge {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  color: #1e40af;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid #bfdbfe;
+  margin: 2px 3px;
+  display: inline-block;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.task-assignee-badge:hover {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced task card styling for multiple assignees */
+.kanban-card.task-card .card-author span[title*="Assigned to:"] {
+  font-weight: 500;
+  color: var(--text-secondary);
+  position: relative;
+}
+
+.kanban-card.task-card .card-author span[title*="Assigned to:"]:hover {
+  color: var(--primary-color);
+}
+
+/* Tooltip enhancement for multiple assignees */
+.kanban-card.task-card .card-author span[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-color);
+  color: var(--surface-color);
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  margin-bottom: 4px;
+}
+
+.kanban-card.task-card .card-author span[title]:hover::after {
+  opacity: 1;
+}
+
+/* Enhanced task details modal assignee section */
+#task-details-assignee {
+  line-height: 1.6;
+  padding: 8px 0;
+}
+
+/* Custom scrollbar for multi-select dropdown */
+#task-assignee[multiple]::-webkit-scrollbar {
+  width: 6px;
+}
+
+#task-assignee[multiple]::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+#task-assignee[multiple]::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #cbd5e1, #94a3b8);
+  border-radius: 3px;
+}
+
+#task-assignee[multiple]::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #94a3b8, #64748b);
+}
+
+/* Form group enhancements for multiple assignees */
+#task-form .form-group:has(#task-assignee[multiple]) {
+  position: relative;
+}
+
+#task-form .form-group:has(#task-assignee[multiple]) label {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#task-form .form-group:has(#task-assignee[multiple]) label::before {
+  content: '👥';
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+/* Selection counter for multiple assignees */
+.assignee-selection-counter {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: var(--primary-color);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 8px;
+  min-width: 18px;
+  text-align: center;
+  display: none;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 122, 255, 0.3);
+}
+
+.assignee-selection-counter.active {
+  display: block;
+}
+
+/* Enhanced validation styling */
+#task-assignee[multiple]:invalid {
+  border-color: var(--danger-color);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+#task-assignee[multiple]:valid {
+  border-color: var(--success-color);
+}
+
+/* Loading state for dropdown */
+#task-assignee[multiple].loading {
+  background-image: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 2s infinite;
+  pointer-events: none;
+}
+
+@keyframes loading-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Mobile responsiveness for multi-select */
+@media (max-width: 768px) {
+  #task-assignee[multiple] {
+    min-height: 100px;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  #task-assignee[multiple] option {
+    padding: 12px;
+    font-size: 16px;
+  }
+  
+  .task-form-help {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+  
+  .task-assignee-badge {
+    font-size: 11px;
+    padding: 4px 8px;
+    margin: 1px 2px;
+  }
+  
+  .multiple-assignees-indicator {
+    font-size: 9px;
+    padding: 2px 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  #task-assignee[multiple] {
+    min-height: 80px;
+  }
+  
+  #task-assignee[multiple] option {
+    padding: 10px 8px;
+  }
+  
+  .task-assignee-badge {
+    display: block;
+    margin: 2px 0;
+    text-align: center;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  #task-assignee[multiple] option:checked {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff;
+  }
+  
+  .task-assignee-badge {
+    border: 2px solid #000000;
+    background: #ffffff;
+    color: #000000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  #task-assignee[multiple],
+  #task-assignee[multiple] option,
+  .task-assignee-badge,
+  .multiple-assignees-indicator {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Focus management for accessibility */
+#task-assignee[multiple]:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .task-form-help,
+  .multiple-assignees-indicator {
+    display: none !important;
+  }
+  
+  .task-assignee-badge {
+    background: white !important;
+    color: black !important;
+    border: 1px solid black !important;
+  }
+}
