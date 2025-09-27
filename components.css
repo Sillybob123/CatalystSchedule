@@ -5840,27 +5840,69 @@
   }
 }
 
+/* ===============================
+   MULTIPLE TASK ASSIGNEES - ADD TO END OF components.css
+   =============================== */
+
 /* Multi-select task assignee styling */
-#task-assignee option {
+#task-assignee[multiple] {
+  min-height: 120px;
+  padding: 8px;
+  size: 6;
+}
+
+#task-assignee[multiple] option {
   padding: 8px 12px;
   margin: 2px 0;
   border-radius: 6px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-#task-assignee option:hover {
+#task-assignee[multiple] option:hover {
   background-color: #f0f9ff;
 }
 
-#task-assignee option:checked {
-  background: linear-gradient(135deg, #007AFF, #0056D6);
-  color: white;
+#task-assignee[multiple] option:checked {
+  background: linear-gradient(135deg, #007AFF, #0056D6) !important;
+  color: white !important;
   font-weight: 600;
 }
 
-.form-help {
-  margin-top: 4px;
+/* Form help text for multi-select */
+.task-form-help {
+  margin-top: 6px;
   font-size: 12px;
   color: #6b7280;
   font-style: italic;
+  line-height: 1.4;
+}
+
+/* Multiple assignee display in cards */
+.multiple-assignees-indicator {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 4px;
+}
+
+/* Task assignee list in details */
+.task-assignee-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.task-assignee-badge {
+  background: #f0f9ff;
+  color: #1e40af;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid #bfdbfe;
 }
