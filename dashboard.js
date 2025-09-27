@@ -1,721 +1,5 @@
-// ===============================
-// Catalyst Tracker - Complete Working Dashboard JS
-// ===============================
-
-// ---- Firebase Configuration ----
-const firebaseConfig = {
-    apiKey: "AIzaSyBT6urJvPCtuYQ1c2iH77QTDfzE3yGw-Xk",
-    authDomain: "catalystmonday.firebaseapp.com",
-    projectId: "catalystmonday",
-    storageBucket: "catalystmonday.appspot.com",
-    messagingSenderId: "394311851220",
-    appId: "1:394311851220:web:86e4939b7d5a085b46d75d"
-};
-
-// Initialize Firebase with error handling
-try {
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-        console.log("[FIREBASE] Firebase initialized successfully");
-    }
-} catch (initError) {
-    console.error("[FIREBASE] Firebase initialization failed:", initError);
-    alert("Failed to connect to the database. Please refresh the page and try again.");
-}
-
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-// ---- App State ----
-let currentUser = null, currentUserName = null, currentUserRole = null;
-let allProjects = [], allEditors = [];
-let currentlyViewedProjectId = null;
-let currentView = 'interviews';
-let calendarDate = new Date();
-
-// ======================
-//  Initialization
-// ======================
-auth.onAuthStateChanged(async (user) => {
-    if (!user) {
-        window.location.href = 'index.html';
-        return;
-    }
-    currentUser = user;
-
-    try {
-        console.log("[INIT] User authenticated:", user.uid);
-        
-        // Try to get user document
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        
-        if (!userDoc.exists) {
-            console.warn("[INIT] User document not found, creating default profile");
-            
-            const defaultUserData = {
-                name: user.displayName || user.email.split('@')[0],
-                email: user.email,
-                role: 'writer',
-                createdAt: new Date()
-            };
-            
-            await db.collection('users').doc(user.uid).set(defaultUserData);
-            currentUserName = defaultUserData.name;
-            currentUserRole = defaultUserData.role;
-        } else {
-            const userData = userDoc.data();
-            currentUserName = userData.name || user.displayName || user.email.split('@')[0];
-            currentUserRole = userData.role || 'writer';
-        }
-
-        await fetchEditors();
-        setupUI();
-        setupNavAndListeners();
-        subscribeToProjects();
-
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('app-container').style.display = 'flex';
-        
-        console.log("[INIT] Initialization completed successfully");
-        
-    } catch (error) {
-        console.error("Initialization Error:", error);
-        alert("Could not load your profile. Please refresh the page and try again.");
-    }
-});
-
-async function fetchEditors() {
-    try {
-        console.log("[INIT] Fetching editors...");
-        const editorsSnapshot = await db.collection('users').where('role', 'in', ['admin', 'editor']).get();
-        allEditors = editorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log("[INIT] Found", allEditors.length, "editors");
-    } catch (error) {
-        console.error("Error fetching editors:", error);
-        allEditors = [];
-    }
-}
-
-function setupUI() {
-    document.getElementById('user-name').textContent = currentUserName;
-    document.getElementById('user-role').textContent = currentUserRole;
-    const avatar = document.getElementById('user-avatar');
-    avatar.textContent = currentUserName.charAt(0).toUpperCase();
-    avatar.style.backgroundColor = stringToColor(currentUserName);
-    if (currentUserRole === 'admin') {
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
-    }
-}
-
-// ==================
-//  Event Listeners
-// ==================
-function setupNavAndListeners() {
-    // Navigation listeners
-    document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-    
-    // ========================================================================
-    //  FIX: Updated navigation logic to allow links to other pages
-    // ========================================================================
-    document.querySelectorAll('.nav-item').forEach(link => {
-        link.addEventListener('click', e => {
-            // If the link has a destination file (like "social.html"),
-            // let the browser navigate normally and do not run our script.
-            const href = link.getAttribute('href');
-            if (href && href !== '#') {
-                return;
-            }
-            
-            // Otherwise, it's an in-page view change. Prevent page reload.
-            e.preventDefault();
-            const view = link.id.replace('nav-', '');
-            handleNavClick(view);
-        });
-    });
-
-    // Modal and form listeners
-    document.getElementById('add-project-button').addEventListener('click', openProjectModal);
-    document.getElementById('project-form').addEventListener('submit', handleProjectFormSubmit);
-    
-    // Check if status report button exists before adding listener
-    const statusReportBtn = document.getElementById('status-report-button');
-    if (statusReportBtn) {
-        statusReportBtn.addEventListener('click', generateStatusReport);
-    }
-    
-    document.getElementById('add-comment-button').addEventListener('click', handleAddComment);
-    document.getElementById('assign-editor-button').addEventListener('click', handleAssignEditor);
-    document.getElementById('delete-project-button').addEventListener('click', handleDeleteProject);
-    document.getElementById('approve-button').addEventListener('click', () => approveProposal(currentlyViewedProjectId));
-    document.getElementById('reject-button').addEventListener('click', () => updateProposalStatus('rejected'));
-    document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
-    document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
-
-    // Proposal editing listeners
-    const editProposalBtn = document.getElementById('edit-proposal-button');
-    const saveProposalBtn = document.getElementById('save-proposal-button');
-    const cancelProposalBtn = document.getElementById('cancel-proposal-button');
-
-    if (editProposalBtn) editProposalBtn.addEventListener('click', enableProposalEditing);
-    if (saveProposalBtn) saveProposalBtn.addEventListener('click', handleSaveProposal);
-    if (cancelProposalBtn) cancelProposalBtn.addEventListener('click', disableProposalEditing);
-
-    // Deadline management listeners
-    const setDeadlinesBtn = document.getElementById('set-deadlines-button');
-    const requestDeadlineChangeBtn = document.getElementById('request-deadline-change-button');
-
-    if (setDeadlinesBtn) setDeadlinesBtn.addEventListener('click', handleSetDeadlines);
-    if (requestDeadlineChangeBtn) requestDeadlineChangeBtn.addEventListener('click', handleRequestDeadlineChange);
-
-    // Modal close listeners
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-        modal.addEventListener('click', e => {
-            if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('close-button')) {
-                closeAllModals();
-            }
-        });
-    });
-    
-    setupCalendarListeners();
-    setupCalendarKeyboardNavigation();
-}
-
-// ==================
-//  View Management
-// ==================
-function handleNavClick(view) {
-    currentView = view;
-    document.querySelectorAll('.nav-item').forEach(l => {
-        l.setAttribute('aria-current', 'false');
-        l.classList.remove('active');
-    });
-    const activeLink = document.getElementById(`nav-${view}`);
-    if (activeLink) {
-        activeLink.classList.add('active');
-        activeLink.setAttribute('aria-current', 'page');
-    }
-    
-    const viewTitles = {
-        'my-assignments': 'My Assignments',
-        'interviews': 'Catalyst in the Capital',
-        'opeds': 'Op-Eds',
-        'calendar': 'Deadlines Calendar'
-    };
-    document.getElementById('board-title').textContent = viewTitles[view] || view;
-    renderCurrentViewEnhanced();
-}
-
-function renderCurrentViewEnhanced() {
-    const boardView = document.getElementById('board-view');
-    const calendarView = document.getElementById('calendar-view');
-
-    if (currentView === 'calendar') {
-        boardView.style.display = 'none';
-        calendarView.style.display = 'block';
-        
-        // Setup calendar listeners if not already done
-        setupCalendarListeners();
-        
-        // Render calendar
-        renderCalendar();
-    } else {
-        boardView.style.display = 'block';
-        calendarView.style.display = 'none';
-        renderKanbanBoard(filterProjects());
-    }
-}
-
-// ==================
-//  Data Handling
-// ==================
-function subscribeToProjects() {
-    console.log("[FIREBASE] Setting up projects subscription...");
-    
-    db.collection('projects').onSnapshot(snapshot => {
-        console.log("[FIREBASE] Projects updated, processing...");
-        
-        allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        renderCurrentViewEnhanced();
-        updateNavCounts();
-
-        if (currentlyViewedProjectId) {
-            const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-            if (project) {
-                refreshDetailsModal(project);
-            } else {
-                closeAllModals();
-            }
-        }
-    }, error => {
-        console.error("[FIREBASE ERROR] Projects subscription failed:", error);
-    });
-}
-
-function updateNavCounts() {
-    const myAssignmentsCount = allProjects.filter(p => {
-        return p.authorId === currentUser.uid || p.editorId === currentUser.uid;
-    }).length;
-    
-    const navLink = document.querySelector('#nav-my-assignments span');
-    if (navLink) {
-        navLink.textContent = `My Assignments (${myAssignmentsCount})`;
-    }
-}
-
-// ==================
-//  Kanban Board
-// ==================
-function renderKanbanBoard(projects) {
-    console.log(`[RENDER] Rendering ${projects.length} projects`);
-    const board = document.getElementById('kanban-board');
-    board.innerHTML = '';
-    
-    const columns = getColumnsForView(currentView);
-    
-    columns.forEach(columnTitle => {
-        const columnProjects = projects.filter(project => {
-            const state = getProjectState(project);
-            return state.column === columnTitle;
-        });
-        
-        console.log(`[COLUMN] "${columnTitle}" has ${columnProjects.length} projects`);
-
-        const columnEl = document.createElement('div');
-        columnEl.className = 'kanban-column';
-        
-        columnEl.innerHTML = `
-            <div class="column-header">
-                <div class="column-title">
-                    <span class="column-title-text">${columnTitle}</span>
-                    <span class="task-count">${columnProjects.length}</span>
-                </div>
-            </div>
-            <div class="column-content">
-                <div class="kanban-cards"></div>
-            </div>
-        `;
-        
-        const cardsContainer = columnEl.querySelector('.kanban-cards');
-        columnProjects.forEach(project => {
-            cardsContainer.appendChild(createProjectCard(project));
-        });
-        
-        board.appendChild(columnEl);
-    });
-}
-
-function filterProjects() {
-    switch (currentView) {
-        case 'interviews':
-            return allProjects.filter(p => p.type === 'Interview');
-        case 'opeds':
-            return allProjects.filter(p => p.type === 'Op-Ed');
-        case 'my-assignments':
-            return allProjects.filter(p => p.authorId === currentUser.uid || p.editorId === currentUser.uid);
-        default:
-            return [];
-    }
-}
-
-function createProjectCard(project) {
-    const state = getProjectState(project);
-    const card = document.createElement('div');
-    
-    card.className = `kanban-card status-${state.color}`;
-    card.dataset.id = project.id;
-    
-    const progress = calculateProgress(project.timeline);
-    
-    const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
-    const daysUntilDeadline = finalDeadline ? Math.ceil((new Date(finalDeadline) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
-    const deadlineClass = daysUntilDeadline < 0 ? 'overdue' : daysUntilDeadline <= 3 ? 'due-soon' : '';
-    
-    const deadlineRequestIndicator = (project.deadlineRequest && project.deadlineRequest.status === 'pending') || 
-                                   (project.deadlineChangeRequest && project.deadlineChangeRequest.status === 'pending') ? 
-        '<span class="deadline-request-indicator">⏰</span>' : '';
-    
-    card.innerHTML = `
-        <h4 class="card-title">${project.title} ${deadlineRequestIndicator}</h4>
-        <div class="card-meta">
-            <span class="card-type">${project.type}</span>
-            <span class="card-status">${state.statusText}</span>
-        </div>
-        <div class="progress-bar-container">
-            <div class="progress-bar" style="width: ${progress}%"></div>
-        </div>
-        <div class="card-footer">
-            <div class="card-author">
-                <div class="user-avatar" style="background: ${stringToColor(project.authorName)}">
-                    ${project.authorName.charAt(0)}
-                </div>
-                <span>${project.authorName}</span>
-            </div>
-            <div class="card-deadline ${deadlineClass}">
-                ${finalDeadline ? new Date(finalDeadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No deadline'}
-            </div>
-        </div>
-    `;
-    
-    card.addEventListener('click', () => openDetailsModal(project.id));
-    return card;
-}
-
 // =================
-// Calendar
-// =================
-function renderCalendar() {
-    const calendarGrid = document.getElementById('calendar-grid');
-    const monthYear = document.getElementById('month-year');
-    
-    if (!calendarGrid || !monthYear) return;
-    
-    calendarGrid.innerHTML = '';
-    
-    const month = calendarDate.getMonth();
-    const year = calendarDate.getFullYear();
-    
-    // Update header
-    monthYear.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
-
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const prevMonth = new Date(year, month, 0);
-    const today = new Date();
-
-    // Previous month's trailing days
-    for (let i = firstDay - 1; i >= 0; i--) {
-        const dayDate = new Date(prevMonth);
-        dayDate.setDate(prevMonth.getDate() - i);
-        createCalendarDay(calendarGrid, dayDate, true, today);
-    }
-
-    // Current month days
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dayDate = new Date(year, month, day);
-        createCalendarDay(calendarGrid, dayDate, false, today);
-    }
-
-    // Next month's leading days to fill the grid (6 rows × 7 days = 42 total)
-    const totalCells = calendarGrid.children.length;
-    const remainingCells = 42 - totalCells;
-    const nextMonth = new Date(year, month + 1, 1);
-    
-    for (let day = 1; day <= remainingCells; day++) {
-        const dayDate = new Date(nextMonth);
-        dayDate.setDate(day);
-        createCalendarDay(calendarGrid, dayDate, true, today);
-    }
-
-    // Update statistics
-    updateCalendarStats();
-    
-    // Add fade-in animation
-    const container = document.querySelector('.calendar-container');
-    if (container) {
-        container.classList.add('calendar-fade-in');
-        setTimeout(() => container.classList.remove('calendar-fade-in'), 300);
-    }
-}
-
-function createCalendarDay(grid, date, isOtherMonth, today) {
-    const dayEl = document.createElement('div');
-    dayEl.className = 'calendar-day';
-    
-    if (isOtherMonth) {
-        dayEl.classList.add('other-month');
-    }
-    
-    // Check if this is today
-    if (isSameDay(date, today)) {
-        dayEl.classList.add('today');
-    }
-
-    // Create day number
-    const dayNumber = document.createElement('div');
-    dayNumber.className = 'day-number';
-    dayNumber.textContent = date.getDate();
-
-    // Create events container
-    const eventsContainer = document.createElement('div');
-    eventsContainer.className = 'calendar-events';
-
-    // Find projects for this day
-    const dayProjects = allProjects.filter(project => {
-        return hasProjectDeadlineOnDate(project, date);
-    });
-
-    // Display up to 3 events, then show "+X more"
-    const maxVisibleEvents = 3;
-    dayProjects.slice(0, maxVisibleEvents).forEach(project => {
-        const eventEl = createCalendarEvent(project, date);
-        eventsContainer.appendChild(eventEl);
-    });
-
-    if (dayProjects.length > maxVisibleEvents) {
-        const moreEl = document.createElement('div');
-        moreEl.className = 'event-more';
-        moreEl.textContent = `+${dayProjects.length - maxVisibleEvents} more`;
-        moreEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            showDayDetails(date, dayProjects);
-        });
-        eventsContainer.appendChild(moreEl);
-    }
-
-    dayEl.appendChild(dayNumber);
-    dayEl.appendChild(eventsContainer);
-
-    // Add click handler for day
-    dayEl.addEventListener('click', () => {
-        if (dayProjects.length === 1) {
-            openDetailsModal(dayProjects[0].id);
-        } else if (dayProjects.length > 1) {
-            showDayDetails(date, dayProjects);
-        }
-    });
-
-    grid.appendChild(dayEl);
-}
-
-function createCalendarEvent(project, date) {
-    const eventEl = document.createElement('div');
-    
-    // Determine event type and styling
-    const { eventType, eventTitle } = getEventTypeForDate(project, date);
-    
-    eventEl.className = `calendar-event ${eventType}`;
-    eventEl.textContent = eventTitle;
-    eventEl.title = `${project.title} - ${eventTitle} - ${date.toLocaleDateString()}`;
-
-    // Add click handler
-    eventEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openDetailsModal(project.id);
-    });
-
-    return eventEl;
-}
-
-function getEventTypeForDate(project, date) {
-    const deadlines = project.deadlines || {};
-    const finalDeadline = deadlines.publication || project.deadline;
-    const dateStr = formatDateForComparison(date);
-    
-    // Check different types of deadlines
-    if (deadlines.contact && formatDateForComparison(new Date(deadlines.contact + 'T00:00:00')) === dateStr) {
-        return { eventType: 'interview', eventTitle: 'Contact Professor' };
-    }
-    if (deadlines.interview && formatDateForComparison(new Date(deadlines.interview + 'T00:00:00')) === dateStr) {
-        return { eventType: 'interview', eventTitle: 'Interview Due' };
-    }
-    if (deadlines.draft && formatDateForComparison(new Date(deadlines.draft + 'T00:00:00')) === dateStr) {
-        return { eventType: 'due-soon', eventTitle: 'Draft Due' };
-    }
-    if (deadlines.review && formatDateForComparison(new Date(deadlines.review + 'T00:00:00')) === dateStr) {
-        return { eventType: 'due-soon', eventTitle: 'Review Due' };
-    }
-    if (deadlines.edits && formatDateForComparison(new Date(deadlines.edits + 'T00:00:00')) === dateStr) {
-        return { eventType: 'due-soon', eventTitle: 'Edits Due' };
-    }
-    if (finalDeadline && formatDateForComparison(new Date(finalDeadline + 'T00:00:00')) === dateStr) {
-        const isOverdue = new Date(finalDeadline) < new Date();
-        const eventType = isOverdue ? 'overdue' : 'publication';
-        return { eventType, eventTitle: 'Publication Due' };
-    }
-    
-    return { eventType: 'publication', eventTitle: project.title };
-}
-
-function hasProjectDeadlineOnDate(project, date) {
-    const deadlines = project.deadlines || {};
-    const finalDeadline = deadlines.publication || project.deadline;
-    const dateStr = formatDateForComparison(date);
-    
-    // Check all possible deadline types
-    const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
-    
-    for (const type of deadlineTypes) {
-        if (deadlines[type]) {
-            const deadlineDate = new Date(deadlines[type] + 'T00:00:00');
-            if (formatDateForComparison(deadlineDate) === dateStr) {
-                return true;
-            }
-        }
-    }
-    
-    // Check final publication deadline
-    if (finalDeadline) {
-        const publicationDate = new Date(finalDeadline + 'T00:00:00');
-        if (formatDateForComparison(publicationDate) === dateStr) {
-            return true;
-        }
-    }
-    
-    return false;
-}
-
-function formatDateForComparison(date) {
-    return date.getFullYear() + '-' + 
-           String(date.getMonth() + 1).padStart(2, '0') + '-' +
-           String(date.getDate()).padStart(2, '0');
-}
-
-function isSameDay(date1, date2) {
-    return date1.getDate() === date2.getDate() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getFullYear() === date2.getFullYear();
-}
-
-function updateCalendarStats() {
-    const now = new Date();
-    const monthStart = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
-    const monthEnd = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0);
-    
-    // Get week boundaries
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay());
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    
-    let thisMonthCount = 0;
-    let thisWeekCount = 0;
-    let overdueCount = 0;
-    
-    allProjects.forEach(project => {
-        const deadlines = project.deadlines || {};
-        const finalDeadline = deadlines.publication || project.deadline;
-        
-        if (finalDeadline) {
-            const deadline = new Date(finalDeadline + 'T00:00:00');
-            
-            // Count for this month
-            if (deadline >= monthStart && deadline <= monthEnd) {
-                thisMonthCount++;
-            }
-            
-            // Count for this week
-            if (deadline >= weekStart && deadline <= weekEnd) {
-                thisWeekCount++;
-            }
-            
-            // Count overdue (not completed)
-            const state = getProjectState(project);
-            if (deadline < now && state.column !== 'Completed') {
-                overdueCount++;
-            }
-        }
-        
-        // Also check intermediate deadlines for current month/week
-        const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
-        deadlineTypes.forEach(type => {
-            if (deadlines[type]) {
-                const deadline = new Date(deadlines[type] + 'T00:00:00');
-                
-                if (deadline >= monthStart && deadline <= monthEnd) {
-                    thisMonthCount++;
-                }
-                
-                if (deadline >= weekStart && deadline <= weekEnd) {
-                    thisWeekCount++;
-                }
-            }
-        });
-    });
-    
-    // Update stats display
-    const statMonth = document.getElementById('stat-month');
-    const statWeek = document.getElementById('stat-week');
-    const statOverdue = document.getElementById('stat-overdue');
-    
-    if (statMonth) statMonth.textContent = thisMonthCount;
-    if (statWeek) statWeek.textContent = thisWeekCount;
-    if (statOverdue) statOverdue.textContent = overdueCount;
-}
-
-function showDayDetails(date, projects) {
-    const dateStr = date.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-    });
-    
-    let message = `Events for ${dateStr}:\n\n`;
-    
-    projects.forEach((project, index) => {
-        const { eventType, eventTitle } = getEventTypeForDate(project, date);
-        message += `${index + 1}. ${project.title}\n   ${eventTitle}\n   Author: ${project.authorName}\n\n`;
-    });
-    
-    message += 'Click on an individual event to view project details.';
-    alert(message);
-}
-
-function changeMonth(offset) {
-    calendarDate.setMonth(calendarDate.getMonth() + offset);
-    renderCalendar();
-}
-
-function goToToday() {
-    calendarDate = new Date();
-    renderCalendar();
-}
-
-// Enhanced event listener setup for calendar
-function setupCalendarListeners() {
-    // Navigation buttons
-    const prevBtn = document.getElementById('prev-month');
-    const nextBtn = document.getElementById('next-month');
-    const todayBtn = document.getElementById('today-btn');
-    
-    if (prevBtn) prevBtn.addEventListener('click', () => changeMonth(-1));
-    if (nextBtn) nextBtn.addEventListener('click', () => changeMonth(1));
-    if (todayBtn) todayBtn.addEventListener('click', goToToday);
-    
-    // View toggle buttons
-    document.querySelectorAll('.view-toggle button').forEach((btn, index) => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.view-toggle button').forEach((b, i) => {
-                b.classList.toggle('active', i === index);
-            });
-            // Future: implement different view modes
-            renderCalendar();
-        });
-    });
-}
-
-// Keyboard navigation for calendar
-function setupCalendarKeyboardNavigation() {
-    document.addEventListener('keydown', (e) => {
-        if (currentView !== 'calendar') return;
-        
-        switch(e.key) {
-            case 'ArrowLeft':
-                if (e.ctrlKey || e.metaKey) {
-                    changeMonth(-1);
-                    e.preventDefault();
-                }
-                break;
-            case 'ArrowRight':
-                if (e.ctrlKey || e.metaKey) {
-                    changeMonth(1);
-                    e.preventDefault();
-                }
-                break;
-            case 't':
-            case 'T':
-                if (e.ctrlKey || e.metaKey) {
-                    goToToday();
-                    e.preventDefault();
-                }
-                break;
-        }
-    });
-}
-
-// =================
-// Modals
+// Modals (Projects)
 // =================
 function openProjectModal() {
     document.getElementById('project-form').reset();
@@ -734,6 +18,7 @@ function openDetailsModal(projectId) {
 function closeAllModals() {
     document.querySelectorAll('.modal-overlay').forEach(modal => modal.style.display = 'none');
     currentlyViewedProjectId = null;
+    currentlyViewedTaskId = null;
     disableProposalEditing();
 }
 
@@ -1069,7 +354,7 @@ function renderActivityFeed(activity) {
 }
 
 // =================
-// Actions
+// Actions (Projects)
 // =================
 async function handleProjectFormSubmit(e) {
     e.preventDefault();
@@ -1390,12 +675,9 @@ async function handleDeleteProject() {
 }
 
 // ===================================
-// STATUS REPORT HELPER FUNCTIONS
+// STATUS REPORT HELPER FUNCTIONS (Existing)
 // ===================================
 
-/**
- * Get the last activity for a project
- */
 function getLastActivity(project) {
     const activity = project.activity || [];
     if (activity.length === 0) return 'No activity';
@@ -1423,521 +705,28 @@ function getLastActivity(project) {
     return `${Math.ceil(diffDays / 30)} months ago`;
 }
 
-/**
- * Get recommended action for a project based on its state
- */
-function getRecommendedAction(project, state) {
-    const timeline = project.timeline || {};
-    const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
-    const now = new Date();
-    const daysOverdue = finalDeadline ? Math.ceil((now - new Date(finalDeadline)) / (1000 * 60 * 60 * 24)) : 0;
-    
-    // Severely overdue projects
-    if (daysOverdue > 7) {
-        if (!project.editorId && timeline["Article Writing Complete"]) {
-            return "URGENT: Assign editor immediately and expedite review process";
-        }
-        if (state.column === "Reviewing Suggestions") {
-            return "URGENT: Contact author to finalize article immediately";
-        }
-        if (state.column === "In Review") {
-            return "URGENT: Complete editor review and provide feedback ASAP";
-        }
-        return "URGENT: Contact all stakeholders to identify blockers and create recovery plan";
-    }
-    
-    // Recently overdue
-    if (daysOverdue > 0) {
-        if (state.column === "Interview Stage") {
-            return "Schedule interview immediately or consider topic change";
-        }
-        if (state.column === "Writing Stage") {
-            return "Set daily check-ins with author to ensure progress";
-        }
-        return "Expedite current phase and compress remaining timeline";
-    }
-    
-    // Regular recommendations
-    switch (state.column) {
-        case "Topic Proposal":
-            return project.proposalStatus === 'pending' ? 
-                "Review and approve/reject proposal within 24 hours" :
-                "Contact author to address rejection feedback";
-        
-        case "Interview Stage":
-            return timeline["Interview Scheduled"] ?
-                "Confirm interview details and prepare questions" :
-                "Schedule interview within next 3 business days";
-        
-        case "Writing Stage":
-            if (timeline["Article Writing Complete"] && !project.editorId) {
-                return "Assign qualified editor for review";
-            }
-            return "Monitor writing progress and offer support if needed";
-        
-        case "In Review":
-            return "Complete review within 3-5 business days";
-        
-        case "Reviewing Suggestions":
-            return "Follow up with author if no response within 48 hours";
-        
-        default:
-            return "Monitor progress and provide support as needed";
-    }
-}
-
-/**
- * Analyze team performance and workload
- */
-function analyzeTeamPerformance() {
-    const teamMembers = {};
-    const now = new Date();
-    
-    // Initialize team member data
-    allProjects.forEach(project => {
-        // Author analysis
-        if (!teamMembers[project.authorId]) {
-            teamMembers[project.authorId] = {
-                id: project.authorId,
-                name: project.authorName,
-                role: 'Author',
-                projects: [],
-                stats: {
-                    total: 0,
-                    completed: 0,
-                    overdue: 0,
-                    inProgress: 0,
-                    pending: 0
-                },
-                alerts: []
-            };
-        }
-        
-        // Editor analysis
-        if (project.editorId && !teamMembers[project.editorId]) {
-            teamMembers[project.editorId] = {
-                id: project.editorId,
-                name: project.editorName,
-                role: 'Editor',
-                projects: [],
-                stats: {
-                    total: 0,
-                    completed: 0,
-                    overdue: 0,
-                    inProgress: 0,
-                    pending: 0
-                },
-                alerts: []
-            };
-        }
-    });
-    
-    // Analyze each project
-    allProjects.forEach(project => {
-        const state = getProjectState(project);
-        const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
-        const isOverdue = finalDeadline && new Date(finalDeadline) < now;
-        
-        // Author stats
-        if (teamMembers[project.authorId]) {
-            const authorMember = teamMembers[project.authorId];
-            authorMember.projects.push({
-                ...project,
-                state,
-                isOverdue
-            });
-            
-            authorMember.stats.total++;
-            
-            if (state.column === 'Completed') {
-                authorMember.stats.completed++;
-            } else if (isOverdue) {
-                authorMember.stats.overdue++;
-                authorMember.alerts.push(`"${project.title}" is overdue`);
-            } else if (state.column === 'Writing Stage' || state.column === 'Interview Stage') {
-                authorMember.stats.inProgress++;
-            } else {
-                authorMember.stats.pending++;
-            }
-            
-            // Check for stuck projects
-            const lastActivity = getLastActivityDate(project);
-            if (lastActivity && (now - lastActivity) > 14 * 24 * 60 * 60 * 1000) {
-                authorMember.alerts.push(`"${project.title}" has no recent activity (>14 days)`);
-            }
-        }
-        
-        // Editor stats
-        if (project.editorId && teamMembers[project.editorId]) {
-            const editorMember = teamMembers[project.editorId];
-            editorMember.projects.push({
-                ...project,
-                state,
-                isOverdue
-            });
-            
-            editorMember.stats.total++;
-            
-            if (state.column === 'Completed') {
-                editorMember.stats.completed++;
-            } else if (isOverdue && (state.column === 'In Review' || state.column === 'Reviewing Suggestions')) {
-                editorMember.stats.overdue++;
-                editorMember.alerts.push(`"${project.title}" review is overdue`);
-            } else if (state.column === 'In Review') {
-                editorMember.stats.inProgress++;
-            } else {
-                editorMember.stats.pending++;
-            }
-        }
-    });
-    
-    return Object.values(teamMembers);
-}
-
-/**
- * Get last activity date for a project
- */
-function getLastActivityDate(project) {
-    const activity = project.activity || [];
-    if (activity.length === 0) return null;
-    
-    const lastActivity = activity.sort((a, b) => {
-        const aTime = a.timestamp?.seconds || 0;
-        const bTime = b.timestamp?.seconds || 0;
-        return bTime - aTime;
-    })[0];
-    
-    if (!lastActivity.timestamp) return null;
-    
-    return lastActivity.timestamp.seconds ? 
-        new Date(lastActivity.timestamp.seconds * 1000) : 
-        new Date(lastActivity.timestamp);
-}
-
-/**
- * Generate team analysis HTML
- */
-function generateTeamAnalysisHTML(teamAnalysis) {
-    if (!teamAnalysis || teamAnalysis.length === 0) {
-        return '<p>No team data available.</p>';
-    }
-    
-    let html = '';
-    
-    teamAnalysis.forEach(member => {
-        const completionRate = member.stats.total > 0 ? 
-            Math.round((member.stats.completed / member.stats.total) * 100) : 0;
-        
-        const hasAlerts = member.alerts.length > 0;
-        const isOverloaded = member.stats.inProgress > 5;
-        
-        html += `
-            <div class="team-member-card ${hasAlerts ? 'has-alerts' : ''}">
-                <div class="member-header">
-                    <div class="member-avatar" style="background-color: ${stringToColor(member.name)}">
-                        ${member.name.charAt(0)}
-                    </div>
-                    <div class="member-info">
-                        <h3>${member.name}</h3>
-                        <p class="member-role">${member.role}</p>
-                    </div>
-                </div>
-                
-                <div class="member-stats">
-                    <div class="stat-box ${member.stats.overdue > 0 ? 'alert' : ''}">
-                        <div class="stat-number">${member.stats.total}</div>
-                        <div class="stat-label">Total</div>
-                    </div>
-                    <div class="stat-box ${member.stats.inProgress > 0 ? 'warning' : ''}">
-                        <div class="stat-number">${member.stats.inProgress}</div>
-                        <div class="stat-label">In Progress</div>
-                    </div>
-                    <div class="stat-box ${member.stats.overdue > 0 ? 'alert' : ''}">
-                        <div class="stat-number">${member.stats.overdue}</div>
-                        <div class="stat-label">Overdue</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-number">${completionRate}%</div>
-                        <div class="stat-label">Completed</div>
-                    </div>
-                </div>
-                
-                ${member.alerts.length > 0 ? `
-                    <div class="member-alerts">
-                        <h4>⚠️ Alerts</h4>
-                        ${member.alerts.map(alert => `<div class="alert-item">${alert}</div>`).join('')}
-                    </div>
-                ` : ''}
-                
-                <div class="member-projects">
-                    <h4>Recent Projects</h4>
-                    <div class="project-list">
-                        ${member.projects.slice(0, 3).map(project => {
-                            const statusClass = project.isOverdue ? 'overdue' : 
-                                               project.state.color === 'green' ? 'completed' : 
-                                               project.state.color === 'yellow' ? 'in-progress' : 'default';
-                            
-                            return `
-                                <div class="project-mini ${statusClass}" data-id="${project.id}">
-                                    <div class="project-title">${project.title}</div>
-                                    <div class="project-status ${statusClass}">${project.state.statusText}</div>
-                                </div>
-                            `;
-                        }).join('')}
-                        
-                        ${member.projects.length > 3 ? `
-                            <div class="project-more">
-                                +${member.projects.length - 3} more projects
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    return html;
-}
-
-/**
- * Get upcoming deadlines
- */
-function getUpcomingDeadlines(days = 14) {
-    const now = new Date();
-    const futureDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-    const upcomingDeadlines = [];
-    
-    allProjects.forEach(project => {
-        const deadlines = project.deadlines || {};
-        const finalDeadline = deadlines.publication || project.deadline;
-        
-        // Check all deadline types
-        const deadlineTypes = [
-            { key: 'contact', label: 'Contact Professor' },
-            { key: 'interview', label: 'Interview Due' },
-            { key: 'draft', label: 'Draft Due' },
-            { key: 'review', label: 'Review Due' },
-            { key: 'edits', label: 'Edits Due' },
-            { key: 'publication', label: 'Publication Due' }
-        ];
-        
-        deadlineTypes.forEach(deadlineType => {
-            let deadlineDate = null;
-            let deadlineLabel = deadlineType.label;
-            
-            if (deadlineType.key === 'publication') {
-                if (finalDeadline) {
-                    deadlineDate = new Date(finalDeadline + 'T23:59:59');
-                }
-            } else if (deadlines[deadlineType.key]) {
-                deadlineDate = new Date(deadlines[deadlineType.key] + 'T23:59:59');
-            }
-            
-            if (deadlineDate && deadlineDate >= now && deadlineDate <= futureDate) {
-                const daysUntil = Math.ceil((deadlineDate - now) / (1000 * 60 * 60 * 24));
-                const urgency = daysUntil <= 1 ? 'urgent' : 
-                              daysUntil <= 3 ? 'high' : 
-                              daysUntil <= 7 ? 'medium' : 'low';
-                
-                upcomingDeadlines.push({
-                    project,
-                    type: deadlineLabel,
-                    date: deadlineDate,
-                    formattedDate: deadlineDate.toLocaleDateString('en-US', { 
-                        weekday: 'short', 
-                        month: 'short', 
-                        day: 'numeric' 
-                    }),
-                    daysUntil,
-                    urgency
-                });
-            }
-        });
-    });
-    
-    // Sort by date
-    upcomingDeadlines.sort((a, b) => a.date - b.date);
-    
-    return upcomingDeadlines;
-}
-
-/**
- * Generate strategic recommendations
- */
-function generateRecommendations(data) {
-    const recommendations = [];
-    
-    // Critical overdue issues
-    if (data.severelyOverdue.length > 0) {
-        recommendations.push({
-            priority: 'critical',
-            title: 'Severely Overdue Projects Need Immediate Attention',
-            description: `${data.severelyOverdue.length} projects are more than 7 days overdue. These require immediate intervention and resource reallocation.`,
-            actions: [
-                'Conduct emergency triage meeting',
-                'Reassign resources if needed',
-                'Establish daily check-ins',
-                'Consider deadline extensions or scope reduction'
-            ]
-        });
-    }
-    
-    // Editor bottleneck
-    if (data.needingEditors.length > 0) {
-        recommendations.push({
-            priority: 'high',
-            title: 'Editor Assignment Bottleneck',
-            description: `${data.needingEditors.length} completed articles are waiting for editor assignment. This is creating a workflow bottleneck.`,
-            actions: [
-                'Assign editors immediately',
-                'Consider cross-training more editors',
-                'Implement automatic editor assignment system'
-            ]
-        });
-    }
-    
-    // Stuck projects
-    if (data.stuckProjects.length > 2) {
-        recommendations.push({
-            priority: 'medium',
-            title: 'Multiple Stalled Projects',
-            description: `${data.stuckProjects.length} projects show no activity for over 2 weeks. These may need intervention or resources.`,
-            actions: [
-                'Contact project owners for status updates',
-                'Identify and remove blockers',
-                'Consider reassignment or additional support'
-            ]
-        });
-    }
-    
-    // Team workload analysis
-    const overloadedMembers = data.teamAnalysis.filter(member => 
-        member.stats.inProgress > 5 || member.stats.overdue > 2
-    );
-    
-    if (overloadedMembers.length > 0) {
-        recommendations.push({
-            priority: 'medium',
-            title: 'Team Workload Imbalance',
-            description: `${overloadedMembers.length} team members appear overloaded. Consider redistributing work or providing additional resources.`,
-            actions: [
-                'Review individual workloads',
-                'Redistribute assignments if possible',
-                'Provide additional training or support',
-                'Consider hiring additional staff'
-            ]
-        });
-    }
-    
-    // Proposal backlog
-    if (data.pendingProposals.length > 3) {
-        recommendations.push({
-            priority: 'medium',
-            title: 'Proposal Approval Backlog',
-            description: `${data.pendingProposals.length} proposals are pending approval. Quick decisions help maintain momentum.`,
-            actions: [
-                'Schedule proposal review sessions',
-                'Establish faster approval process',
-                'Delegate approval authority',
-                'Set 48-hour approval target'
-            ]
-        });
-    }
-    
-    // Process improvements
-    if (data.overdueProjects.length > data.teamAnalysis.length) {
-        recommendations.push({
-            priority: 'low',
-            title: 'Process Optimization Opportunity',
-            description: 'The ratio of overdue projects suggests potential process improvements could help prevent future delays.',
-            actions: [
-                'Analyze common delay patterns',
-                'Implement earlier warning systems',
-                'Improve deadline estimation accuracy',
-                'Create standard operating procedures'
-            ]
-        });
-    }
-    
-    return recommendations;
-}
-
-// ===================================
-// STATUS REPORT GENERATION
-// ===================================
-
+// Simplified status report generation
 function generateStatusReport() {
     const reportModal = document.getElementById('report-modal');
     const reportContent = document.getElementById('report-content');
     if (!reportModal || !reportContent) return;
 
     const now = new Date();
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    // ===== COMPREHENSIVE DATA ANALYSIS =====
     
-    // Critical Issues
+    // Project analysis
     const overdueProjects = allProjects.filter(p => {
         const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
         return finalDeadline && new Date(finalDeadline) < now && getProjectState(p).column !== 'Completed';
     });
 
-    const severelyOverdue = overdueProjects.filter(p => {
-        const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
-        const daysPast = Math.ceil((now - new Date(finalDeadline)) / (1000 * 60 * 60 * 24));
-        return daysPast > 7;
-    });
-
-    // Workflow Issues
     const pendingProposals = allProjects.filter(p => p.proposalStatus === 'pending');
-    const rejectedProposals = allProjects.filter(p => p.proposalStatus === 'rejected');
+    const completedProjects = allProjects.filter(p => getProjectState(p).column === 'Completed');
     
-    const pendingDeadlineRequests = allProjects.filter(p => 
-        (p.deadlineRequest?.status === 'pending') || (p.deadlineChangeRequest?.status === 'pending')
-    );
-
-    const needingEditors = allProjects.filter(p => {
-        const state = getProjectState(p);
-        return p.timeline && p.timeline["Article Writing Complete"] && !p.editorId && state.column !== 'Completed';
-    });
-
-    // Progress Tracking
-    const recentlyCompleted = allProjects.filter(p => {
-        const state = getProjectState(p);
-        if (state.column !== 'Completed') return false;
-        const completionActivity = (p.activity || []).find(a => a.text.includes('Suggestions Reviewed'));
-        if (!completionActivity?.timestamp) return false;
-        const activityDate = completionActivity.timestamp.seconds ? new Date(completionActivity.timestamp.seconds * 1000) : new Date(completionActivity.timestamp);
-        return activityDate >= oneWeekAgo;
-    });
-
-    const stuckProjects = allProjects.filter(p => {
-        const state = getProjectState(p);
-        if (state.column === 'Completed' || state.column === 'Topic Proposal') return false;
-        const lastActivity = (p.activity || []).sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))[0];
-        if (!lastActivity?.timestamp) return false;
-        const lastActivityDate = lastActivity.timestamp.seconds ? new Date(lastActivity.timestamp.seconds * 1000) : new Date(lastActivity.timestamp);
-        const daysSinceUpdate = (now - lastActivityDate) / (1000 * 60 * 60 * 24);
-        return daysSinceUpdate > 14;
-    });
-
-    // Status breakdown
-    const statusBreakdown = {
-        'Topic Proposal': allProjects.filter(p => getProjectState(p).column === 'Topic Proposal').length,
-        'Interview Stage': allProjects.filter(p => getProjectState(p).column === 'Interview Stage').length,
-        'Writing Stage': allProjects.filter(p => getProjectState(p).column === 'Writing Stage').length,
-        'In Review': allProjects.filter(p => getProjectState(p).column === 'In Review').length,
-        'Reviewing Suggestions': allProjects.filter(p => getProjectState(p).column === 'Reviewing Suggestions').length,
-        'Completed': allProjects.filter(p => getProjectState(p).column === 'Completed').length
-    };
-
-    // Team performance analysis
-    const teamAnalysis = analyzeTeamPerformance();
+    // Task analysis
+    const overdueTasks = allTasks.filter(t => new Date(t.deadline) < now && t.status !== 'completed');
+    const pendingTasks = allTasks.filter(t => t.status === 'pending');
+    const completedTasks = allTasks.filter(t => t.status === 'completed');
     
-    // Upcoming deadlines (next 2 weeks)
-    const upcomingDeadlines = getUpcomingDeadlines(14);
-
-    // ===== REPORT GENERATION =====
     let reportHTML = `
         <div class="report-section executive-summary">
             <h2>🎯 Executive Dashboard</h2>
@@ -1948,27 +737,49 @@ function generateStatusReport() {
                 </div>
                 <div class="summary-item ${overdueProjects.length > 0 ? 'overdue' : ''}">
                     <div class="summary-value">${overdueProjects.length}</div>
-                    <div class="summary-label">Overdue</div>
+                    <div class="summary-label">Overdue Projects</div>
                 </div>
-                <div class="summary-item ${pendingProposals.length > 0 ? 'pending' : ''}">
-                    <div class="summary-value">${pendingProposals.length}</div>
+                <div class="summary-item completed">
+                    <div class="summary-value">${completedProjects.length}</div>
+                    <div class="summary-label">Completed Projects</div>
+                </div>
+                <div class="summary-item total">
+                    <div class="summary-value">${allTasks.length}</div>
+                    <div class="summary-label">Total Tasks</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="report-section">
+            <h2>📋 Task Overview</h2>
+            <div class="summary-grid">
+                <div class="summary-item ${overdueTasks.length > 0 ? 'overdue' : ''}">
+                    <div class="summary-value">${overdueTasks.length}</div>
+                    <div class="summary-label">Overdue Tasks</div>
+                </div>
+                <div class="summary-item ${pendingTasks.length > 0 ? 'pending' : ''}">
+                    <div class="summary-value">${pendingTasks.length}</div>
                     <div class="summary-label">Pending Approval</div>
                 </div>
                 <div class="summary-item completed">
-                    <div class="summary-value">${recentlyCompleted.length}</div>
-                    <div class="summary-label">Completed This Week</div>
+                    <div class="summary-value">${completedTasks.length}</div>
+                    <div class="summary-label">Completed Tasks</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">${allTasks.filter(t => t.status === 'approved').length}</div>
+                    <div class="summary-label">In Progress</div>
                 </div>
             </div>
         </div>
     `;
 
-    // Critical Actions
-    if (overdueProjects.length > 0 || needingEditors.length > 0 || pendingProposals.length > 0) {
+    // Critical Issues
+    if (overdueProjects.length > 0 || overdueTasks.length > 0 || pendingProposals.length > 0) {
         reportHTML += `
             <div class="report-section">
                 <h2>🚨 Actions Required</h2>
-                ${severelyOverdue.length > 0 ? `<h3>Severely Overdue (${severelyOverdue.length})</h3>` : ''}
-                ${severelyOverdue.map(p => {
+                ${overdueProjects.length > 0 ? `<h3>Overdue Projects (${overdueProjects.length})</h3>` : ''}
+                ${overdueProjects.map(p => {
                     const deadline = p.deadlines ? p.deadlines.publication : p.deadline;
                     const daysPast = Math.ceil((now - new Date(deadline)) / (1000 * 60 * 60 * 24));
                     return `
@@ -1979,13 +790,16 @@ function generateStatusReport() {
                     `;
                 }).join('')}
                 
-                ${needingEditors.length > 0 ? `<h3>Need Editor Assignment (${needingEditors.length})</h3>` : ''}
-                ${needingEditors.map(p => `
-                    <div class="report-item pending-item" data-id="${p.id}">
-                        <span>${p.title}</span>
-                        <span class="meta">by ${p.authorName}</span>
-                    </div>
-                `).join('')}
+                ${overdueTasks.length > 0 ? `<h3>Overdue Tasks (${overdueTasks.length})</h3>` : ''}
+                ${overdueTasks.map(t => {
+                    const daysPast = Math.ceil((now - new Date(t.deadline)) / (1000 * 60 * 60 * 24));
+                    return `
+                        <div class="report-item overdue-item" data-id="${t.id}" data-type="task">
+                            <span>${t.title} (assigned to ${t.assigneeName})</span>
+                            <span class="meta">${daysPast} days overdue</span>
+                        </div>
+                    `;
+                }).join('')}
                 
                 ${pendingProposals.length > 0 ? `<h3>Pending Proposals (${pendingProposals.length})</h3>` : ''}
                 ${pendingProposals.map(p => `
@@ -1998,69 +812,17 @@ function generateStatusReport() {
         `;
     }
 
-    // Team Analysis
-    if (teamAnalysis.length > 0) {
-        reportHTML += `
-            <div class="report-section">
-                <h2>👥 Team Analysis</h2>
-                <div class="user-workload-grid">
-                    ${teamAnalysis.map(member => `
-                        <div class="user-card">
-                            <div class="user-card-header">
-                                <div class="user-avatar" style="background-color: ${stringToColor(member.name)}">
-                                    ${member.name.charAt(0)}
-                                </div>
-                                <div class="user-card-name">${member.name}</div>
-                                <div class="user-card-stats">
-                                    <span>Total: ${member.stats.total}</span>
-                                    <span>Overdue: ${member.stats.overdue}</span>
-                                </div>
-                            </div>
-                            <div class="user-card-body">
-                                ${member.stats.inProgress > 0 ? `
-                                    <h4>In Progress (${member.stats.inProgress})</h4>
-                                    ${member.projects.filter(p => p.state.column !== 'Completed' && !p.isOverdue).slice(0, 3).map(p => `
-                                        <div class="report-item mini" data-id="${p.id}">
-                                            <div class="status-dot ${p.state.color}"></div>
-                                            <span>${p.title}</span>
-                                        </div>
-                                    `).join('')}
-                                ` : ''}
-                                
-                                ${member.alerts.length > 0 ? `
-                                    <h4>⚠️ Alerts</h4>
-                                    ${member.alerts.slice(0, 2).map(alert => `<div class="alert-item">${alert}</div>`).join('')}
-                                ` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    // Upcoming Deadlines
-    if (upcomingDeadlines.length > 0) {
-        reportHTML += `
-            <div class="report-section">
-                <h2>📅 Upcoming Deadlines (Next 2 Weeks)</h2>
-                ${upcomingDeadlines.slice(0, 10).map(item => `
-                    <div class="report-item ${item.urgency}" data-id="${item.project.id}">
-                        <span>${item.project.title} - ${item.type}</span>
-                        <span class="meta">${item.formattedDate} (${item.daysUntil} days)</span>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
     reportContent.innerHTML = reportHTML;
 
     // Add click handlers
     reportContent.querySelectorAll('[data-id]').forEach(item => {
         item.addEventListener('click', () => {
             closeAllModals();
-            openDetailsModal(item.dataset.id);
+            if (item.dataset.type === 'task') {
+                openTaskDetailsModal(item.dataset.id);
+            } else {
+                openDetailsModal(item.dataset.id);
+            }
         });
     });
 
@@ -2096,5 +858,1338 @@ function isValidDate(dateString) {
     return date instanceof Date && !isNaN(date) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
 }
 
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showNotification(message, type = 'success') {
+    console.log(`[NOTIFICATION ${type.toUpperCase()}] ${message}`);
+    // Simple alert for now - you could enhance this with a toast system
+    if (type === 'error') {
+        alert(`Error: ${message}`);
+    } else {
+        alert(message);
+    }
+}
+
 // Import getProjectState and getColumnsForView from projectState.js
-// These functions are defined in projectState.js which is loaded before this file
+// These functions are defined in projectState.js which is loaded before this file// ==================
+//  Data Handling (Projects)
+// ==================
+function subscribeToProjects() {
+    console.log("[FIREBASE] Setting up projects subscription...");
+    
+    db.collection('projects').onSnapshot(snapshot => {
+        console.log("[FIREBASE] Projects updated, processing...");
+        
+        allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        if (currentView !== 'tasks') {
+            renderCurrentViewEnhanced();
+        }
+        updateNavCounts();
+
+        if (currentlyViewedProjectId) {
+            const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+            if (project) {
+                refreshDetailsModal(project);
+            } else {
+                closeAllModals();
+            }
+        }
+    }, error => {
+        console.error("[FIREBASE ERROR] Projects subscription failed:", error);
+    });
+}
+
+function updateNavCounts() {
+    const myAssignmentsProjects = allProjects.filter(p => {
+        return p.authorId === currentUser.uid || p.editorId === currentUser.uid;
+    }).length;
+    
+    const myAssignmentsTasks = allTasks.filter(t => {
+        return t.creatorId === currentUser.uid || t.assigneeId === currentUser.uid;
+    }).length;
+    
+    const totalAssignments = myAssignmentsProjects + myAssignmentsTasks;
+    
+    const navLink = document.querySelector('#nav-my-assignments span');
+    if (navLink) {
+        navLink.textContent = `My Assignments (${totalAssignments})`;
+    }
+}
+
+// ==================
+//  Kanban Board (Projects)
+// ==================
+function renderKanbanBoard(projects) {
+    console.log(`[RENDER] Rendering ${projects.length} projects`);
+    const board = document.getElementById('kanban-board');
+    board.innerHTML = '';
+    
+    const columns = getColumnsForView(currentView);
+    
+    columns.forEach(columnTitle => {
+        const columnProjects = projects.filter(project => {
+            const state = getProjectState(project);
+            return state.column === columnTitle;
+        });
+        
+        console.log(`[COLUMN] "${columnTitle}" has ${columnProjects.length} projects`);
+
+        const columnEl = document.createElement('div');
+        columnEl.className = 'kanban-column';
+        
+        columnEl.innerHTML = `
+            <div class="column-header">
+                <div class="column-title">
+                    <span class="column-title-text">${columnTitle}</span>
+                    <span class="task-count">${columnProjects.length}</span>
+                </div>
+            </div>
+            <div class="column-content">
+                <div class="kanban-cards"></div>
+            </div>
+        `;
+        
+        const cardsContainer = columnEl.querySelector('.kanban-cards');
+        columnProjects.forEach(project => {
+            cardsContainer.appendChild(createProjectCard(project));
+        });
+        
+        board.appendChild(columnEl);
+    });
+}
+
+function filterProjects() {
+    switch (currentView) {
+        case 'interviews':
+            return allProjects.filter(p => p.type === 'Interview');
+        case 'opeds':
+            return allProjects.filter(p => p.type === 'Op-Ed');
+        case 'my-assignments':
+            // Include both projects and tasks for my assignments
+            return [...allProjects.filter(p => p.authorId === currentUser.uid || p.editorId === currentUser.uid),
+                    ...allTasks.filter(t => t.creatorId === currentUser.uid || t.assigneeId === currentUser.uid).map(t => ({...t, isTask: true}))];
+        default:
+            return [];
+    }
+}
+
+function createProjectCard(project) {
+    // Handle task cards differently
+    if (project.isTask) {
+        return createTaskCardForAssignments(project);
+    }
+    
+    const state = getProjectState(project);
+    const card = document.createElement('div');
+    
+    card.className = `kanban-card status-${state.color}`;
+    card.dataset.id = project.id;
+    
+    const progress = calculateProgress(project.timeline);
+    
+    const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
+    const daysUntilDeadline = finalDeadline ? Math.ceil((new Date(finalDeadline) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+    const deadlineClass = daysUntilDeadline < 0 ? 'overdue' : daysUntilDeadline <= 3 ? 'due-soon' : '';
+    
+    const deadlineRequestIndicator = (project.deadlineRequest && project.deadlineRequest.status === 'pending') || 
+                                   (project.deadlineChangeRequest && project.deadlineChangeRequest.status === 'pending') ? 
+        '<span class="deadline-request-indicator">⏰</span>' : '';
+    
+    card.innerHTML = `
+        <h4 class="card-title">${project.title} ${deadlineRequestIndicator}</h4>
+        <div class="card-meta">
+            <span class="card-type">${project.type}</span>
+            <span class="card-status">${state.statusText}</span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" style="width: ${progress}%"></div>
+        </div>
+        <div class="card-footer">
+            <div class="card-author">
+                <div class="user-avatar" style="background: ${stringToColor(project.authorName)}">
+                    ${project.authorName.charAt(0)}
+                </div>
+                <span>${project.authorName}</span>
+            </div>
+            <div class="card-deadline ${deadlineClass}">
+                ${finalDeadline ? new Date(finalDeadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No deadline'}
+            </div>
+        </div>
+    `;
+    
+    card.addEventListener('click', () => openDetailsModal(project.id));
+    return card;
+}
+
+function createTaskCardForAssignments(task) {
+    const card = document.createElement('div');
+    card.className = 'kanban-card task-card';
+    card.dataset.id = task.id;
+    card.dataset.type = 'task';
+    
+    // Check if overdue
+    const isOverdue = new Date(task.deadline) < new Date() && task.status !== 'completed';
+    const isDueSoon = !isOverdue && new Date(task.deadline) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    
+    if (isOverdue) card.classList.add('overdue');
+    if (isDueSoon) card.classList.add('due-soon');
+    
+    // Format deadline
+    const deadline = new Date(task.deadline);
+    const deadlineText = deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    // Priority colors
+    const priorityColors = {
+        low: '#10b981',
+        medium: '#f59e0b', 
+        high: '#ef4444',
+        urgent: '#dc2626'
+    };
+    
+    const priorityColor = priorityColors[task.priority] || priorityColors.medium;
+    
+    card.innerHTML = `
+        <h4 class="card-title">📋 ${task.title}</h4>
+        <div class="card-meta">
+            <span class="card-type" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white;">TASK</span>
+            <span class="card-status">${(task.status || 'pending').replace('_', ' ')}</span>
+        </div>
+        <div class="card-footer">
+            <div class="card-author">
+                <div class="user-avatar" style="background: ${stringToColor(task.creatorName)}">
+                    ${task.creatorName.charAt(0)}
+                </div>
+                <span>→ ${task.assigneeName}</span>
+            </div>
+            <div class="card-deadline ${isOverdue ? 'overdue' : isDueSoon ? 'due-today' : ''}">
+                ${deadlineText}
+            </div>
+        </div>
+        <div class="priority-indicator" style="background: ${priorityColor}; color: white; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 600; margin-top: 8px; text-align: center;">
+            ${(task.priority || 'medium').toUpperCase()} PRIORITY
+        </div>
+    `;
+    
+    card.addEventListener('click', () => openTaskDetailsModal(task.id));
+    return card;
+}
+
+// =================
+// Calendar (existing functionality)
+// =================
+function renderCalendar() {
+    const calendarGrid = document.getElementById('calendar-grid');
+    const monthYear = document.getElementById('month-year');
+    
+    if (!calendarGrid || !monthYear) return;
+    
+    calendarGrid.innerHTML = '';
+    
+    const month = calendarDate.getMonth();
+    const year = calendarDate.getFullYear();
+    
+    // Update header
+    monthYear.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonth = new Date(year, month, 0);
+    const today = new Date();
+
+    // Previous month's trailing days
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const dayDate = new Date(prevMonth);
+        dayDate.setDate(prevMonth.getDate() - i);
+        createCalendarDay(calendarGrid, dayDate, true, today);
+    }
+
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayDate = new Date(year, month, day);
+        createCalendarDay(calendarGrid, dayDate, false, today);
+    }
+
+    // Next month's leading days to fill the grid (6 rows × 7 days = 42 total)
+    const totalCells = calendarGrid.children.length;
+    const remainingCells = 42 - totalCells;
+    const nextMonth = new Date(year, month + 1, 1);
+    
+    for (let day = 1; day <= remainingCells; day++) {
+        const dayDate = new Date(nextMonth);
+        dayDate.setDate(day);
+        createCalendarDay(calendarGrid, dayDate, true, today);
+    }
+
+    // Update statistics
+    updateCalendarStats();
+    
+    // Add fade-in animation
+    const container = document.querySelector('.calendar-container');
+    if (container) {
+        container.classList.add('calendar-fade-in');
+        setTimeout(() => container.classList.remove('calendar-fade-in'), 300);
+    }
+}
+
+function createCalendarDay(grid, date, isOtherMonth, today) {
+    const dayEl = document.createElement('div');
+    dayEl.className = 'calendar-day';
+    
+    if (isOtherMonth) {
+        dayEl.classList.add('other-month');
+    }
+    
+    // Check if this is today
+    if (isSameDay(date, today)) {
+        dayEl.classList.add('today');
+    }
+
+    // Create day number
+    const dayNumber = document.createElement('div');
+    dayNumber.className = 'day-number';
+    dayNumber.textContent = date.getDate();
+
+    // Create events container
+    const eventsContainer = document.createElement('div');
+    eventsContainer.className = 'calendar-events';
+
+    // Find projects and tasks for this day
+    const dayProjects = allProjects.filter(project => {
+        return hasProjectDeadlineOnDate(project, date);
+    });
+    
+    const dayTasks = allTasks.filter(task => {
+        return hasTaskDeadlineOnDate(task, date);
+    });
+
+    // Display up to 3 events, then show "+X more"
+    const maxVisibleEvents = 3;
+    const allEvents = [...dayProjects, ...dayTasks.map(t => ({...t, isTask: true}))];
+    
+    allEvents.slice(0, maxVisibleEvents).forEach(item => {
+        const eventEl = createCalendarEvent(item, date);
+        eventsContainer.appendChild(eventEl);
+    });
+
+    if (allEvents.length > maxVisibleEvents) {
+        const moreEl = document.createElement('div');
+        moreEl.className = 'event-more';
+        moreEl.textContent = `+${allEvents.length - maxVisibleEvents} more`;
+        moreEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showDayDetails(date, allEvents);
+        });
+        eventsContainer.appendChild(moreEl);
+    }
+
+    dayEl.appendChild(dayNumber);
+    dayEl.appendChild(eventsContainer);
+
+    // Add click handler for day
+    dayEl.addEventListener('click', () => {
+        if (allEvents.length === 1) {
+            if (allEvents[0].isTask) {
+                openTaskDetailsModal(allEvents[0].id);
+            } else {
+                openDetailsModal(allEvents[0].id);
+            }
+        } else if (allEvents.length > 1) {
+            showDayDetails(date, allEvents);
+        }
+    });
+
+    grid.appendChild(dayEl);
+}
+
+function createCalendarEvent(item, date) {
+    const eventEl = document.createElement('div');
+    
+    if (item.isTask) {
+        // Task event
+        eventEl.className = 'calendar-event task-event';
+        eventEl.textContent = `📋 ${item.title}`;
+        eventEl.title = `Task: ${item.title} - Due ${date.toLocaleDateString()}`;
+        eventEl.style.background = 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
+    } else {
+        // Project event
+        const { eventType, eventTitle } = getEventTypeForDate(item, date);
+        eventEl.className = `calendar-event ${eventType}`;
+        eventEl.textContent = eventTitle;
+        eventEl.title = `${item.title} - ${eventTitle} - ${date.toLocaleDateString()}`;
+    }
+
+    // Add click handler
+    eventEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (item.isTask) {
+            openTaskDetailsModal(item.id);
+        } else {
+            openDetailsModal(item.id);
+        }
+    });
+
+    return eventEl;
+}
+
+function hasTaskDeadlineOnDate(task, date) {
+    const taskDeadline = new Date(task.deadline + 'T00:00:00');
+    return formatDateForComparison(taskDeadline) === formatDateForComparison(date);
+}
+
+function hasProjectDeadlineOnDate(project, date) {
+    const deadlines = project.deadlines || {};
+    const finalDeadline = deadlines.publication || project.deadline;
+    const dateStr = formatDateForComparison(date);
+    
+    // Check all possible deadline types
+    const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
+    
+    for (const type of deadlineTypes) {
+        if (deadlines[type]) {
+            const deadlineDate = new Date(deadlines[type] + 'T00:00:00');
+            if (formatDateForComparison(deadlineDate) === dateStr) {
+                return true;
+            }
+        }
+    }
+    
+    // Check final publication deadline
+    if (finalDeadline) {
+        const publicationDate = new Date(finalDeadline + 'T00:00:00');
+        if (formatDateForComparison(publicationDate) === dateStr) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+function getEventTypeForDate(project, date) {
+    const deadlines = project.deadlines || {};
+    const finalDeadline = deadlines.publication || project.deadline;
+    const dateStr = formatDateForComparison(date);
+    
+    // Check different types of deadlines
+    if (deadlines.contact && formatDateForComparison(new Date(deadlines.contact + 'T00:00:00')) === dateStr) {
+        return { eventType: 'interview', eventTitle: 'Contact Professor' };
+    }
+    if (deadlines.interview && formatDateForComparison(new Date(deadlines.interview + 'T00:00:00')) === dateStr) {
+        return { eventType: 'interview', eventTitle: 'Interview Due' };
+    }
+    if (deadlines.draft && formatDateForComparison(new Date(deadlines.draft + 'T00:00:00')) === dateStr) {
+        return { eventType: 'due-soon', eventTitle: 'Draft Due' };
+    }
+    if (deadlines.review && formatDateForComparison(new Date(deadlines.review + 'T00:00:00')) === dateStr) {
+        return { eventType: 'due-soon', eventTitle: 'Review Due' };
+    }
+    if (deadlines.edits && formatDateForComparison(new Date(deadlines.edits + 'T00:00:00')) === dateStr) {
+        return { eventType: 'due-soon', eventTitle: 'Edits Due' };
+    }
+    if (finalDeadline && formatDateForComparison(new Date(finalDeadline + 'T00:00:00')) === dateStr) {
+        const isOverdue = new Date(finalDeadline) < new Date();
+        const eventType = isOverdue ? 'overdue' : 'publication';
+        return { eventType, eventTitle: 'Publication Due' };
+    }
+    
+    return { eventType: 'publication', eventTitle: project.title };
+}
+
+function formatDateForComparison(date) {
+    return date.getFullYear() + '-' + 
+           String(date.getMonth() + 1).padStart(2, '0') + '-' +
+           String(date.getDate()).padStart(2, '0');
+}
+
+function isSameDay(date1, date2) {
+    return date1.getDate() === date2.getDate() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getFullYear() === date2.getFullYear();
+}
+
+function updateCalendarStats() {
+    const now = new Date();
+    const monthStart = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
+    const monthEnd = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0);
+    
+    // Get week boundaries
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    
+    let thisMonthCount = 0;
+    let thisWeekCount = 0;
+    let overdueCount = 0;
+    
+    // Count project deadlines
+    allProjects.forEach(project => {
+        const deadlines = project.deadlines || {};
+        const finalDeadline = deadlines.publication || project.deadline;
+        
+        if (finalDeadline) {
+            const deadline = new Date(finalDeadline + 'T00:00:00');
+            
+            // Count for this month
+            if (deadline >= monthStart && deadline <= monthEnd) {
+                thisMonthCount++;
+            }
+            
+            // Count for this week
+            if (deadline >= weekStart && deadline <= weekEnd) {
+                thisWeekCount++;
+            }
+            
+            // Count overdue (not completed)
+            const state = getProjectState(project);
+            if (deadline < now && state.column !== 'Completed') {
+                overdueCount++;
+            }
+        }
+        
+        // Also check intermediate deadlines for current month/week
+        const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
+        deadlineTypes.forEach(type => {
+            if (deadlines[type]) {
+                const deadline = new Date(deadlines[type] + 'T00:00:00');
+                
+                if (deadline >= monthStart && deadline <= monthEnd) {
+                    thisMonthCount++;
+                }
+                
+                if (deadline >= weekStart && deadline <= weekEnd) {
+                    thisWeekCount++;
+                }
+            }
+        });
+    });
+    
+    // Count task deadlines
+    allTasks.forEach(task => {
+        const deadline = new Date(task.deadline + 'T00:00:00');
+        
+        if (deadline >= monthStart && deadline <= monthEnd) {
+            thisMonthCount++;
+        }
+        
+        if (deadline >= weekStart && deadline <= weekEnd) {
+            thisWeekCount++;
+        }
+        
+        if (deadline < now && task.status !== 'completed') {
+            overdueCount++;
+        }
+    });
+    
+    // Update stats display
+    const statMonth = document.getElementById('stat-month');
+    const statWeek = document.getElementById('stat-week');
+    const statOverdue = document.getElementById('stat-overdue');
+    
+    if (statMonth) statMonth.textContent = thisMonthCount;
+    if (statWeek) statWeek.textContent = thisWeekCount;
+    if (statOverdue) statOverdue.textContent = overdueCount;
+}
+
+function showDayDetails(date, items) {
+    const dateStr = date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
+    let message = `Events for ${dateStr}:\n\n`;
+    
+    items.forEach((item, index) => {
+        if (item.isTask) {
+            message += `${index + 1}. [TASK] ${item.title}\n   Assigned to: ${item.assigneeName}\n   Priority: ${item.priority || 'medium'}\n\n`;
+        } else {
+            const { eventType, eventTitle } = getEventTypeForDate(item, date);
+            message += `${index + 1}. ${item.title}\n   ${eventTitle}\n   Author: ${item.authorName}\n\n`;
+        }
+    });
+    
+    message += 'Click on an individual event to view details.';
+    alert(message);
+}
+
+function changeMonth(offset) {
+    calendarDate.setMonth(calendarDate.getMonth() + offset);
+    renderCalendar();
+}
+
+function goToToday() {
+    calendarDate = new Date();
+    renderCalendar();
+}
+
+// Enhanced event listener setup for calendar
+function setupCalendarListeners() {
+    // Navigation buttons
+    const prevBtn = document.getElementById('prev-month');
+    const nextBtn = document.getElementById('next-month');
+    const todayBtn = document.getElementById('today-btn');
+    
+    if (prevBtn) prevBtn.addEventListener('click', () => changeMonth(-1));
+    if (nextBtn) nextBtn.addEventListener('click', () => changeMonth(1));
+    if (todayBtn) todayBtn.addEventListener('click', goToToday);
+    
+    // View toggle buttons
+    document.querySelectorAll('.view-toggle button').forEach((btn, index) => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.view-toggle button').forEach((b, i) => {
+                b.classList.toggle('active', i === index);
+            });
+            // Future: implement different view modes
+            renderCalendar();
+        });
+    });
+}
+
+// Keyboard navigation for calendar
+function setupCalendarKeyboardNavigation() {
+    document.addEventListener('keydown', (e) => {
+        if (currentView !== 'calendar') return;
+        
+        switch(e.key) {
+            case 'ArrowLeft':
+                if (e.ctrlKey || e.metaKey) {
+                    changeMonth(-1);
+                    e.preventDefault();
+                }
+                break;
+            case 'ArrowRight':
+                if (e.ctrlKey || e.metaKey) {
+                    changeMonth(1);
+                    e.preventDefault();
+                }
+                break;
+            case 't':
+            case 'T':
+                if (e.ctrlKey || e.metaKey) {
+                    goToToday();
+                    e.preventDefault();
+                }
+                break;
+        }
+    });
+}// ===============================
+// Catalyst Tracker - Complete Working Dashboard JS with Task Management
+// ===============================
+
+// ---- Firebase Configuration ----
+const firebaseConfig = {
+    apiKey: "AIzaSyBT6urJvPCtuYQ1c2iH77QTDfzE3yGw-Xk",
+    authDomain: "catalystmonday.firebaseapp.com",
+    projectId: "catalystmonday",
+    storageBucket: "catalystmonday.appspot.com",
+    messagingSenderId: "394311851220",
+    appId: "1:394311851220:web:86e4939b7d5a085b46d75d"
+};
+
+// Initialize Firebase with error handling
+try {
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log("[FIREBASE] Firebase initialized successfully");
+    }
+} catch (initError) {
+    console.error("[FIREBASE] Firebase initialization failed:", initError);
+    alert("Failed to connect to the database. Please refresh the page and try again.");
+}
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ---- App State ----
+let currentUser = null, currentUserName = null, currentUserRole = null;
+let allProjects = [], allEditors = [], allTasks = [], allUsers = [];
+let currentlyViewedProjectId = null, currentlyViewedTaskId = null;
+let currentView = 'interviews';
+let calendarDate = new Date();
+
+// ======================
+//  Initialization
+// ======================
+auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+        window.location.href = 'index.html';
+        return;
+    }
+    currentUser = user;
+
+    try {
+        console.log("[INIT] User authenticated:", user.uid);
+        
+        // Try to get user document
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        
+        if (!userDoc.exists) {
+            console.warn("[INIT] User document not found, creating default profile");
+            
+            const defaultUserData = {
+                name: user.displayName || user.email.split('@')[0],
+                email: user.email,
+                role: 'writer',
+                createdAt: new Date()
+            };
+            
+            await db.collection('users').doc(user.uid).set(defaultUserData);
+            currentUserName = defaultUserData.name;
+            currentUserRole = defaultUserData.role;
+        } else {
+            const userData = userDoc.data();
+            currentUserName = userData.name || user.displayName || user.email.split('@')[0];
+            currentUserRole = userData.role || 'writer';
+        }
+
+        await fetchEditors();
+        await fetchAllUsers();
+        setupUI();
+        setupNavAndListeners();
+        subscribeToProjects();
+        subscribeToTasks();
+
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('app-container').style.display = 'flex';
+        
+        console.log("[INIT] Initialization completed successfully");
+        
+    } catch (error) {
+        console.error("Initialization Error:", error);
+        alert("Could not load your profile. Please refresh the page and try again.");
+    }
+});
+
+async function fetchEditors() {
+    try {
+        console.log("[INIT] Fetching editors...");
+        const editorsSnapshot = await db.collection('users').where('role', 'in', ['admin', 'editor']).get();
+        allEditors = editorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("[INIT] Found", allEditors.length, "editors");
+    } catch (error) {
+        console.error("Error fetching editors:", error);
+        allEditors = [];
+    }
+}
+
+async function fetchAllUsers() {
+    try {
+        console.log("[INIT] Fetching all users...");
+        const usersSnapshot = await db.collection('users').get();
+        allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("[INIT] Found", allUsers.length, "users");
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        allUsers = [];
+    }
+}
+
+function setupUI() {
+    document.getElementById('user-name').textContent = currentUserName;
+    document.getElementById('user-role').textContent = currentUserRole;
+    const avatar = document.getElementById('user-avatar');
+    avatar.textContent = currentUserName.charAt(0).toUpperCase();
+    avatar.style.backgroundColor = stringToColor(currentUserName);
+    if (currentUserRole === 'admin') {
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+    }
+}
+
+// ==================
+//  Event Listeners
+// ==================
+function setupNavAndListeners() {
+    // Navigation listeners
+    document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+    
+    // Navigation handling
+    document.querySelectorAll('.nav-item').forEach(link => {
+        link.addEventListener('click', e => {
+            const href = link.getAttribute('href');
+            if (href && href !== '#') {
+                return; // Let normal navigation happen
+            }
+            
+            e.preventDefault();
+            const view = link.id.replace('nav-', '');
+            handleNavClick(view);
+        });
+    });
+
+    // Modal and form listeners
+    document.getElementById('add-project-button').addEventListener('click', openProjectModal);
+    document.getElementById('add-task-button').addEventListener('click', openTaskModal);
+    document.getElementById('project-form').addEventListener('submit', handleProjectFormSubmit);
+    document.getElementById('task-form').addEventListener('submit', handleTaskFormSubmit);
+    
+    // Status report button
+    const statusReportBtn = document.getElementById('status-report-button');
+    if (statusReportBtn) {
+        statusReportBtn.addEventListener('click', generateStatusReport);
+    }
+    
+    // Project modal listeners
+    document.getElementById('add-comment-button').addEventListener('click', handleAddComment);
+    document.getElementById('assign-editor-button').addEventListener('click', handleAssignEditor);
+    document.getElementById('delete-project-button').addEventListener('click', handleDeleteProject);
+    document.getElementById('approve-button').addEventListener('click', () => approveProposal(currentlyViewedProjectId));
+    document.getElementById('reject-button').addEventListener('click', () => updateProposalStatus('rejected'));
+
+    // Task modal listeners
+    document.getElementById('add-task-comment-button').addEventListener('click', handleAddTaskComment);
+    document.getElementById('approve-task-button').addEventListener('click', () => updateTaskStatus('approved'));
+    document.getElementById('reject-task-button').addEventListener('click', () => updateTaskStatus('rejected'));
+    document.getElementById('complete-task-button').addEventListener('click', () => updateTaskStatus('completed'));
+    document.getElementById('request-extension-button').addEventListener('click', handleRequestExtension);
+    document.getElementById('delete-task-button').addEventListener('click', handleDeleteTask);
+
+    // Calendar listeners
+    document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
+
+    // Proposal editing listeners
+    const editProposalBtn = document.getElementById('edit-proposal-button');
+    const saveProposalBtn = document.getElementById('save-proposal-button');
+    const cancelProposalBtn = document.getElementById('cancel-proposal-button');
+
+    if (editProposalBtn) editProposalBtn.addEventListener('click', enableProposalEditing);
+    if (saveProposalBtn) saveProposalBtn.addEventListener('click', handleSaveProposal);
+    if (cancelProposalBtn) cancelProposalBtn.addEventListener('click', disableProposalEditing);
+
+    // Deadline management listeners
+    const setDeadlinesBtn = document.getElementById('set-deadlines-button');
+    const requestDeadlineChangeBtn = document.getElementById('request-deadline-change-button');
+
+    if (setDeadlinesBtn) setDeadlinesBtn.addEventListener('click', handleSetDeadlines);
+    if (requestDeadlineChangeBtn) requestDeadlineChangeBtn.addEventListener('click', handleRequestDeadlineChange);
+
+    // Modal close listeners
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', e => {
+            if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('close-button')) {
+                closeAllModals();
+            }
+        });
+    });
+    
+    setupCalendarListeners();
+    setupCalendarKeyboardNavigation();
+}
+
+// ==================
+//  View Management
+// ==================
+function handleNavClick(view) {
+    currentView = view;
+    document.querySelectorAll('.nav-item').forEach(l => {
+        l.setAttribute('aria-current', 'false');
+        l.classList.remove('active');
+    });
+    const activeLink = document.getElementById(`nav-${view}`);
+    if (activeLink) {
+        activeLink.classList.add('active');
+        activeLink.setAttribute('aria-current', 'page');
+    }
+    
+    const viewTitles = {
+        'my-assignments': 'My Assignments',
+        'interviews': 'Catalyst in the Capital',
+        'opeds': 'Op-Eds',
+        'calendar': 'Deadlines Calendar',
+        'tasks': 'Task Management'
+    };
+    document.getElementById('board-title').textContent = viewTitles[view] || view;
+    
+    // Show/hide appropriate buttons
+    const addProjectBtn = document.getElementById('add-project-button');
+    const addTaskBtn = document.getElementById('add-task-button');
+    
+    if (view === 'tasks') {
+        addProjectBtn.style.display = 'none';
+        addTaskBtn.style.display = 'inline-flex';
+    } else {
+        addProjectBtn.style.display = 'inline-flex';
+        addTaskBtn.style.display = 'none';
+    }
+    
+    renderCurrentViewEnhanced();
+}
+
+function renderCurrentViewEnhanced() {
+    const boardView = document.getElementById('board-view');
+    const tasksView = document.getElementById('tasks-view');
+    const calendarView = document.getElementById('calendar-view');
+
+    // Hide all views first
+    boardView.style.display = 'none';
+    tasksView.style.display = 'none';
+    calendarView.style.display = 'none';
+
+    if (currentView === 'calendar') {
+        calendarView.style.display = 'block';
+        setupCalendarListeners();
+        renderCalendar();
+    } else if (currentView === 'tasks') {
+        tasksView.style.display = 'block';
+        renderTasksBoard(allTasks);
+    } else {
+        boardView.style.display = 'block';
+        renderKanbanBoard(filterProjects());
+    }
+}
+
+// ==================
+//  Task Management
+// ==================
+function subscribeToTasks() {
+    console.log("[FIREBASE] Setting up tasks subscription...");
+    
+    db.collection('tasks').onSnapshot(snapshot => {
+        console.log("[FIREBASE] Tasks updated, processing...");
+        
+        allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        if (currentView === 'tasks') {
+            renderTasksBoard(allTasks);
+        }
+        updateNavCounts();
+
+        // Refresh task details modal if open
+        if (currentlyViewedTaskId) {
+            const task = allTasks.find(t => t.id === currentlyViewedTaskId);
+            if (task) {
+                refreshTaskDetailsModal(task);
+            } else {
+                closeAllModals();
+            }
+        }
+    }, error => {
+        console.error("[FIREBASE ERROR] Tasks subscription failed:", error);
+    });
+}
+
+function renderTasksBoard(tasks) {
+    console.log(`[RENDER] Rendering ${tasks.length} tasks`);
+    const board = document.getElementById('tasks-board');
+    board.innerHTML = '';
+    
+    const columns = [
+        { id: 'pending', title: 'Pending Approval', icon: '⏳' },
+        { id: 'approved', title: 'Approved', icon: '✅' },
+        { id: 'in_progress', title: 'In Progress', icon: '🔄' },
+        { id: 'completed', title: 'Completed', icon: '🎉' }
+    ];
+    
+    columns.forEach(column => {
+        const columnTasks = tasks.filter(task => getTaskColumn(task) === column.id);
+        console.log(`[COLUMN] "${column.title}" has ${columnTasks.length} tasks`);
+
+        const columnEl = document.createElement('div');
+        columnEl.className = 'kanban-column';
+        
+        columnEl.innerHTML = `
+            <div class="column-header">
+                <div class="column-title">
+                    <div class="column-title-main">
+                        <span class="column-icon">${column.icon}</span>
+                        <span class="column-title-text">${column.title}</span>
+                    </div>
+                    <span class="task-count">${columnTasks.length}</span>
+                </div>
+            </div>
+            <div class="column-content">
+                <div class="kanban-cards"></div>
+            </div>
+        `;
+        
+        const cardsContainer = columnEl.querySelector('.kanban-cards');
+        
+        if (columnTasks.length === 0) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'empty-column';
+            emptyState.innerHTML = `
+                <div class="empty-column-icon">${column.icon}</div>
+                <div class="empty-column-text">No ${column.title.toLowerCase()}</div>
+                <div class="empty-column-subtext">Tasks will appear here when they reach this stage</div>
+            `;
+            cardsContainer.appendChild(emptyState);
+        } else {
+            columnTasks.forEach(task => {
+                cardsContainer.appendChild(createTaskCard(task));
+            });
+        }
+        
+        board.appendChild(columnEl);
+    });
+}
+
+function getTaskColumn(task) {
+    if (task.status === 'completed') return 'completed';
+    if (task.status === 'rejected') return 'pending'; // Rejected tasks go back to pending
+    if (task.status === 'approved') {
+        // Check if assignee has started working on it
+        if (task.activity && task.activity.some(a => a.text.includes('started working') || a.text.includes('in progress'))) {
+            return 'in_progress';
+        }
+        return 'approved';
+    }
+    return 'pending'; // Default for new tasks
+}
+
+function createTaskCard(task) {
+    const card = document.createElement('div');
+    card.className = 'kanban-card';
+    card.dataset.id = task.id;
+    
+    // Check if overdue
+    const isOverdue = new Date(task.deadline) < new Date() && task.status !== 'completed';
+    const isDueSoon = !isOverdue && new Date(task.deadline) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    
+    if (isOverdue) card.classList.add('overdue');
+    if (isDueSoon) card.classList.add('due-soon');
+    
+    // Priority styling
+    card.classList.add(`priority-${task.priority || 'medium'}`);
+    
+    // Format deadline
+    const deadline = new Date(task.deadline);
+    const deadlineText = deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    // Priority badge
+    const priorityColors = {
+        low: '#10b981',
+        medium: '#f59e0b', 
+        high: '#ef4444',
+        urgent: '#dc2626'
+    };
+    
+    const priorityColor = priorityColors[task.priority] || priorityColors.medium;
+    
+    card.innerHTML = `
+        <h4 class="card-title">${escapeHtml(task.title)}</h4>
+        <div class="card-meta">
+            <div class="priority-badge" style="background-color: ${priorityColor}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                ${(task.priority || 'medium').toUpperCase()}
+            </div>
+            <div class="status-badge ${task.status || 'pending'}">${(task.status || 'pending').replace('_', ' ')}</div>
+        </div>
+        ${task.description ? `<div class="card-content-preview">${escapeHtml(task.description.substring(0, 100))}${task.description.length > 100 ? '...' : ''}</div>` : ''}
+        <div class="card-footer">
+            <div class="card-author">
+                <div class="user-avatar" style="background-color: ${stringToColor(task.creatorName)}">
+                    ${task.creatorName.charAt(0).toUpperCase()}
+                </div>
+                <span>→ ${escapeHtml(task.assigneeName)}</span>
+            </div>
+            <div class="card-deadline ${isOverdue ? 'overdue' : isDueSoon ? 'due-today' : ''}">
+                ${deadlineText}
+            </div>
+        </div>
+    `;
+    
+    card.addEventListener('click', () => openTaskDetailsModal(task.id));
+    return card;
+}
+
+// ==================
+//  Task Modal Functions
+// ==================
+function openTaskModal() {
+    document.getElementById('task-form').reset();
+    populateTaskAssigneeDropdown();
+    document.getElementById('task-modal').style.display = 'flex';
+    
+    // Focus first input
+    setTimeout(() => {
+        document.getElementById('task-title').focus();
+    }, 100);
+}
+
+function populateTaskAssigneeDropdown() {
+    const dropdown = document.getElementById('task-assignee');
+    dropdown.innerHTML = '<option value="">Select person to assign task to</option>';
+    allUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.name;
+        dropdown.appendChild(option);
+    });
+}
+
+function openTaskDetailsModal(taskId) {
+    const task = allTasks.find(t => t.id === taskId);
+    if (!task) {
+        console.error("[MODAL] Task not found:", taskId);
+        return;
+    }
+    
+    currentlyViewedTaskId = taskId;
+    refreshTaskDetailsModal(task);
+    document.getElementById('task-details-modal').style.display = 'flex';
+}
+
+function refreshTaskDetailsModal(task) {
+    // Basic info
+    document.getElementById('task-details-title').textContent = task.title;
+    document.getElementById('task-details-description').textContent = task.description || 'No description provided.';
+    
+    // Status
+    document.getElementById('task-details-status').textContent = (task.status || 'pending').replace('_', ' ').toUpperCase();
+    
+    // Assignment
+    document.getElementById('task-details-creator').textContent = task.creatorName;
+    document.getElementById('task-details-assignee').textContent = task.assigneeName || 'Not assigned';
+    
+    // Timeline
+    const createdDate = task.createdAt ? new Date(task.createdAt.seconds * 1000) : new Date();
+    const deadlineDate = new Date(task.deadline);
+    document.getElementById('task-details-created').textContent = createdDate.toLocaleDateString('en-US', { 
+        year: 'numeric', month: 'long', day: 'numeric' 
+    });
+    document.getElementById('task-details-deadline').textContent = deadlineDate.toLocaleDateString('en-US', { 
+        year: 'numeric', month: 'long', day: 'numeric' 
+    });
+    document.getElementById('task-details-priority').textContent = (task.priority || 'medium').toUpperCase();
+    
+    // Permissions and actions
+    const isAdmin = currentUserRole === 'admin';
+    const isCreator = currentUser.uid === task.creatorId;
+    const isAssignee = currentUser.uid === task.assigneeId;
+    
+    // Admin approval section
+    const adminSection = document.getElementById('task-admin-approval-section');
+    if (adminSection) {
+        adminSection.style.display = isAdmin && task.status === 'pending' ? 'block' : 'none';
+    }
+    
+    // Assignee actions
+    const assigneeActions = document.getElementById('task-assignee-actions');
+    if (assigneeActions) {
+        assigneeActions.style.display = isAssignee && task.status === 'approved' ? 'block' : 'none';
+    }
+    
+    // Delete section
+    const deleteSection = document.getElementById('task-delete-section');
+    const deleteButton = document.getElementById('delete-task-button');
+    if (deleteSection && deleteButton) {
+        deleteButton.style.display = (isAdmin || isCreator) ? 'block' : 'none';
+    }
+    
+    // Activity feed
+    renderTaskActivityFeed(task.activity || []);
+}
+
+function renderTaskActivityFeed(activity) {
+    const feed = document.getElementById('task-details-activity-feed');
+    if (!feed) return;
+    
+    feed.innerHTML = '';
+    
+    if (!activity || activity.length === 0) {
+        feed.innerHTML = '<p>No activity yet.</p>';
+        return;
+    }
+    
+    // Sort activity by timestamp (newest first)
+    const sortedActivity = [...activity].sort((a, b) => {
+        const aTime = a.timestamp?.seconds || 0;
+        const bTime = b.timestamp?.seconds || 0;
+        return bTime - aTime;
+    });
+    
+    sortedActivity.forEach(item => {
+        const timestamp = item.timestamp?.seconds ? 
+            new Date(item.timestamp.seconds * 1000).toLocaleString() : 
+            'Unknown time';
+        
+        feed.innerHTML += `
+            <div class="feed-item">
+                <div class="user-avatar" style="background-color: ${stringToColor(item.authorName)}">
+                    ${item.authorName.charAt(0)}
+                </div>
+                <div class="feed-content">
+                    <p><span class="author">${item.authorName}</span> ${item.text}</p>
+                    <span class="timestamp">${timestamp}</span>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// ==================
+//  Task Actions
+// ==================
+async function handleTaskFormSubmit(e) {
+    e.preventDefault();
+    
+    const submitButton = document.getElementById('save-task-button');
+    const originalText = submitButton.textContent;
+    
+    try {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Creating...';
+        
+        const assigneeId = document.getElementById('task-assignee').value;
+        const assignee = allUsers.find(u => u.id === assigneeId);
+        
+        if (!assignee) {
+            throw new Error('Please select a valid assignee');
+        }
+        
+        const newTask = {
+            title: document.getElementById('task-title').value.trim(),
+            description: document.getElementById('task-description').value.trim(),
+            assigneeId: assigneeId,
+            assigneeName: assignee.name,
+            deadline: document.getElementById('task-deadline').value,
+            priority: document.getElementById('task-priority').value,
+            creatorId: currentUser.uid,
+            creatorName: currentUserName,
+            status: 'pending',
+            createdAt: new Date(),
+            activity: [{
+                text: 'created this task',
+                authorName: currentUserName,
+                timestamp: new Date()
+            }]
+        };
+        
+        await db.collection('tasks').add(newTask);
+        
+        showNotification('Task created successfully!', 'success');
+        closeAllModals();
+        
+    } catch (error) {
+        console.error("[ERROR] Failed to create task:", error);
+        showNotification(error.message || 'Failed to create task. Please try again.', 'error');
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+    }
+}
+
+async function updateTaskStatus(newStatus) {
+    if (!currentlyViewedTaskId) return;
+    
+    try {
+        const updates = {
+            status: newStatus,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `marked task as ${newStatus}`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        };
+        
+        if (newStatus === 'completed') {
+            updates.completedAt = new Date();
+        }
+        
+        await db.collection('tasks').doc(currentlyViewedTaskId).update(updates);
+        
+        showNotification(`Task ${newStatus} successfully!`, 'success');
+        
+    } catch (error) {
+        console.error(`[ERROR] Failed to update task status to ${newStatus}:`, error);
+        showNotification(`Failed to ${newStatus} task. Please try again.`, 'error');
+    }
+}
+
+async function handleAddTaskComment() {
+    const commentInput = document.getElementById('task-comment-input');
+    if (!commentInput || !currentlyViewedTaskId) return;
+    
+    const comment = commentInput.value.trim();
+    if (!comment) {
+        showNotification('Please enter a comment.', 'error');
+        return;
+    }
+    
+    try {
+        await db.collection('tasks').doc(currentlyViewedTaskId).update({
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `commented: "${comment}"`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        });
+        
+        commentInput.value = '';
+        showNotification('Comment added successfully!', 'success');
+        
+    } catch (error) {
+        console.error("[ERROR] Failed to add comment:", error);
+        showNotification('Failed to add comment. Please try again.', 'error');
+    }
+}
+
+async function handleRequestExtension() {
+    if (!currentlyViewedTaskId) return;
+    
+    const newDate = prompt('Enter new deadline (YYYY-MM-DD format):');
+    if (!newDate || !isValidDate(newDate)) {
+        showNotification('Please enter a valid date in YYYY-MM-DD format.', 'error');
+        return;
+    }
+    
+    const reason = prompt('Please provide a reason for the extension:');
+    if (!reason || !reason.trim()) {
+        showNotification('Please provide a reason for the extension.', 'error');
+        return;
+    }
+    
+    try {
+        await db.collection('tasks').doc(currentlyViewedTaskId).update({
+            extensionRequest: {
+                requestedBy: currentUserName,
+                requestedDate: newDate,
+                reason: reason.trim(),
+                status: 'pending',
+                requestedAt: new Date()
+            },
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `requested deadline extension to ${new Date(newDate).toLocaleDateString()}. Reason: ${reason.trim()}`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        });
+        
+        showNotification('Extension request submitted successfully!', 'success');
+        
+    } catch (error) {
+        console.error("[ERROR] Failed to request extension:", error);
+        showNotification('Failed to submit extension request. Please try again.', 'error');
+    }
+}
+
+async function handleDeleteTask() {
+    if (!currentlyViewedTaskId) return;
+    
+    const task = allTasks.find(t => t.id === currentlyViewedTaskId);
+    if (!task) return;
+    
+    const isAdmin = currentUserRole === 'admin';
+    const isCreator = currentUser.uid === task.creatorId;
+    
+    if (!isAdmin && !isCreator) {
+        showNotification('You can only delete tasks you created.', 'error');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to delete "${task.title}"? This action cannot be undone.`)) {
+        try {
+            await db.collection('tasks').doc(currentlyViewedTaskId).delete();
+            showNotification('Task deleted successfully!', 'success');
+            closeAllModals();
+        } catch (error) {
+            console.error("[ERROR] Failed to delete task:", error);
+            showNotification('Failed to delete task. Please try again.', 'error');
+        }
+    }
+}
