@@ -33,10 +33,238 @@ let currentlyViewedProjectId = null, currentlyViewedTaskId = null;
 let currentView = 'interviews';
 let calendarDate = new Date();
 
-// Multi-select state
+// ==================
+//  Multi-Select State & Functions
+// ==================
 let selectedAssignees = [];
 let filteredUsers = [];
 let isDropdownOpen = false;
+
+function initializeMultiSelect() {
+    selectedAssignees = [];
+    filteredUsers = [...allUsers];
+    isDropdownOpen = false;
+    
+    renderSelectedAssignees();
+    renderDropdownOptions();
+    setupMultiSelectListeners();
+    
+    console.log('[MULTI-SELECT] Initialized with', allUsers.length, 'users');
+}
+
+function setupMultiSelectListeners() {
+    const container = document.getElementById('multi-select-container');
+    const searchInput = document.getElementById('assignee-search');
+    const header = document.getElementById('multi-select-header');
+    const indicator = document.getElementById('dropdown-indicator');
+    
+    if (!container || !searchInput || !header || !indicator) {
+        console.error('[MULTI-SELECT] Required elements not found');
+        return;
+    }
+    
+    // Remove all existing event listeners by cloning
+    const newContainer = container.cloneNode(true);
+    container.parentNode.replaceChild(newContainer, container);
+    
+    // Get fresh references
+    const freshContainer = document.getElementById('multi-select-container');
+    const freshSearch = document.getElementById('assignee-search');
+    const freshHeader = document.getElementById('multi-select-header');
+    const freshIndicator = document.getElementById('dropdown-indicator');
+    
+    // Search input handlers
+    freshSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        filterUsers(searchTerm);
+        if (!isDropdownOpen) openDropdown();
+    });
+    
+    freshSearch.addEventListener('focus', () => {
+        openDropdown();
+    });
+    
+    freshSearch.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeDropdown();
+            e.target.blur();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (filteredUsers.length > 0) {
+                const firstUnselected = filteredUsers.find(user => 
+                    !selectedAssignees.some(selected => selected.id === user.id)
+                );
+                if (firstUnselected) {
+                    toggleAssignee(firstUnselected.id);
+                    e.target.value = '';
+                    filterUsers('');
+                }
+            }
+        } else if (e.key === 'Backspace' && e.target.value === '' && selectedAssignees.length > 0) {
+            const lastAssignee = selectedAssignees[selectedAssignees.length - 1];
+            removeAssignee(lastAssignee.id);
+        }
+    });
+    
+    // Container click handler
+    freshHeader.addEventListener('click', (e) => {
+        if (!e.target.closest('.remove-assignee') && !e.target.closest('.dropdown-indicator')) {
+            freshSearch.focus();
+            if (!isDropdownOpen) openDropdown();
+        }
+    });
+    
+    // Dropdown indicator
+    freshIndicator.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleDropdown();
+        if (isDropdownOpen) freshSearch.focus();
+    });
+    
+    // Close dropdown when clicking outside
+    const handleOutsideClick = (e) => {
+        if (freshContainer && !freshContainer.contains(e.target)) {
+            closeDropdown();
+        }
+    };
+    
+    document.removeEventListener('click', handleOutsideClick);
+    document.addEventListener('click', handleOutsideClick);
+}
+
+function openDropdown() {
+    isDropdownOpen = true;
+    const container = document.getElementById('multi-select-container');
+    const dropdown = document.getElementById('assignee-dropdown');
+    
+    if (container && dropdown) {
+        container.classList.add('open');
+        dropdown.classList.add('show');
+    }
+}
+
+function closeDropdown() {
+    isDropdownOpen = false;
+    const container = document.getElementById('multi-select-container');
+    const dropdown = document.getElementById('assignee-dropdown');
+    
+    if (container && dropdown) {
+        container.classList.remove('open');
+        dropdown.classList.remove('show');
+    }
+}
+
+function toggleDropdown() {
+    if (isDropdownOpen) {
+        closeDropdown();
+    } else {
+        openDropdown();
+    }
+}
+
+function filterUsers(searchTerm) {
+    if (!searchTerm.trim()) {
+        filteredUsers = [...allUsers];
+    } else {
+        filteredUsers = allUsers.filter(user =>
+            user.name.toLowerCase().includes(searchTerm) ||
+            (user.role && user.role.toLowerCase().includes(searchTerm)) ||
+            (user.email && user.email.toLowerCase().includes(searchTerm))
+        );
+    }
+    renderDropdownOptions();
+}
+
+function toggleAssignee(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+
+    const existingIndex = selectedAssignees.findIndex(selected => selected.id === userId);
+    
+    if (existingIndex > -1) {
+        selectedAssignees.splice(existingIndex, 1);
+    } else {
+        selectedAssignees.push(user);
+    }
+
+    renderSelectedAssignees();
+    renderDropdownOptions();
+    updateSelectionCounter();
+}
+
+function removeAssignee(userId) {
+    selectedAssignees = selectedAssignees.filter(user => user.id !== userId);
+    renderSelectedAssignees();
+    renderDropdownOptions();
+    updateSelectionCounter();
+}
+
+function renderSelectedAssignees() {
+    const container = document.getElementById('selected-assignees');
+    if (!container) return;
+    
+    if (selectedAssignees.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.innerHTML = selectedAssignees.map(user => `
+        <div class="assignee-tag" data-user-id="${user.id}">
+            <div class="assignee-avatar" style="background-color: ${stringToColor(user.name)}">
+                ${user.name.charAt(0).toUpperCase()}
+            </div>
+            <span>${escapeHtml(user.name)}</span>
+            <div class="remove-assignee" onclick="removeAssignee('${user.id}')" title="Remove ${escapeHtml(user.name)}">
+                ×
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderDropdownOptions() {
+    const dropdown = document.getElementById('assignee-dropdown');
+    if (!dropdown) return;
+    
+    if (filteredUsers.length === 0) {
+        dropdown.innerHTML = '<div class="no-results">No team members found</div>';
+        return;
+    }
+
+    dropdown.innerHTML = filteredUsers.map(user => {
+        const isSelected = selectedAssignees.some(selected => selected.id === user.id);
+        return `
+            <div class="assignee-item ${isSelected ? 'selected' : ''}" 
+                 onclick="toggleAssignee('${user.id}')"
+                 data-user-id="${user.id}"
+                 tabindex="0">
+                <div class="user-avatar" style="background-color: ${stringToColor(user.name)}">
+                    ${user.name.charAt(0).toUpperCase()}
+                </div>
+                <div class="assignee-info">
+                    <div class="assignee-name">${escapeHtml(user.name)}</div>
+                    <div class="assignee-role">${escapeHtml(user.role || 'member')}</div>
+                </div>
+                <div class="assignee-status">available</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateSelectionCounter() {
+    const counter = document.getElementById('selection-counter');
+    if (!counter) return;
+    
+    if (selectedAssignees.length > 0) {
+        counter.textContent = selectedAssignees.length;
+        counter.classList.add('show');
+    } else {
+        counter.classList.remove('show');
+    }
+}
+
+// Make functions globally available
+window.toggleAssignee = toggleAssignee;
+window.removeAssignee = removeAssignee;
 
 // ======================
 //  Initialization
