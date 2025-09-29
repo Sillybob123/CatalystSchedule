@@ -95,7 +95,7 @@
           </a>
 
           <p class="nav-heading">Workflows</p>
-          <a
+          
             href="#"
             id="nav-interviews"
             class="nav-item"
@@ -265,100 +265,103 @@
       </main>
     </div>
 
+    <!-- ============================= -->
+    <!-- APPLE-INSPIRED TASK MODAL -->
+    <!-- ============================= -->
     <div id="task-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 id="task-modal-title">Create New Task</h2>
-      <button class="close-button" aria-label="Close">×</button>
-    </div>
-    <form id="task-form">
-      <div class="form-group">
-        <label for="task-title">Task Title</label>
-        <input
-          type="text"
-          id="task-title"
-          required
-          placeholder="e.g., Contact Nature Journal about Catalyst feature"
-        />
-      </div>
-
-      <div class="form-group">
-        <label for="task-description">Description</label>
-        <textarea
-          id="task-description"
-          rows="4"
-          placeholder="Describe what needs to be done, any specific requirements, contacts, or additional context."
-        ></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="task-assignee">Assign To</label>
-        <div class="multi-select-wrapper">
-          <div class="multi-select-container" id="multi-select-container">
-            <div class="multi-select-header" id="multi-select-header">
-              <div class="selected-assignees" id="selected-assignees">
-                </div>
-              <div class="assignee-search-wrapper">
-                <input 
-                  type="text" 
-                  id="assignee-search" 
-                  class="assignee-search"
-                  placeholder="Search team members..."
-                  autocomplete="off"
-                >
-                <div class="search-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <path d="m21 21-4.35-4.35"></path>
-                  </svg>
-                </div>
-              </div>
-              <div class="dropdown-indicator" id="dropdown-indicator">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="6,9 12,15 18,9"></polyline>
-                </svg>
-              </div>
-            </div>
-            <div class="assignee-dropdown" id="assignee-dropdown">
-              <div class="dropdown-loading">
-                <div class="mini-loader"></div>
-                <span>Loading team members...</span>
-              </div>
-            </div>
-          </div>
-          <div class="assignee-help-text">
-            Search and select team members. Click on selected members to remove them.
-          </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="task-modal-title">Create New Task</h2>
+          <button class="close-button" aria-label="Close">×</button>
         </div>
-      </div>
+        <form id="task-form">
+          <div class="form-group">
+            <label for="task-title">Task Title</label>
+            <input
+              type="text"
+              id="task-title"
+              required
+              placeholder="e.g., Contact Nature Journal about Catalyst feature"
+            />
+          </div>
 
-      <div class="form-group">
-        <label for="task-deadline">Deadline</label>
-        <input type="date" id="task-deadline" required />
-      </div>
+          <div class="form-group">
+            <label for="task-description">Description</label>
+            <textarea
+              id="task-description"
+              rows="4"
+              placeholder="Describe what needs to be done, any specific requirements, contacts, or additional context."
+            ></textarea>
+          </div>
 
-      <div class="form-group">
-        <label for="task-priority">Priority</label>
-        <select id="task-priority" required>
-          <option value="low">Low Priority</option>
-          <option value="medium" selected>Medium Priority</option>
-          <option value="high">High Priority</option>
-          <option value="urgent">Urgent Priority</option>
-        </select>
-      </div>
+          <div class="form-group">
+            <label for="task-assignee">Assign To</label>
+            <div class="multi-select-wrapper">
+              <div class="multi-select-container" id="multi-select-container">
+                <div class="multi-select-header" id="multi-select-header">
+                  <div class="selected-assignees" id="selected-assignees"></div>
+                  <div class="assignee-search-wrapper">
+                    <input 
+                      type="text" 
+                      id="assignee-search" 
+                      class="assignee-search"
+                      placeholder="Search team members..."
+                      autocomplete="off"
+                    >
+                    <div class="search-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="dropdown-indicator" id="dropdown-indicator">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="6,9 12,15 18,9"></polyline>
+                    </svg>
+                  </div>
+                </div>
+                <div class="assignee-dropdown" id="assignee-dropdown">
+                  <div class="dropdown-loading">
+                    <div class="mini-loader"></div>
+                    <span>Loading team members...</span>
+                  </div>
+                </div>
+              </div>
+              <div class="selection-counter" id="selection-counter">0</div>
+            </div>
+            <div class="assignee-help-text">
+              Search and select team members. Click on selected members to remove them.
+            </div>
+          </div>
 
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary close-button">Cancel</button>
-        <button type="submit" id="save-task-button" class="btn-primary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20,6 9,17 4,12"></polyline>
-          </svg>
-          Create Task
-        </button>
+          <div class="form-group">
+            <label for="task-deadline">Deadline</label>
+            <input type="date" id="task-deadline" required />
+          </div>
+
+          <div class="form-group">
+            <label for="task-priority">Priority</label>
+            <select id="task-priority" required>
+              <option value="low">Low Priority</option>
+              <option value="medium" selected>Medium Priority</option>
+              <option value="high">High Priority</option>
+              <option value="urgent">Urgent Priority</option>
+            </select>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary close-button">Cancel</button>
+            <button type="submit" id="save-task-button" class="btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20,6 9,17 4,12"></polyline>
+              </svg>
+              Create Task
+            </button>
+          </div>
+        </form>
       </div>
-    </form>
-  </div>
-</div>
+    </div>
 
     <div id="task-details-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
         <div class="modal-content large">
