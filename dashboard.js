@@ -1555,12 +1555,7 @@ function renderActivityFeed(activity) {
 
 async function handleProjectFormSubmit(e) {
     e.preventDefault();
-    console.log('[PROJECT CREATE] Form submitted');
-
     const type = document.getElementById('project-type').value;
-    console.log('[PROJECT CREATE] Current View:', currentView);
-    console.log('[PROJECT CREATE] Project Type:', type);
-
     const timeline = {};
     const tasks = type === "Interview" 
         ? ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete", "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"] 
@@ -1587,8 +1582,12 @@ async function handleProjectFormSubmit(e) {
         editorName: null,
         proposalStatus: 'pending',
         timeline: timeline,
-        createdAt: new Date(), // Add creation timestamp
-        activity: [{ text: 'created the project.', authorName: currentUserName, timestamp: new Date() }]
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        activity: [{ 
+            text: 'created the project.', 
+            authorName: currentUserName, 
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+        }]
     };
     
     console.log('[PROJECT CREATE] New Project Data:', newProject);
@@ -1596,19 +1595,20 @@ async function handleProjectFormSubmit(e) {
     try {
         await db.collection('projects').add(newProject);
         console.log('[PROJECT CREATE] Project added to Firestore successfully');
+        showNotification('Project proposal submitted successfully!', 'success');
         closeAllModals();
     } catch (error) {
         console.error("[PROJECT ERROR] Failed to create project:", error);
-        alert('Failed to create project. Please try again.');
+        console.error("[PROJECT ERROR] Error details:", error.code, error.message);
+        showNotification(`Failed to create project: ${error.message}`, 'error');
     }
 }
-
 
 // ==================
 //  Kanban Board
 // ==================
 function renderKanbanBoard(projects) {
-    console.log(`[RENDER] Rendering ${projects.length} projects for view: ${currentView}`);
+    console.log(`[RENDER] Rendering ${projects.length} projects`);
     const board = document.getElementById('kanban-board');
     board.innerHTML = '';
     
@@ -1636,16 +1636,13 @@ function renderKanbanBoard(projects) {
         `;
         
         const cardsContainer = columnEl.querySelector('.kanban-cards');
-        if (columnProjects.length > 0) {
-            columnProjects.forEach(project => {
-                cardsContainer.appendChild(createProjectCard(project));
-            });
-        }
+        columnProjects.forEach(project => {
+            cardsContainer.appendChild(createProjectCard(project));
+        });
         
         board.appendChild(columnEl);
     });
 }
-
 
 function filterProjects() {
     console.log('[FILTER] Filtering projects for view:', currentView);
