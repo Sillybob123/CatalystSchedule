@@ -438,6 +438,9 @@ function setupNavAndListeners() {
 //  View Management
 // ==================
 function handleNavClick(view) {
+    if (view === 'dashboard') {
+        view = 'interviews'; // Default to interviews view
+    }
     currentView = view;
     document.querySelectorAll('.nav-item').forEach(l => {
         l.setAttribute('aria-current', 'false');
@@ -450,6 +453,7 @@ function handleNavClick(view) {
     }
     
     const viewTitles = {
+        'dashboard': 'Catalyst in the Capital',
         'my-assignments': 'My Assignments',
         'interviews': 'Catalyst in the Capital',
         'opeds': 'Op-Eds',
@@ -1623,6 +1627,7 @@ function renderKanbanBoard(projects) {
 
 function filterProjects() {
     switch (currentView) {
+        case 'dashboard':
         case 'interviews':
             return allProjects.filter(p => p.type === 'Interview');
         case 'opeds':
