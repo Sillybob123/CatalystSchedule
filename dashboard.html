@@ -260,9 +260,6 @@
       </main>
     </div>
 
-    <!-- ============================= -->
-    <!-- APPLE-INSPIRED TASK MODAL -->
-    <!-- ============================= -->
     <div id="task-modal" class="modal-overlay" role="dialog" aria-modal="true" style="display: none;">
       <div class="modal-content">
         <div class="modal-header">
@@ -622,35 +619,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
-    <script>
-        // Debug mode - use simplified dashboard
-        const useDebugMode = true;
-        
-        if (useDebugMode) {
-            console.log('[DEBUG] Using debug dashboard');
-        }
-    </script>
-    
-    <script src="projectState.js"></script>
-    <script>
-      // Load dashboard script based on mode
-      const script = document.createElement('script');
-      script.src = window.useDebugMode ? 'debug_dashboard.js' : 'dashboard.js';
-      script.onload = () => console.log('[SCRIPT] Dashboard script loaded');
-      script.onerror = (e) => {
-        console.error('[SCRIPT] Dashboard script failed to load', e);
-        // Fallback to inline basic functionality
-        document.getElementById('loader').innerHTML = `
-          <div style="text-align: center; padding: 40px;">
-            <h3 style="color: #ef4444;">Script Loading Error</h3>
-            <p style="color: #64748b; margin: 20px 0;">Dashboard script could not load.</p>
-            <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007AFF; color: white; border: none; border-radius: 8px; cursor: pointer;">
-              Refresh Page
-            </button>
-          </div>
-        `;
-      };
-      document.head.appendChild(script);
-    </script>
+    <script src="stateManager.js"></script>
+    <script src="dashboard.js"></script>
   </body>
 </html>
