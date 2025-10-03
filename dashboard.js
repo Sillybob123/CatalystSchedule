@@ -1315,7 +1315,7 @@ function refreshDetailsModal(project) {
     document.getElementById('details-author').textContent = project.authorName;
     document.getElementById('details-editor').textContent = project.editorName || 'Not Assigned';
     
-    const state = getProjectState(project);
+    const state = getProjectState(project, currentView, currentUser);
     document.getElementById('details-status').textContent = state.statusText;
 
     const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
@@ -1372,7 +1372,9 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
     ];
 
     orderedTasks.forEach(task => {
-        if (timeline[task] === undefined) return;
+        if (project.type === 'Op-Ed' && (task === "Interview Scheduled" || task === "Interview Complete")) {
+            return;
+        }
 
         let canEditTask = false;
         const authorTasks = ["Interview Scheduled", "Interview Complete", "Article Writing Complete", "Suggestions Reviewed"];
@@ -1385,11 +1387,13 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
         } else if (isEditor && editorTasks.includes(task)) {
             canEditTask = true;
         }
+        
+        if (task === "Topic Proposal Complete") canEditTask = false;
 
-        const completed = timeline[task];
+        const completed = timeline[task] || false;
         const taskEl = document.createElement('div');
         taskEl.className = 'task';
-        const taskId = `task-${task.replace(/\s+/g, '-')}`;
+        const taskId = `task-${project.id}-${task.replace(/\s+/g, '-')}`;
         taskEl.innerHTML = `
             <input type="checkbox" id="${taskId}" ${completed ? 'checked' : ''} ${!canEditTask ? 'disabled' : ''}>
             <label for="${taskId}">${task}</label>
@@ -1397,7 +1401,7 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
         
         if (canEditTask) {
             taskEl.querySelector('input').addEventListener('change', async (e) => {
-                await updateTaskStatus(project.id, task, e.target.checked);
+                await handleTaskCompletion(project.id, task, e.target.checked, db, currentUserName);
             });
         }
         
@@ -1589,7 +1593,7 @@ function renderKanbanBoard(projects) {
     
     columns.forEach(columnTitle => {
         const columnProjects = projects.filter(project => {
-            const state = getProjectState(project);
+            const state = getProjectState(project, currentView, currentUser);
             return state.column === columnTitle;
         });
 
@@ -1637,7 +1641,7 @@ function createProjectCard(project) {
         return createTaskCardForAssignments(project);
     }
     
-    const state = getProjectState(project);
+    const state = getProjectState(project, currentView, currentUser);
     const card = document.createElement('div');
     
     card.className = `kanban-card status-${state.color}`;
@@ -1982,7 +1986,7 @@ function updateCalendarStats() {
                 thisWeekCount++;
             }
             
-            const state = getProjectState(project);
+            const state = getProjectState(project, currentView, currentUser);
             if (deadline < now && state.column !== 'Completed') {
                 overdueCount++;
             }
@@ -2132,11 +2136,11 @@ function generateStatusReport() {
     
     const overdueProjects = allProjects.filter(p => {
         const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
-        return finalDeadline && new Date(finalDeadline) < now && getProjectState(p).column !== 'Completed';
+        return finalDeadline && new Date(finalDeadline) < now && getProjectState(p, currentView, currentUser).column !== 'Completed';
     });
 
     const pendingProposals = allProjects.filter(p => p.proposalStatus === 'pending');
-    const completedProjects = allProjects.filter(p => getProjectState(p).column === 'Completed');
+    const completedProjects = allProjects.filter(p => getProjectState(p, currentView, currentUser).column === 'Completed');
     
     const overdueTasks = allTasks.filter(t => new Date(t.deadline) < now && t.status !== 'completed');
     const pendingTasks = allTasks.filter(t => t.status === 'pending');
@@ -2256,24 +2260,6 @@ async function addActivity(projectId, text) {
         console.error(`[ACTIVITY ERROR] Failed to add activity:`, error);
     }
 }
-
-async function updateTaskStatusInProject(projectId, taskName, isCompleted) {
-    const updates = {
-        [`timeline.${taskName}`]: isCompleted
-    };
-    
-    try {
-        await db.collection('projects').doc(projectId).update(updates);
-        
-        const activityText = `${isCompleted ? 'completed' : 'un-completed'} the task: "${taskName}"`;
-        await addActivity(projectId, activityText);
-        
-    } catch (error) {
-        console.error('[TASK UPDATE ERROR]', error);
-        alert('Failed to update task. Please try again.');
-    }
-}
-
 
 async function handleAddComment() {
     const commentInput = document.getElementById('comment-input');
