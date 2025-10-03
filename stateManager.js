@@ -14,7 +14,7 @@
 function getProjectState(project, view, currentUser) {
     const timeline = project.timeline || {};
     
-    console.log(`[STATE DEBUG] Project: ${project.title}, View: ${view}, Timeline:`, timeline);
+    console.log('[STATE] Evaluating project:', project.title, 'Status:', project.proposalStatus, 'Type:', project.type);
 
     // ========================================
     // FINAL COMPLETED STATE (Highest Priority)
