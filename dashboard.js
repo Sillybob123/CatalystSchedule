@@ -507,7 +507,8 @@ function subscribeToProjects() {
     console.log("[FIREBASE] Setting up projects subscription...");
     
     db.collection('projects').onSnapshot(snapshot => {
-        console.log("[FIREBASE] Projects updated, processing...");
+        console.log('[FIREBASE] Projects snapshot received, count:', snapshot.docs.length);
+        console.log('[FIREBASE] Current view:', currentView);
         
         allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
@@ -1299,6 +1300,13 @@ async function handleDeleteTask() {
 function openProjectModal() {
     document.getElementById('project-form').reset();
     document.getElementById('modal-title').textContent = 'Propose New Article';
+    // Pre-select project type based on the current view
+    const projectTypeSelect = document.getElementById('project-type');
+    if (currentView === 'interviews') {
+        projectTypeSelect.value = 'Interview';
+    } else if (currentView === 'opeds') {
+        projectTypeSelect.value = 'Op-Ed';
+    }
     document.getElementById('project-modal').style.display = 'flex';
 }
 
@@ -1547,7 +1555,12 @@ function renderActivityFeed(activity) {
 
 async function handleProjectFormSubmit(e) {
     e.preventDefault();
+    console.log('[PROJECT CREATE] Form submitted');
+
     const type = document.getElementById('project-type').value;
+    console.log('[PROJECT CREATE] Current View:', currentView);
+    console.log('[PROJECT CREATE] Project Type:', type);
+
     const timeline = {};
     const tasks = type === "Interview" 
         ? ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete", "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"] 
@@ -1559,7 +1572,8 @@ async function handleProjectFormSubmit(e) {
         title: document.getElementById('project-title').value, 
         type,
         proposal: document.getElementById('project-proposal').value,
-        deadlines: {
+        deadline: document.getElementById('project-deadline').value, // Legacy deadline
+        deadlines: { // New deadlines object
             publication: document.getElementById('project-deadline').value,
             contact: '',
             interview: '',
@@ -1573,11 +1587,15 @@ async function handleProjectFormSubmit(e) {
         editorName: null,
         proposalStatus: 'pending',
         timeline: timeline,
+        createdAt: new Date(), // Add creation timestamp
         activity: [{ text: 'created the project.', authorName: currentUserName, timestamp: new Date() }]
     };
     
+    console.log('[PROJECT CREATE] New Project Data:', newProject);
+
     try {
         await db.collection('projects').add(newProject);
+        console.log('[PROJECT CREATE] Project added to Firestore successfully');
         closeAllModals();
     } catch (error) {
         console.error("[PROJECT ERROR] Failed to create project:", error);
@@ -1585,11 +1603,12 @@ async function handleProjectFormSubmit(e) {
     }
 }
 
+
 // ==================
 //  Kanban Board
 // ==================
 function renderKanbanBoard(projects) {
-    console.log(`[RENDER] Rendering ${projects.length} projects`);
+    console.log(`[RENDER] Rendering ${projects.length} projects for view: ${currentView}`);
     const board = document.getElementById('kanban-board');
     board.innerHTML = '';
     
@@ -1617,15 +1636,19 @@ function renderKanbanBoard(projects) {
         `;
         
         const cardsContainer = columnEl.querySelector('.kanban-cards');
-        columnProjects.forEach(project => {
-            cardsContainer.appendChild(createProjectCard(project));
-        });
+        if (columnProjects.length > 0) {
+            columnProjects.forEach(project => {
+                cardsContainer.appendChild(createProjectCard(project));
+            });
+        }
         
         board.appendChild(columnEl);
     });
 }
 
+
 function filterProjects() {
+    console.log('[FILTER] Filtering projects for view:', currentView);
     switch (currentView) {
         case 'dashboard':
         case 'interviews':
@@ -1637,9 +1660,10 @@ function filterProjects() {
             const myTasks = allTasks.filter(t => isUserAssignedToTask(t, currentUser.uid)).map(t => ({...t, isTask: true}));
             return [...myProjects, ...myTasks];
         default:
-            return [];
+            return allProjects;
     }
 }
+
 
 function createProjectCard(project) {
     if (project.isTask) {
