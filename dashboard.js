@@ -1586,7 +1586,7 @@ async function handleProjectFormSubmit(e) {
         activity: [{ 
             text: 'created the project.', 
             authorName: currentUserName, 
-            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+            timestamp: new Date() // Use client-side timestamp here to avoid array issue
         }]
     };
     
@@ -1603,6 +1603,7 @@ async function handleProjectFormSubmit(e) {
         showNotification(`Failed to create project: ${error.message}`, 'error');
     }
 }
+
 
 // ==================
 //  Kanban Board
