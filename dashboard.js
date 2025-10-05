@@ -1578,7 +1578,7 @@ async function handleProjectFormSubmit(e) {
         // Initialize all timeline tasks as incomplete
         tasks.forEach(task => timeline[task] = false);
 
-        // Create the project document - CRITICAL: activity array starts EMPTY
+        // ✅ FIX: Use new Date() instead of serverTimestamp in the activity array
         const newProject = {
             title: document.getElementById('project-title').value, 
             type: type,
@@ -1599,26 +1599,20 @@ async function handleProjectFormSubmit(e) {
             proposalStatus: 'pending',
             timeline: timeline,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            activity: [] // ✅ START WITH EMPTY ARRAY - this is the key fix
+            // ✅ FIXED: Initialize with activity entry using new Date()
+            activity: [{
+                text: 'created the project.',
+                authorName: currentUserName,
+                timestamp: new Date() // ✅ Use new Date() instead of serverTimestamp()
+            }]
         };
         
         console.log('[PROJECT CREATE] Creating project:', newProject);
 
-        // STEP 1: Create the document and get its ID
-        const docRef = await db.collection('projects').add(newProject);
-        console.log('[PROJECT CREATE] Project created with ID:', docRef.id);
+        // ✅ SIMPLIFIED: Create the document with activity included - ONE operation instead of two
+        await db.collection('projects').add(newProject);
         
-        // STEP 2: Add the activity entry in a SEPARATE operation
-        // This avoids the timestamp conflict by keeping all timestamps server-side
-        await db.collection('projects').doc(docRef.id).update({
-            activity: firebase.firestore.FieldValue.arrayUnion({
-                text: 'created the project.',
-                authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp() // ✅ Server-side timestamp
-            })
-        });
-        
-        console.log('[PROJECT CREATE] Activity added successfully');
+        console.log('[PROJECT CREATE] Project created successfully');
         
         // Show success message and close modal
         showNotification('Project proposal submitted successfully!', 'success');
