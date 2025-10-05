@@ -1555,52 +1555,89 @@ function renderActivityFeed(activity) {
 
 async function handleProjectFormSubmit(e) {
     e.preventDefault();
-    const type = document.getElementById('project-type').value;
-    const timeline = {};
-    const tasks = type === "Interview" 
-        ? ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete", "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"] 
-        : ["Topic Proposal Complete", "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"];
     
-    tasks.forEach(task => timeline[task] = false);
-
-    const newProject = {
-        title: document.getElementById('project-title').value, 
-        type,
-        proposal: document.getElementById('project-proposal').value,
-        deadline: document.getElementById('project-deadline').value, // Legacy deadline
-        deadlines: { // New deadlines object
-            publication: document.getElementById('project-deadline').value,
-            contact: '',
-            interview: '',
-            draft: '',
-            review: '',
-            edits: ''
-        },
-        authorId: currentUser.uid, 
-        authorName: currentUserName,
-        editorId: null, 
-        editorName: null,
-        proposalStatus: 'pending',
-        timeline: timeline,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        activity: [{ 
-            text: 'created the project.', 
-            authorName: currentUserName, 
-            timestamp: new Date() // Use client-side timestamp here to avoid array issue
-        }]
-    };
+    // Get submit button reference for loading states
+    const submitButton = document.getElementById('save-project-button');
+    const originalText = submitButton.textContent;
     
-    console.log('[PROJECT CREATE] New Project Data:', newProject);
-
     try {
-        await db.collection('projects').add(newProject);
-        console.log('[PROJECT CREATE] Project added to Firestore successfully');
+        // Show loading state to user
+        submitButton.disabled = true;
+        submitButton.classList.add('loading');
+        submitButton.textContent = 'Submitting...';
+        
+        // Build timeline tasks based on project type
+        const type = document.getElementById('project-type').value;
+        const timeline = {};
+        const tasks = type === "Interview" 
+            ? ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete", 
+               "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"] 
+            : ["Topic Proposal Complete", "Article Writing Complete", 
+               "Review In Progress", "Review Complete", "Suggestions Reviewed"];
+        
+        // Initialize all timeline tasks as incomplete
+        tasks.forEach(task => timeline[task] = false);
+
+        // Create the project document - CRITICAL: activity array starts EMPTY
+        const newProject = {
+            title: document.getElementById('project-title').value, 
+            type: type,
+            proposal: document.getElementById('project-proposal').value,
+            deadline: document.getElementById('project-deadline').value,
+            deadlines: {
+                publication: document.getElementById('project-deadline').value,
+                contact: '',
+                interview: '',
+                draft: '',
+                review: '',
+                edits: ''
+            },
+            authorId: currentUser.uid, 
+            authorName: currentUserName,
+            editorId: null, 
+            editorName: null,
+            proposalStatus: 'pending',
+            timeline: timeline,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            activity: [] // ✅ START WITH EMPTY ARRAY - this is the key fix
+        };
+        
+        console.log('[PROJECT CREATE] Creating project:', newProject);
+
+        // STEP 1: Create the document and get its ID
+        const docRef = await db.collection('projects').add(newProject);
+        console.log('[PROJECT CREATE] Project created with ID:', docRef.id);
+        
+        // STEP 2: Add the activity entry in a SEPARATE operation
+        // This avoids the timestamp conflict by keeping all timestamps server-side
+        await db.collection('projects').doc(docRef.id).update({
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: 'created the project.',
+                authorName: currentUserName,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp() // ✅ Server-side timestamp
+            })
+        });
+        
+        console.log('[PROJECT CREATE] Activity added successfully');
+        
+        // Show success message and close modal
         showNotification('Project proposal submitted successfully!', 'success');
         closeAllModals();
+        
     } catch (error) {
+        // Log detailed error information
         console.error("[PROJECT ERROR] Failed to create project:", error);
-        console.error("[PROJECT ERROR] Error details:", error.code, error.message);
+        console.error("[PROJECT ERROR] Error code:", error.code);
+        console.error("[PROJECT ERROR] Error message:", error.message);
+        
+        // Show user-friendly error message
         showNotification(`Failed to create project: ${error.message}`, 'error');
+        
+    } finally {
+        // ALWAYS reset button state, even if there was an error
+        submitButton.disabled = false;
+        submitButton.classList.remove('loading');
+        submitButton.textContent = originalText;
     }
 }
 
