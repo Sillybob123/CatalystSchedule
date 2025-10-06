@@ -30,9 +30,20 @@ const db = firebase.firestore();
 // ==================
 
 async function approveProposal(projectId) {
-    if (!projectId) return;
+    if (!projectId) {
+        console.error('[APPROVE] No project ID provided');
+        showNotification('No project selected.', 'error');
+        return;
+    }
+
+    if (currentUserRole !== 'admin') {
+        console.error('[APPROVE] User is not admin:', currentUserRole);
+        showNotification('Only admins can approve proposals.', 'error');
+        return;
+    }
 
     try {
+        console.log('[APPROVE] Approving proposal:', projectId);
         await db.collection('projects').doc(projectId).update({
             proposalStatus: 'approved',
             'timeline.Topic Proposal Complete': true,
@@ -44,16 +55,36 @@ async function approveProposal(projectId) {
         });
 
         showNotification('Proposal approved successfully!', 'success');
+        console.log('[APPROVE] Proposal approved successfully');
     } catch (error) {
-        console.error('[ERROR] Failed to approve proposal:', error);
-        showNotification('Failed to approve proposal. Please try again.', 'error');
+        console.error('[APPROVE ERROR] Failed to approve proposal:', error);
+        let errorMessage = 'Failed to approve proposal. ';
+        
+        if (error.code === 'permission-denied') {
+            errorMessage += 'You do not have permission to approve proposals.';
+        } else {
+            errorMessage += 'Please try again.';
+        }
+        
+        showNotification(errorMessage, 'error');
     }
 }
 
 async function updateProposalStatus(status) {
-    if (!currentlyViewedProjectId) return;
+    if (!currentlyViewedProjectId) {
+        console.error('[UPDATE STATUS] No project ID provided');
+        showNotification('No project selected.', 'error');
+        return;
+    }
+
+    if (currentUserRole !== 'admin') {
+        console.error('[UPDATE STATUS] User is not admin:', currentUserRole);
+        showNotification('Only admins can update proposal status.', 'error');
+        return;
+    }
 
     try {
+        console.log('[UPDATE STATUS] Updating proposal status to:', status);
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             proposalStatus: status,
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -64,9 +95,18 @@ async function updateProposalStatus(status) {
         });
 
         showNotification(`Proposal ${status} successfully!`, 'success');
+        console.log('[UPDATE STATUS] Status updated successfully');
     } catch (error) {
-        console.error(`[ERROR] Failed to ${status} proposal:`, error);
-        showNotification(`Failed to ${status} proposal. Please try again.`, 'error');
+        console.error(`[UPDATE STATUS ERROR] Failed to ${status} proposal:`, error);
+        let errorMessage = `Failed to ${status} proposal. `;
+        
+        if (error.code === 'permission-denied') {
+            errorMessage += 'You do not have permission to update proposal status.';
+        } else {
+            errorMessage += 'Please try again.';
+        }
+        
+        showNotification(errorMessage, 'error');
     }
 }
 
@@ -129,27 +169,61 @@ async function handleAssignEditor() {
 }
 
 async function handleDeleteProject() {
-    if (!currentlyViewedProjectId) return;
+    if (!currentlyViewedProjectId) {
+        console.error('[DELETE] No project ID provided');
+        showNotification('No project selected for deletion.', 'error');
+        return;
+    }
 
     const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!project) return;
+    if (!project) {
+        console.error('[DELETE] Project not found:', currentlyViewedProjectId);
+        showNotification('Project not found.', 'error');
+        return;
+    }
 
     const isAdmin = currentUserRole === 'admin';
     const isAuthor = currentUser.uid === project.authorId;
+
+    console.log('[DELETE PROJECT] Permissions check:', {
+        currentUserRole,
+        isAdmin,
+        isAuthor,
+        projectAuthorId: project.authorId,
+        currentUserId: currentUser.uid
+    });
 
     if (!isAdmin && !isAuthor) {
         showNotification('You can only delete projects you created.', 'error');
         return;
     }
 
-    if (confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
+    const confirmMessage = `Are you sure you want to permanently delete "${project.title}"?\n\nThis action cannot be undone and will remove all associated data.`;
+    
+    if (confirm(confirmMessage)) {
         try {
+            console.log('[DELETE] Deleting project:', currentlyViewedProjectId);
             await db.collection('projects').doc(currentlyViewedProjectId).delete();
             showNotification('Project deleted successfully!', 'success');
-            closeAllModals();
+            console.log('[DELETE] Project deleted successfully');
+            
+            // Close modal after a short delay
+            setTimeout(() => {
+                closeAllModals();
+            }, 500);
         } catch (error) {
-            console.error('[ERROR] Failed to delete project:', error);
-            showNotification('Failed to delete project. Please try again.', 'error');
+            console.error('[DELETE ERROR] Failed to delete project:', error);
+            let errorMessage = 'Failed to delete project. ';
+            
+            if (error.code === 'permission-denied') {
+                errorMessage += 'You do not have permission to delete this project.';
+            } else if (error.code === 'not-found') {
+                errorMessage += 'Project not found.';
+            } else {
+                errorMessage += 'Please try again or contact support.';
+            }
+            
+            showNotification(errorMessage, 'error');
         }
     }
 }
@@ -1142,7 +1216,16 @@ function refreshTaskDetailsModal(task) {
 
     const deleteButton = document.getElementById('delete-task-button');
     if (deleteButton) {
-        deleteButton.style.display = (isAdmin || isCreator) ? 'block' : 'none';
+        const canDelete = isAdmin || isCreator;
+        deleteButton.style.display = canDelete ? 'block' : 'none';
+        console.log('[TASK MODAL] Delete button visibility:', {
+            canDelete,
+            isAdmin,
+            isCreator,
+            display: deleteButton.style.display
+        });
+    } else {
+        console.error('[TASK MODAL] Delete task button not found in DOM');
     }
 
     renderTaskActivityFeed(task.activity || []);
@@ -1157,11 +1240,38 @@ function renderTaskActivityFeed(activity) {
 
 async function updateTaskStatus(newStatus) {
     if (!currentlyViewedTaskId) {
+        console.error('[TASK STATUS] No task ID provided');
         showNotification('No task selected. Please try again.', 'error');
         return;
     }
 
+    const task = allTasks.find(t => t.id === currentlyViewedTaskId);
+    if (!task) {
+        console.error('[TASK STATUS] Task not found:', currentlyViewedTaskId);
+        showNotification('Task not found.', 'error');
+        return;
+    }
+
+    // Check permissions
+    const isAdmin = currentUserRole === 'admin';
+    const isAssignee = isUserAssignedToTask(task, currentUser.uid);
+    const isCreator = currentUser.uid === task.creatorId;
+
+    // Admin can approve/reject, assignee can mark complete
+    if (newStatus === 'approved' || newStatus === 'rejected') {
+        if (!isAdmin) {
+            showNotification('Only admins can approve or reject tasks.', 'error');
+            return;
+        }
+    } else if (newStatus === 'completed') {
+        if (!isAssignee && !isAdmin) {
+            showNotification('Only assigned team members can mark tasks as complete.', 'error');
+            return;
+        }
+    }
+
     try {
+        console.log('[TASK STATUS] Updating status to:', newStatus);
         const updates = {
             status: newStatus,
             updatedAt: new Date()
@@ -1183,6 +1293,7 @@ async function updateTaskStatus(newStatus) {
         });
 
         showNotification(`Task ${newStatus.replace('_', ' ')} successfully!`, 'success');
+        console.log('[TASK STATUS] Status updated successfully');
 
     } catch (error) {
         console.error(`[TASK STATUS ERROR] Failed to update task status:`, error);
@@ -1269,27 +1380,61 @@ async function handleRequestExtension() {
 }
 
 async function handleDeleteTask() {
-    if (!currentlyViewedTaskId) return;
+    if (!currentlyViewedTaskId) {
+        console.error('[DELETE] No task ID provided');
+        showNotification('No task selected for deletion.', 'error');
+        return;
+    }
 
     const task = allTasks.find(t => t.id === currentlyViewedTaskId);
-    if (!task) return;
+    if (!task) {
+        console.error('[DELETE] Task not found:', currentlyViewedTaskId);
+        showNotification('Task not found.', 'error');
+        return;
+    }
 
     const isAdmin = currentUserRole === 'admin';
     const isCreator = currentUser.uid === task.creatorId;
+
+    console.log('[DELETE TASK] Permissions check:', {
+        currentUserRole,
+        isAdmin,
+        isCreator,
+        taskCreatorId: task.creatorId,
+        currentUserId: currentUser.uid
+    });
 
     if (!isAdmin && !isCreator) {
         showNotification('You can only delete tasks you created.', 'error');
         return;
     }
 
-    if (confirm(`Are you sure you want to delete "${task.title}"? This action cannot be undone.`)) {
+    const confirmMessage = `Are you sure you want to permanently delete "${task.title}"?\n\nThis action cannot be undone and will remove all associated data.`;
+    
+    if (confirm(confirmMessage)) {
         try {
+            console.log('[DELETE] Deleting task:', currentlyViewedTaskId);
             await db.collection('tasks').doc(currentlyViewedTaskId).delete();
             showNotification('Task deleted successfully!', 'success');
-            closeAllModals();
+            console.log('[DELETE] Task deleted successfully');
+            
+            // Close modal after a short delay
+            setTimeout(() => {
+                closeAllModals();
+            }, 500);
         } catch (error) {
-            console.error("[ERROR] Failed to delete task:", error);
-            showNotification('Failed to delete task. Please try again.', 'error');
+            console.error('[DELETE ERROR] Failed to delete task:', error);
+            let errorMessage = 'Failed to delete task. ';
+            
+            if (error.code === 'permission-denied') {
+                errorMessage += 'You do not have permission to delete this task.';
+            } else if (error.code === 'not-found') {
+                errorMessage += 'Task not found.';
+            } else {
+                errorMessage += 'Please try again or contact support.';
+            }
+            
+            showNotification(errorMessage, 'error');
         }
     }
 }
@@ -1403,7 +1548,16 @@ function refreshDetailsModal(project) {
 
     const deleteButton = document.getElementById('delete-project-button');
     if (deleteButton) {
-        deleteButton.style.display = (isAuthor || isAdmin) ? 'block' : 'none';
+        const canDelete = isAuthor || isAdmin;
+        deleteButton.style.display = canDelete ? 'block' : 'none';
+        console.log('[MODAL] Delete button visibility:', {
+            canDelete,
+            isAuthor,
+            isAdmin,
+            display: deleteButton.style.display
+        });
+    } else {
+        console.error('[MODAL] Delete project button not found in DOM');
     }
 }
 
