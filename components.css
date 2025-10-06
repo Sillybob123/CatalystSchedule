@@ -308,9 +308,9 @@
   box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
-  height: fit-content;
-  max-height: 600px;
-  min-height: 300px;
+  height: calc(100vh - 220px);
+  min-height: 500px;
+  max-height: calc(100vh - 220px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -365,8 +365,28 @@
 .column-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--space-4);
   min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
+}
+
+.column-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.column-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.column-content::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+}
+
+.column-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
 }
 
 .kanban-cards {
