@@ -16,7 +16,6 @@ const firebaseConfig = {
 try {
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
-        console.log("[FIREBASE] Firebase initialized successfully");
     }
 } catch (initError) {
     console.error("[FIREBASE] Firebase initialization failed:", initError);
@@ -210,9 +209,6 @@ let calendarDate = new Date();
 //  Utility Functions
 // ==================
 
-/**
- * Generate a consistent color from a string (for avatars)
- */
 function stringToColor(str) {
     if (!str) return '#64748b';
     let hash = 0;
@@ -223,9 +219,6 @@ function stringToColor(str) {
     return `hsl(${hue}, 65%, 50%)`;
 }
 
-/**
- * Escape HTML to prevent XSS
- */
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -233,9 +226,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-/**
- * Calculate progress percentage for a project
- */
 function calculateProgress(timeline) {
     if (!timeline) return 0;
     const tasks = Object.values(timeline);
@@ -244,33 +234,23 @@ function calculateProgress(timeline) {
     return Math.round((completed / tasks.length) * 100);
 }
 
-/**
- * Check if a user is assigned to a task
- */
 function isUserAssignedToTask(task, userId) {
     if (!task || !userId) return false;
     
-    // Check new format (multiple assignees)
     if (task.assigneeIds && Array.isArray(task.assigneeIds)) {
         return task.assigneeIds.includes(userId);
     }
     
-    // Check old format (single assignee)
     return task.assigneeId === userId;
 }
 
-/**
- * Get all assignee names for a task
- */
 function getTaskAssigneeNames(task) {
     if (!task) return ['Not assigned'];
     
-    // Try new format first
     if (task.assigneeNames && Array.isArray(task.assigneeNames) && task.assigneeNames.length > 0) {
         return task.assigneeNames;
     }
     
-    // Fallback to old format
     if (task.assigneeName) {
         return [task.assigneeName];
     }
@@ -278,9 +258,6 @@ function getTaskAssigneeNames(task) {
     return ['Not assigned'];
 }
 
-/**
- * Validate date string
- */
 function isValidDate(dateString) {
     const regex = /^\d{4}-\d{2}-\d{2}$/;
     if (!regex.test(dateString)) return false;
@@ -288,12 +265,7 @@ function isValidDate(dateString) {
     return date instanceof Date && !isNaN(date);
 }
 
-/**
- * Show notification to user
- */
 function showNotification(message, type = 'info') {
-    console.log(`[NOTIFICATION ${type.toUpperCase()}]`, message);
-    
     const container = document.getElementById('notification-container') || createNotificationContainer();
     
     const notification = document.createElement('div');
@@ -308,15 +280,12 @@ function showNotification(message, type = 'info') {
     
     container.appendChild(notification);
     
-    // Trigger animation
     setTimeout(() => notification.classList.add('show'), 10);
     
-    // Close button handler
     notification.querySelector('.notification-close').addEventListener('click', () => {
         removeNotification(notification);
     });
     
-    // Auto-remove after 5 seconds
     setTimeout(() => removeNotification(notification), 5000);
 }
 
@@ -362,8 +331,6 @@ function initializeMultiSelect() {
     renderSelectedAssignees();
     renderDropdownOptions();
     setupMultiSelectListeners();
-    
-    console.log('[MULTI-SELECT] Initialized with', allUsers.length, 'users');
 }
 
 function setupMultiSelectListeners() {
@@ -377,17 +344,14 @@ function setupMultiSelectListeners() {
         return;
     }
     
-    // Remove all existing event listeners by cloning
     const newContainer = container.cloneNode(true);
     container.parentNode.replaceChild(newContainer, container);
     
-    // Get fresh references
     const freshContainer = document.getElementById('multi-select-container');
     const freshSearch = document.getElementById('assignee-search');
     const freshHeader = document.getElementById('multi-select-header');
     const freshIndicator = document.getElementById('dropdown-indicator');
     
-    // Search input handlers
     freshSearch.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         filterUsers(searchTerm);
@@ -420,7 +384,6 @@ function setupMultiSelectListeners() {
         }
     });
     
-    // Container click handler
     freshHeader.addEventListener('click', (e) => {
         if (!e.target.closest('.remove-assignee') && !e.target.closest('.dropdown-indicator')) {
             freshSearch.focus();
@@ -428,14 +391,12 @@ function setupMultiSelectListeners() {
         }
     });
     
-    // Dropdown indicator
     freshIndicator.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleDropdown();
         if (isDropdownOpen) freshSearch.focus();
     });
     
-    // Close dropdown when clicking outside
     const handleOutsideClick = (e) => {
         if (freshContainer && !freshContainer.contains(e.target)) {
             closeDropdown();
@@ -587,13 +548,9 @@ auth.onAuthStateChanged(async (user) => {
     currentUser = user;
 
     try {
-        console.log("[INIT] User authenticated:", user.uid);
-        
         const userDoc = await db.collection('users').doc(user.uid).get();
         
         if (!userDoc.exists) {
-            console.warn("[INIT] User document not found, creating default profile");
-            
             const defaultUserData = {
                 name: user.displayName || user.email.split('@')[0],
                 email: user.email,
@@ -615,19 +572,14 @@ auth.onAuthStateChanged(async (user) => {
         setupUI();
         setupNavAndListeners();
         
-        // Initialize subscriptions using the bulletproof system
-        console.log('[INIT] Initializing Firestore subscriptions...');
         if (typeof window.initializeSubscriptions === 'function') {
             window.initializeSubscriptions();
-            console.log('[INIT] Subscriptions initialized successfully');
         } else {
             console.error('[INIT] Subscription initializer not found! Check if fixedSubscriptions.js loaded.');
         }
 
         document.getElementById('loader').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
-        
-        console.log("[INIT] Initialization completed successfully");
         
     } catch (error) {
         console.error("Initialization Error:", error);
@@ -637,10 +589,8 @@ auth.onAuthStateChanged(async (user) => {
 
 async function fetchEditors() {
     try {
-        console.log("[INIT] Fetching editors...");
         const editorsSnapshot = await db.collection('users').where('role', 'in', ['admin', 'editor']).get();
         allEditors = editorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log("[INIT] Found", allEditors.length, "editors");
     } catch (error) {
         console.error("Error fetching editors:", error);
         allEditors = [];
@@ -649,10 +599,8 @@ async function fetchEditors() {
 
 async function fetchAllUsers() {
     try {
-        console.log("[INIT] Fetching all users...");
         const usersSnapshot = await db.collection('users').get();
         allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log("[INIT] Found", allUsers.length, "users");
     } catch (error) {
         console.error("Error fetching users:", error);
         allUsers = [];
@@ -674,15 +622,13 @@ function setupUI() {
 //  Event Listeners
 // ==================
 function setupNavAndListeners() {
-    // Navigation listeners
     document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
     
-    // Navigation handling
     document.querySelectorAll('.nav-item').forEach(link => {
         link.addEventListener('click', e => {
             const href = link.getAttribute('href');
             if (href && href !== '#') {
-                return; // Let normal navigation happen
+                return;
             }
             
             e.preventDefault();
@@ -691,24 +637,20 @@ function setupNavAndListeners() {
         });
     });
 
-    // Modal and form listeners
     document.getElementById('add-project-button').addEventListener('click', openProjectModal);
     document.getElementById('add-task-button').addEventListener('click', openTaskModal);
     
-    // Status report button
     const statusReportBtn = document.getElementById('status-report-button');
     if (statusReportBtn) {
         statusReportBtn.addEventListener('click', generateStatusReport);
     }
     
-    // Project modal listeners
     document.getElementById('add-comment-button').addEventListener('click', handleAddComment);
     document.getElementById('assign-editor-button').addEventListener('click', handleAssignEditor);
     document.getElementById('delete-project-button').addEventListener('click', handleDeleteProject);
     document.getElementById('approve-button').addEventListener('click', () => approveProposal(currentlyViewedProjectId));
     document.getElementById('reject-button').addEventListener('click', () => updateProposalStatus('rejected'));
 
-    // Task modal listeners
     document.getElementById('add-task-comment-button').addEventListener('click', handleAddTaskComment);
     document.getElementById('approve-task-button').addEventListener('click', () => updateTaskStatus('approved'));
     document.getElementById('reject-task-button').addEventListener('click', () => updateTaskStatus('rejected'));
@@ -716,11 +658,9 @@ function setupNavAndListeners() {
     document.getElementById('request-extension-button').addEventListener('click', handleRequestExtension);
     document.getElementById('delete-task-button').addEventListener('click', handleDeleteTask);
 
-    // Calendar listeners
     document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
     document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
 
-    // Proposal editing listeners
     const editProposalBtn = document.getElementById('edit-proposal-button');
     const saveProposalBtn = document.getElementById('save-proposal-button');
     const cancelProposalBtn = document.getElementById('cancel-proposal-button');
@@ -729,24 +669,19 @@ function setupNavAndListeners() {
     if (saveProposalBtn) saveProposalBtn.addEventListener('click', handleSaveProposal);
     if (cancelProposalBtn) cancelProposalBtn.addEventListener('click', disableProposalEditing);
 
-    // Deadline management listeners
     const setDeadlinesBtn = document.getElementById('set-deadlines-button');
     const requestDeadlineChangeBtn = document.getElementById('request-deadline-change-button');
 
     if (setDeadlinesBtn) setDeadlinesBtn.addEventListener('click', handleSetDeadlines);
     if (requestDeadlineChangeBtn) requestDeadlineChangeBtn.addEventListener('click', handleRequestDeadlineChange);
 
-    // Modal close listeners
     document.querySelectorAll('.modal-overlay').forEach(modal => {
-        // Remove any existing listeners first
         const newModal = modal.cloneNode(true);
         modal.parentNode.replaceChild(newModal, modal);
     });
     
-    // Re-attach listeners to fresh modals
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', e => {
-            // Only close if clicking directly on overlay or close button
             if (e.target === modal || e.target.classList.contains('close-button')) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -754,7 +689,6 @@ function setupNavAndListeners() {
             }
         });
         
-        // Close button handler
         const closeButtons = modal.querySelectorAll('.close-button');
         closeButtons.forEach(btn => {
             btn.addEventListener('click', e => {
@@ -765,21 +699,17 @@ function setupNavAndListeners() {
         });
     });
     
-    // CRITICAL: Attach form submit handlers AFTER modal cloning
-    console.log('[SETUP] Attaching form submit handlers...');
     const projectForm = document.getElementById('project-form');
     const taskForm = document.getElementById('task-form');
     
     if (projectForm) {
         projectForm.addEventListener('submit', handleProjectFormSubmit);
-        console.log('[SETUP] Project form submit handler attached');
     } else {
         console.error('[SETUP] Project form not found!');
     }
     
     if (taskForm) {
         taskForm.addEventListener('submit', handleTaskFormSubmit);
-        console.log('[SETUP] Task form submit handler attached');
     } else {
         console.error('[SETUP] Task form not found!');
     }
@@ -793,7 +723,7 @@ function setupNavAndListeners() {
 // ==================
 function handleNavClick(view) {
     if (view === 'dashboard') {
-        view = 'interviews'; // Default to interviews view
+        view = 'interviews';
     }
     currentView = view;
     document.querySelectorAll('.nav-item').forEach(l => {
@@ -816,7 +746,6 @@ function handleNavClick(view) {
     };
     document.getElementById('board-title').textContent = viewTitles[view] || view;
     
-    // Show/hide appropriate buttons
     const addProjectBtn = document.getElementById('add-project-button');
     const addTaskBtn = document.getElementById('add-task-button');
     
@@ -836,7 +765,6 @@ function renderCurrentViewEnhanced() {
     const tasksView = document.getElementById('tasks-view');
     const calendarView = document.getElementById('calendar-view');
 
-    // Hide all views first
     boardView.style.display = 'none';
     tasksView.style.display = 'none';
     calendarView.style.display = 'none';
@@ -857,11 +785,6 @@ function renderCurrentViewEnhanced() {
 // ==================
 //  Data Handling
 // ==================
-// OLD SUBSCRIPTION FUNCTIONS REMOVED - Now handled by fixedSubscriptions.js
-// These functions caused conflicts with the bulletproof subscriptions
-// The issue was that BOTH old and new subscriptions were running simultaneously
-// causing the UI to not update properly after saves
-
 function updateNavCounts() {
     const myAssignmentsProjects = allProjects.filter(p => {
         return p.authorId === currentUser.uid || p.editorId === currentUser.uid;
@@ -883,22 +806,17 @@ function updateNavCounts() {
 //  Task Management
 // ==================
 function openTaskModal() {
-    // Reset form and state
     document.getElementById('task-form').reset();
     selectedAssignees = [];
     
-    // Initialize multi-select
     initializeMultiSelect();
     
-    // Set default deadline to tomorrow
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     document.getElementById('task-deadline').value = tomorrow.toISOString().split('T')[0];
     
-    // Show modal
     document.getElementById('task-modal').style.display = 'flex';
     
-    // Focus first input after animation
     setTimeout(() => {
         document.getElementById('task-title').focus();
     }, 100);
@@ -911,7 +829,6 @@ async function handleTaskFormSubmit(e) {
     const originalText = submitButton.textContent;
     
     try {
-        // Validate form
         const title = document.getElementById('task-title').value.trim();
         const deadline = document.getElementById('task-deadline').value;
         
@@ -934,26 +851,21 @@ async function handleTaskFormSubmit(e) {
             return;
         }
         
-        // Show loading state
         submitButton.disabled = true;
         submitButton.classList.add('loading');
         submitButton.textContent = 'Creating Task...';
         
-        // Get form values
         const description = document.getElementById('task-description').value.trim();
         const priority = document.getElementById('task-priority').value || 'medium';
         
-        // Prepare assignee data
         const assigneeIds = selectedAssignees.map(u => u.id);
         const assigneeNames = selectedAssignees.map(u => u.name);
         
         const taskData = {
             title: title,
             description: description || null,
-            // Multiple assignees (new format)
             assigneeIds: assigneeIds,
             assigneeNames: assigneeNames,
-            // Single assignee (backwards compatibility)
             assigneeId: assigneeIds[0],
             assigneeName: assigneeNames[0],
             deadline: deadline,
@@ -967,41 +879,18 @@ async function handleTaskFormSubmit(e) {
                     `created this task and assigned it to ${assigneeNames[0]}` :
                     `created this task and assigned it to ${assigneeNames.join(', ')}`,
                 authorName: currentUserName,
-                timestamp: new Date() // Use client-side timestamp
+                timestamp: new Date()
             }]
         };
         
-        console.log('[TASK CREATE] Creating task:', taskData);
-        if (typeof debugLog === 'function') debugLog('📝 Creating task: ' + title, 'info');
-        if (typeof debugLog === 'function') debugLog('👥 Assigned to: ' + assigneeNames.join(', '), 'info');
-        
-        // Write to Firestore - the snapshot listener will handle the UI update
         const docRef = await db.collection('tasks').add(taskData);
-        
-        console.log('[TASK CREATE] ===== TASK SAVED TO FIRESTORE =====');
-        console.log('[TASK CREATE] Task ID:', docRef.id);
-        console.log('[TASK CREATE] Current view:', currentView);
-        console.log('[TASK CREATE] Current allTasks count:', allTasks.length);
-        
-        if (typeof debugLog === 'function') {
-            debugLog('✅ Task created successfully! ID: ' + docRef.id, 'success');
-            debugLog('⏳ Waiting for Firestore snapshot to trigger...', 'info');
-            debugLog('📊 Currently have ' + allTasks.length + ' tasks', 'info');
-        }
         
         showNotification(`Task assigned to ${assigneeNames.join(', ')} successfully!`, 'success');
         
-        // Wait a moment before closing modal to see snapshot trigger
-        console.log('[TASK CREATE] Waiting 1 second for snapshot...');
         setTimeout(() => {
-            console.log('[TASK CREATE] After wait - allTasks count:', allTasks.length);
-            if (typeof debugLog === 'function') {
-                debugLog('📊 After 1s: ' + allTasks.length + ' tasks', 'info');
-            }
             closeAllModals();
         }, 1000);
         
-        // Reset form and state
         document.getElementById('task-form').reset();
         selectedAssignees = [];
         
@@ -1009,7 +898,6 @@ async function handleTaskFormSubmit(e) {
         console.error("[ERROR] Failed to create task:", error);
         showNotification(error.message || 'Failed to create task. Please try again.', 'error');
     } finally {
-        // Reset button state
         submitButton.disabled = false;
         submitButton.classList.remove('loading');
         submitButton.textContent = originalText;
@@ -1017,7 +905,6 @@ async function handleTaskFormSubmit(e) {
 }
 
 function renderTasksBoard(tasks) {
-    console.log(`[RENDER] Rendering ${tasks.length} tasks`);
     const board = document.getElementById('tasks-board');
     board.innerHTML = '';
     
@@ -1112,7 +999,6 @@ function createTaskCard(task) {
     
     const priorityColor = priorityColors[task.priority] || priorityColors.medium;
     
-    // Handle multiple assignees
     const assigneeNames = getTaskAssigneeNames(task);
     let displayNames = assigneeNames.join(', ');
     let multipleIndicator = '';
@@ -1152,11 +1038,9 @@ function createTaskCard(task) {
         </div>
     `;
     
-    // Prevent event bubbling issues
     card.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('[CARD CLICK] Opening task:', task.id);
         openTaskDetailsModal(task.id);
     });
     
@@ -1164,8 +1048,6 @@ function createTaskCard(task) {
 }
 
 function openTaskDetailsModal(taskId) {
-    console.log('[MODAL] Opening task details for:', taskId);
-    
     const task = allTasks.find(t => t.id === taskId);
     if (!task) {
         console.error('[MODAL] Task not found:', taskId);
@@ -1173,12 +1055,9 @@ function openTaskDetailsModal(taskId) {
         return;
     }
     
-    // CRITICAL: Ensure all modals are completely closed first
     closeAllModals();
     
-    // Wait a brief moment to ensure close is complete
-    setTimeout(() => {
-        console.log('[MODAL] Setting up task modal for:', task.title);
+    requestAnimationFrame(() => {
         currentlyViewedTaskId = taskId;
         
         const modal = document.getElementById('task-details-modal');
@@ -1188,39 +1067,23 @@ function openTaskDetailsModal(taskId) {
         }
         
         const content = modal.querySelector('.details-container');
-        
-        // Force reset the content state
         if (content) {
             content.style.opacity = '0';
-            content.style.transition = 'none';
-            content.style.display = 'flex'; // Ensure it's visible
         }
         
-        // Show modal
         modal.style.display = 'flex';
         
-        // Force a reflow to ensure styles are applied
-        void modal.offsetHeight;
-        
-        // Populate content immediately
         refreshTaskDetailsModal(task);
         
-        // Re-enable transition and fade in
         requestAnimationFrame(() => {
             if (content) {
-                content.style.transition = 'opacity 0.2s ease-in-out';
                 content.style.opacity = '1';
             }
         });
-        
-        console.log('[MODAL] Task modal opened successfully');
-    }, 100); // Small delay to ensure clean state
+    });
 }
 
 function refreshTaskDetailsModal(task) {
-    console.log('[MODAL REFRESH] Refreshing task details for:', task.title);
-    
-    // Ensure all elements exist before populating
     const titleEl = document.getElementById('task-details-title');
     const descEl = document.getElementById('task-details-description');
     const statusEl = document.getElementById('task-details-status');
@@ -1240,7 +1103,6 @@ function refreshTaskDetailsModal(task) {
     statusEl.textContent = (task.status || 'pending').replace('_', ' ').toUpperCase();
     creatorEl.textContent = task.creatorName;
     
-    // Handle multiple assignees in details
     const assigneeElement = document.getElementById('task-details-assignee');
     const assigneeNames = getTaskAssigneeNames(task);
     
@@ -1263,7 +1125,6 @@ function refreshTaskDetailsModal(task) {
     });
     document.getElementById('task-details-priority').textContent = (task.priority || 'medium').toUpperCase();
     
-    // Permissions
     const isAdmin = currentUserRole === 'admin';
     const isCreator = currentUser.uid === task.creatorId;
     const isAssignee = isUserAssignedToTask(task, currentUser.uid);
@@ -1295,42 +1156,31 @@ function renderTaskActivityFeed(activity) {
 
 async function updateTaskStatus(newStatus) {
     if (!currentlyViewedTaskId) {
-        console.error('[TASK STATUS] No task ID set');
         showNotification('No task selected. Please try again.', 'error');
         return;
     }
     
-    console.log(`[TASK STATUS] Updating task ${currentlyViewedTaskId} to status: ${newStatus}`);
-    
     try {
-        // Prepare the update object
         const updates = {
             status: newStatus,
             updatedAt: new Date()
         };
         
-        // Add completion timestamp if completing
         if (newStatus === 'completed') {
             updates.completedAt = new Date();
         }
         
-        // Prepare activity entry
         const activityEntry = {
             text: `marked task as ${newStatus.replace('_', ' ')}`,
             authorName: currentUserName,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        console.log('[TASK STATUS] Applying updates:', updates);
-        console.log('[TASK STATUS] Adding activity:', activityEntry);
-        
-        // Update the document with both status and activity
         await db.collection('tasks').doc(currentlyViewedTaskId).update({
             ...updates,
             activity: window.firebase.firestore.FieldValue.arrayUnion(activityEntry)
         });
         
-        console.log('[TASK STATUS] Update successful');
         showNotification(`Task ${newStatus.replace('_', ' ')} successfully!`, 'success');
         
     } catch (error) {
@@ -1449,7 +1299,6 @@ async function handleDeleteTask() {
 function openProjectModal() {
     document.getElementById('project-form').reset();
     document.getElementById('modal-title').textContent = 'Propose New Article';
-    // Pre-select project type based on the current view
     const projectTypeSelect = document.getElementById('project-type');
     if (currentView === 'interviews') {
         projectTypeSelect.value = 'Interview';
@@ -1460,8 +1309,6 @@ function openProjectModal() {
 }
 
 function openDetailsModal(projectId) {
-    console.log('[MODAL] Opening project details for:', projectId);
-    
     const project = allProjects.find(p => p.id === projectId);
     if (!project) {
         console.error('[MODAL] Project not found:', projectId);
@@ -1469,12 +1316,9 @@ function openDetailsModal(projectId) {
         return;
     }
     
-    // CRITICAL: Ensure all modals are completely closed first
     closeAllModals();
     
-    // Wait a brief moment to ensure close is complete
-    setTimeout(() => {
-        console.log('[MODAL] Setting up project modal for:', project.title);
+    requestAnimationFrame(() => {
         currentlyViewedProjectId = projectId;
         
         const modal = document.getElementById('details-modal');
@@ -1484,39 +1328,23 @@ function openDetailsModal(projectId) {
         }
         
         const content = modal.querySelector('.details-container');
-        
-        // Force reset the content state
         if (content) {
             content.style.opacity = '0';
-            content.style.transition = 'none';
-            content.style.display = 'flex'; // Ensure it's visible
         }
         
-        // Show modal
         modal.style.display = 'flex';
         
-        // Force a reflow to ensure styles are applied
-        void modal.offsetHeight;
-        
-        // Populate content immediately
         refreshDetailsModal(project);
         
-        // Re-enable transition and fade in
         requestAnimationFrame(() => {
             if (content) {
-                content.style.transition = 'opacity 0.2s ease-in-out';
                 content.style.opacity = '1';
             }
         });
-        
-        console.log('[MODAL] Project modal opened successfully');
-    }, 100); // Small delay to ensure clean state
+    });
 }
 
 function refreshDetailsModal(project) {
-    console.log('[MODAL REFRESH] Refreshing project details for:', project.title);
-    
-    // Ensure all elements exist before populating
     const titleEl = document.getElementById('details-title');
     const authorEl = document.getElementById('details-author');
     const editorEl = document.getElementById('details-editor');
@@ -1533,7 +1361,6 @@ function refreshDetailsModal(project) {
     const isEditor = currentUser.uid === project.editorId;
     const isAdmin = currentUserRole === 'admin';
     
-    // Set basic info
     titleEl.textContent = project.title;
     authorEl.textContent = project.authorName;
     editorEl.textContent = project.editorName || 'Not Assigned';
@@ -1787,38 +1614,15 @@ async function handleProjectFormSubmit(e) {
             activity: [{
                 text: 'created the project.',
                 authorName: currentUserName,
-                timestamp: new Date() // Use client-side timestamp
+                timestamp: new Date()
             }]
         };
         
-        console.log('[PROJECT CREATE] Creating project:', projectData.title);
-        console.log('[PROJECT CREATE] Type:', projectData.type, 'Deadline:', projectData.deadline);
-        if (typeof debugLog === 'function') debugLog('📄 Creating project: ' + projectData.title, 'info');
-        if (typeof debugLog === 'function') debugLog('📅 Deadline: ' + projectData.deadline, 'info');
-
-        // Write to Firestore - the snapshot listener will handle the UI update
         const docRef = await db.collection('projects').add(projectData);
-        
-        console.log('[PROJECT CREATE] ===== PROJECT SAVED TO FIRESTORE =====');
-        console.log('[PROJECT CREATE] Project ID:', docRef.id);
-        console.log('[PROJECT CREATE] Current view:', currentView);
-        console.log('[PROJECT CREATE] Current allProjects count:', allProjects.length);
-        
-        if (typeof debugLog === 'function') {
-            debugLog('✅ Project created successfully! ID: ' + docRef.id, 'success');
-            debugLog('⏳ Waiting for Firestore snapshot to trigger...', 'info');
-            debugLog('📊 Currently have ' + allProjects.length + ' projects', 'info');
-        }
         
         showNotification('Project proposal submitted successfully!', 'success');
         
-        // Wait a moment before closing modal to see snapshot trigger
-        console.log('[PROJECT CREATE] Waiting 1 second for snapshot...');
         setTimeout(() => {
-            console.log('[PROJECT CREATE] After wait - allProjects count:', allProjects.length);
-            if (typeof debugLog === 'function') {
-                debugLog('📊 After 1s: ' + allProjects.length + ' projects', 'info');
-            }
             closeAllModals();
         }, 1000);
         
@@ -1930,8 +1734,6 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, database, 
         return;
     }
     
-    console.log(`[TASK COMPLETION] Updating task "${taskName}" to ${isCompleted ? 'completed' : 'incomplete'}`);
-    
     try {
         const updatePath = `timeline.${taskName}`;
         const activityText = isCompleted ? 
@@ -1947,8 +1749,6 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, database, 
             })
         });
         
-        console.log('[TASK COMPLETION] Task updated successfully');
-        
     } catch (error) {
         console.error('[TASK COMPLETION ERROR]', error);
         showNotification('Failed to update task. Please try again.', 'error');
@@ -1959,7 +1759,6 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, database, 
 //  Kanban Board
 // ==================
 function renderKanbanBoard(projects) {
-    console.log(`[RENDER] Rendering ${projects.length} projects`);
     const board = document.getElementById('kanban-board');
     board.innerHTML = '';
     
@@ -1996,7 +1795,6 @@ function renderKanbanBoard(projects) {
 }
 
 function filterProjects() {
-    console.log('[FILTER] Filtering projects for view:', currentView);
     switch (currentView) {
         case 'dashboard':
         case 'interviews':
@@ -2059,7 +1857,6 @@ function createProjectCard(project) {
     card.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('[CARD CLICK] Opening project:', project.id);
         openDetailsModal(project.id);
     });
     
@@ -2377,8 +2174,6 @@ function isSameDay(date1, date2) {
 }
 
 function updateCalendarStats() {
-    console.log('[CALENDAR] Updating calendar statistics');
-    
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     
@@ -2472,8 +2267,6 @@ function updateCalendarStats() {
             console.error('[CALENDAR STATS] Error parsing task deadline:', error);
         }
     });
-    
-    console.log('[CALENDAR STATS] Month:', thisMonthCount, 'Week:', thisWeekCount, 'Overdue:', overdueCount);
     
     const statMonth = document.getElementById('stat-month');
     const statWeek = document.getElementById('stat-week');
@@ -2569,8 +2362,6 @@ function setupCalendarKeyboardNavigation() {
 //  Modals
 // ==================
 function closeAllModals() {
-    console.log('[MODAL] Closing all modals');
-    
     const modals = document.querySelectorAll('.modal-overlay');
     
     modals.forEach(modal => {
@@ -2592,16 +2383,12 @@ function closeAllModals() {
     currentlyViewedProjectId = null;
     currentlyViewedTaskId = null;
     disableProposalEditing();
-    
-    console.log('[MODAL] All modals closed and reset');
 }
 
 // ==================
 //  Status Reports
 // ==================
 function generateStatusReport() {
-    console.log('[REPORT] Generating comprehensive status report');
-    
     const reportModal = document.getElementById('report-modal');
     const reportContent = document.getElementById('report-content');
     if (!reportModal || !reportContent) {
@@ -2949,7 +2736,6 @@ function generateStatusReport() {
     
     reportContent.innerHTML = reportHTML;
     reportModal.style.display = 'flex';
-    console.log('[REPORT] Comprehensive status report generated successfully');
 }
 
 // ==================
@@ -2957,12 +2743,9 @@ function generateStatusReport() {
 // ==================
 async function approveProposal(projectId) {
     if (!projectId) {
-        console.error('[APPROVE] No project ID provided');
         showNotification('No project selected. Please try again.', 'error');
         return;
     }
-    
-    console.log('[APPROVE] Approving project:', projectId);
     
     try {
         await db.collection('projects').doc(projectId).update({
@@ -2976,7 +2759,6 @@ async function approveProposal(projectId) {
         });
         
         showNotification('Proposal approved successfully!', 'success');
-        console.log('[APPROVE] Project approved successfully');
         
     } catch (error) {
         console.error('[APPROVE ERROR]', error);
@@ -2986,12 +2768,9 @@ async function approveProposal(projectId) {
 
 async function updateProposalStatus(newStatus) {
     if (!currentlyViewedProjectId) {
-        console.error('[STATUS UPDATE] No project ID set');
         showNotification('No project selected. Please try again.', 'error');
         return;
     }
-    
-    console.log(`[STATUS UPDATE] Updating project ${currentlyViewedProjectId} to: ${newStatus}`);
     
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
@@ -3004,7 +2783,6 @@ async function updateProposalStatus(newStatus) {
         });
         
         showNotification(`Proposal ${newStatus} successfully!`, 'success');
-        console.log('[STATUS UPDATE] Update successful');
         
     } catch (error) {
         console.error('[STATUS UPDATE ERROR]', error);
@@ -3021,8 +2799,6 @@ async function handleAddComment() {
         showNotification('Please enter a comment.', 'error');
         return;
     }
-    
-    console.log('[COMMENT] Adding comment to project:', currentlyViewedProjectId);
     
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
@@ -3056,8 +2832,6 @@ async function handleAssignEditor() {
     
     const editor = allEditors.find(e => e.id === editorId);
     if (!editor) return;
-    
-    console.log('[ASSIGN EDITOR] Assigning editor:', editor.name);
     
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
@@ -3093,8 +2867,6 @@ async function handleDeleteProject() {
     }
     
     if (confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
-        console.log('[DELETE] Deleting project:', currentlyViewedProjectId);
-        
         try {
             await db.collection('projects').doc(currentlyViewedProjectId).delete();
             showNotification('Project deleted successfully!', 'success');
@@ -3117,8 +2889,6 @@ function enableProposalEditing() {
     
     if (!proposalElement) return;
     
-    console.log('[EDIT PROPOSAL] Enabling editing mode');
-    
     const currentText = proposalElement.textContent;
     proposalElement.setAttribute('data-original-text', currentText);
     proposalElement.contentEditable = 'true';
@@ -3140,8 +2910,6 @@ function disableProposalEditing() {
     const cancelBtn = document.getElementById('cancel-proposal-button');
     
     if (!proposalElement) return;
-    
-    console.log('[EDIT PROPOSAL] Disabling editing mode');
     
     proposalElement.contentEditable = 'false';
     proposalElement.style.border = 'none';
@@ -3178,8 +2946,6 @@ async function handleSaveProposal() {
         return;
     }
     
-    console.log('[SAVE PROPOSAL] Saving updated proposal');
-    
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             proposal: newProposal,
@@ -3204,8 +2970,6 @@ async function handleSaveProposal() {
 // ==================
 async function handleSetDeadlines() {
     if (!currentlyViewedProjectId) return;
-    
-    console.log('[SET DEADLINES] Saving deadlines');
     
     const deadlines = {
         contact: document.getElementById('deadline-contact')?.value || '',
@@ -3246,8 +3010,6 @@ async function handleRequestDeadlineChange() {
         showNotification('Please provide a reason for the deadline change request.', 'error');
         return;
     }
-    
-    console.log('[DEADLINE REQUEST] Submitting deadline change request');
     
     const requestedDeadlines = {
         contact: document.getElementById('deadline-contact')?.value || '',
@@ -3290,8 +3052,6 @@ async function handleApproveDeadlineRequest() {
     const request = project.deadlineRequest || project.deadlineChangeRequest;
     if (!request) return;
     
-    console.log('[APPROVE DEADLINE] Approving deadline request');
-    
     try {
         const updates = {
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -3329,8 +3089,6 @@ async function handleRejectDeadlineRequest() {
     const request = project.deadlineRequest || project.deadlineChangeRequest;
     if (!request) return;
     
-    console.log('[REJECT DEADLINE] Rejecting deadline request');
-    
     try {
         const updates = {
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -3356,7 +3114,6 @@ async function handleRejectDeadlineRequest() {
     }
 }
 
-// Make functions globally available for onclick handlers
 window.handleApproveDeadlineRequest = handleApproveDeadlineRequest;
 window.handleRejectDeadlineRequest = handleRejectDeadlineRequest;
 
@@ -3397,8 +3154,6 @@ function escapeHtml(text) {
 }
 
 function showNotification(message, type = 'success') {
-    console.log(`[NOTIFICATION ${type.toUpperCase()}] ${message}`);
-    
     let container = document.getElementById('notification-container');
     if (!container) {
         container = document.createElement('div');
@@ -3483,9 +3238,5 @@ function isUserAssignedToTask(task, userId) {
     return assigneeIds.includes(userId);
 }
 
-// Make global functions available for onclick handlers
 window.toggleAssignee = toggleAssignee;
 window.removeAssignee = removeAssignee;
-
-console.log('[DASHBOARD] Fixed dashboard.js loaded successfully!');
-console.log('[INIT] ✅ All missing functions loaded successfully - Saving is now fixed!');
