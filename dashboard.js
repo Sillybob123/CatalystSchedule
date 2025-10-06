@@ -423,10 +423,30 @@ function setupNavAndListeners() {
 
     // Modal close listeners
     document.querySelectorAll('.modal-overlay').forEach(modal => {
+        // Remove any existing listeners first
+        const newModal = modal.cloneNode(true);
+        modal.parentNode.replaceChild(newModal, modal);
+    });
+    
+    // Re-attach listeners to fresh modals
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', e => {
-            if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('close-button')) {
+            // Only close if clicking directly on overlay or close button
+            if (e.target === modal || e.target.classList.contains('close-button')) {
+                e.preventDefault();
+                e.stopPropagation();
                 closeAllModals();
             }
+        });
+        
+        // Close button handler
+        const closeButtons = modal.querySelectorAll('.close-button');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeAllModals();
+            });
         });
     });
     
@@ -980,6 +1000,7 @@ function createTaskCard(task) {
     card.className = 'kanban-card';
     card.classList.add(`priority-${task.priority || 'medium'}`);
     card.dataset.id = task.id;
+    card.dataset.type = 'task';
     
     const isOverdue = new Date(task.deadline) < new Date() && task.status !== 'completed';
     const isDueSoon = !isOverdue && new Date(task.deadline) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
@@ -1039,27 +1060,93 @@ function createTaskCard(task) {
         </div>
     `;
     
-    card.addEventListener('click', () => openTaskDetailsModal(task.id));
+    // Prevent event bubbling issues
+    card.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[CARD CLICK] Opening task:', task.id);
+        openTaskDetailsModal(task.id);
+    });
+    
     return card;
 }
 
 function openTaskDetailsModal(taskId) {
+    console.log('[MODAL] Opening task details for:', taskId);
+    
     const task = allTasks.find(t => t.id === taskId);
     if (!task) {
-        console.error("[MODAL] Task not found:", taskId);
+        console.error('[MODAL] Task not found:', taskId);
+        showNotification('Task not found. Please refresh the page.', 'error');
         return;
     }
     
-    currentlyViewedTaskId = taskId;
-    refreshTaskDetailsModal(task);
-    document.getElementById('task-details-modal').style.display = 'flex';
+    // CRITICAL: Ensure all modals are completely closed first
+    closeAllModals();
+    
+    // Wait a brief moment to ensure close is complete
+    setTimeout(() => {
+        console.log('[MODAL] Setting up task modal for:', task.title);
+        currentlyViewedTaskId = taskId;
+        
+        const modal = document.getElementById('task-details-modal');
+        if (!modal) {
+            console.error('[MODAL] Task modal element not found');
+            return;
+        }
+        
+        const content = modal.querySelector('.details-container');
+        
+        // Force reset the content state
+        if (content) {
+            content.style.opacity = '0';
+            content.style.transition = 'none';
+            content.style.display = 'flex'; // Ensure it's visible
+        }
+        
+        // Show modal
+        modal.style.display = 'flex';
+        
+        // Force a reflow to ensure styles are applied
+        void modal.offsetHeight;
+        
+        // Populate content immediately
+        refreshTaskDetailsModal(task);
+        
+        // Re-enable transition and fade in
+        requestAnimationFrame(() => {
+            if (content) {
+                content.style.transition = 'opacity 0.2s ease-in-out';
+                content.style.opacity = '1';
+            }
+        });
+        
+        console.log('[MODAL] Task modal opened successfully');
+    }, 100); // Small delay to ensure clean state
 }
 
 function refreshTaskDetailsModal(task) {
-    document.getElementById('task-details-title').textContent = task.title;
-    document.getElementById('task-details-description').textContent = task.description || 'No description provided.';
-    document.getElementById('task-details-status').textContent = (task.status || 'pending').replace('_', ' ').toUpperCase();
-    document.getElementById('task-details-creator').textContent = task.creatorName;
+    console.log('[MODAL REFRESH] Refreshing task details for:', task.title);
+    
+    // Ensure all elements exist before populating
+    const titleEl = document.getElementById('task-details-title');
+    const descEl = document.getElementById('task-details-description');
+    const statusEl = document.getElementById('task-details-status');
+    const creatorEl = document.getElementById('task-details-creator');
+    const assigneeEl = document.getElementById('task-details-assignee');
+    const createdEl = document.getElementById('task-details-created');
+    const deadlineEl = document.getElementById('task-details-deadline');
+    const priorityEl = document.getElementById('task-details-priority');
+    
+    if (!titleEl || !descEl || !statusEl || !creatorEl || !assigneeEl || !createdEl || !deadlineEl || !priorityEl) {
+        console.error('[MODAL REFRESH] Required task elements not found in DOM');
+        return;
+    }
+    
+    titleEl.textContent = task.title;
+    descEl.textContent = task.description || 'No description provided.';
+    statusEl.textContent = (task.status || 'pending').replace('_', ' ').toUpperCase();
+    creatorEl.textContent = task.creatorName;
     
     // Handle multiple assignees in details
     const assigneeElement = document.getElementById('task-details-assignee');
@@ -1311,24 +1398,86 @@ function openProjectModal() {
 }
 
 function openDetailsModal(projectId) {
+    console.log('[MODAL] Opening project details for:', projectId);
+    
     const project = allProjects.find(p => p.id === projectId);
-    if (!project) return;
-    currentlyViewedProjectId = projectId;
-    refreshDetailsModal(project);
-    document.getElementById('details-modal').style.display = 'flex';
+    if (!project) {
+        console.error('[MODAL] Project not found:', projectId);
+        showNotification('Project not found. Please refresh the page.', 'error');
+        return;
+    }
+    
+    // CRITICAL: Ensure all modals are completely closed first
+    closeAllModals();
+    
+    // Wait a brief moment to ensure close is complete
+    setTimeout(() => {
+        console.log('[MODAL] Setting up project modal for:', project.title);
+        currentlyViewedProjectId = projectId;
+        
+        const modal = document.getElementById('details-modal');
+        if (!modal) {
+            console.error('[MODAL] Modal element not found');
+            return;
+        }
+        
+        const content = modal.querySelector('.details-container');
+        
+        // Force reset the content state
+        if (content) {
+            content.style.opacity = '0';
+            content.style.transition = 'none';
+            content.style.display = 'flex'; // Ensure it's visible
+        }
+        
+        // Show modal
+        modal.style.display = 'flex';
+        
+        // Force a reflow to ensure styles are applied
+        void modal.offsetHeight;
+        
+        // Populate content immediately
+        refreshDetailsModal(project);
+        
+        // Re-enable transition and fade in
+        requestAnimationFrame(() => {
+            if (content) {
+                content.style.transition = 'opacity 0.2s ease-in-out';
+                content.style.opacity = '1';
+            }
+        });
+        
+        console.log('[MODAL] Project modal opened successfully');
+    }, 100); // Small delay to ensure clean state
 }
 
 function refreshDetailsModal(project) {
+    console.log('[MODAL REFRESH] Refreshing project details for:', project.title);
+    
+    // Ensure all elements exist before populating
+    const titleEl = document.getElementById('details-title');
+    const authorEl = document.getElementById('details-author');
+    const editorEl = document.getElementById('details-editor');
+    const statusEl = document.getElementById('details-status');
+    const deadlineEl = document.getElementById('details-publication-deadline');
+    const proposalEl = document.getElementById('details-proposal');
+    
+    if (!titleEl || !authorEl || !editorEl || !statusEl || !deadlineEl || !proposalEl) {
+        console.error('[MODAL REFRESH] Required elements not found in DOM');
+        return;
+    }
+    
     const isAuthor = currentUser.uid === project.authorId;
     const isEditor = currentUser.uid === project.editorId;
     const isAdmin = currentUserRole === 'admin';
     
-    document.getElementById('details-title').textContent = project.title;
-    document.getElementById('details-author').textContent = project.authorName;
-    document.getElementById('details-editor').textContent = project.editorName || 'Not Assigned';
+    // Set basic info
+    titleEl.textContent = project.title;
+    authorEl.textContent = project.authorName;
+    editorEl.textContent = project.editorName || 'Not Assigned';
     
     const state = getProjectState(project, currentView, currentUser);
-    document.getElementById('details-status').textContent = state.statusText;
+    statusEl.textContent = state.statusText;
 
     const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
     if (finalDeadline) {
@@ -1704,6 +1853,7 @@ function createProjectCard(project) {
     
     card.className = `kanban-card status-${state.color}`;
     card.dataset.id = project.id;
+    card.dataset.type = 'project';
     
     const progress = calculateProgress(project.timeline);
     
@@ -1737,7 +1887,14 @@ function createProjectCard(project) {
         </div>
     `;
     
-    card.addEventListener('click', () => openDetailsModal(project.id));
+    // Prevent event bubbling issues
+    card.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[CARD CLICK] Opening project:', project.id);
+        openDetailsModal(project.id);
+    });
+    
     return card;
 }
 
@@ -1944,8 +2101,22 @@ function createCalendarEvent(item, date) {
 }
 
 function hasTaskDeadlineOnDate(task, date) {
-    const taskDeadline = new Date(task.deadline + 'T00:00:00');
-    return formatDateForComparison(taskDeadline) === formatDateForComparison(date);
+    if (!task.deadline) return false;
+    
+    try {
+        // Handle both date strings and Date objects
+        const taskDeadline = new Date(task.deadline + 'T00:00:00');
+        
+        if (isNaN(taskDeadline.getTime())) {
+            console.error('[CALENDAR] Invalid task deadline:', task.deadline);
+            return false;
+        }
+        
+        return formatDateForComparison(taskDeadline) === formatDateForComparison(date);
+    } catch (error) {
+        console.error('[CALENDAR] Error parsing task deadline:', error);
+        return false;
+    }
 }
 
 function hasProjectDeadlineOnDate(project, date) {
@@ -1955,19 +2126,43 @@ function hasProjectDeadlineOnDate(project, date) {
     
     const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
     
+    // Check intermediate deadlines
     for (const type of deadlineTypes) {
         if (deadlines[type]) {
-            const deadlineDate = new Date(deadlines[type] + 'T00:00:00');
-            if (formatDateForComparison(deadlineDate) === dateStr) {
-                return true;
+            try {
+                const deadlineDate = new Date(deadlines[type] + 'T00:00:00');
+                
+                if (isNaN(deadlineDate.getTime())) {
+                    console.error('[CALENDAR] Invalid deadline for type:', type, deadlines[type]);
+                    continue;
+                }
+                
+                if (formatDateForComparison(deadlineDate) === dateStr) {
+                    return true;
+                }
+            } catch (error) {
+                console.error('[CALENDAR] Error parsing deadline:', error);
+                continue;
             }
         }
     }
     
+    // Check final publication deadline
     if (finalDeadline) {
-        const publicationDate = new Date(finalDeadline + 'T00:00:00');
-        if (formatDateForComparison(publicationDate) === dateStr) {
-            return true;
+        try {
+            const publicationDate = new Date(finalDeadline + 'T00:00:00');
+            
+            if (isNaN(publicationDate.getTime())) {
+                console.error('[CALENDAR] Invalid publication deadline:', finalDeadline);
+                return false;
+            }
+            
+            if (formatDateForComparison(publicationDate) === dateStr) {
+                return true;
+            }
+        } catch (error) {
+            console.error('[CALENDAR] Error parsing publication deadline:', error);
+            return false;
         }
     }
     
@@ -2004,6 +2199,11 @@ function getEventTypeForDate(project, date) {
 }
 
 function formatDateForComparison(date) {
+    if (!date || isNaN(date.getTime())) {
+        console.error('[CALENDAR] Invalid date for comparison:', date);
+        return '';
+    }
+    
     return date.getFullYear() + '-' + 
            String(date.getMonth() + 1).padStart(2, '0') + '-' +
            String(date.getDate()).padStart(2, '0');
@@ -2016,45 +2216,89 @@ function isSameDay(date1, date2) {
 }
 
 function updateCalendarStats() {
+    console.log('[CALENDAR] Updating calendar statistics');
+    
     const now = new Date();
+    now.setHours(0, 0, 0, 0); // Normalize to start of day
+    
     const monthStart = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
+    monthStart.setHours(0, 0, 0, 0);
+    
     const monthEnd = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0);
+    monthEnd.setHours(23, 59, 59, 999);
     
     const weekStart = new Date(now);
     weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
     
     let thisMonthCount = 0;
     let thisWeekCount = 0;
     let overdueCount = 0;
     
+    // Count project deadlines
     allProjects.forEach(project => {
         const deadlines = project.deadlines || {};
         const finalDeadline = deadlines.publication || project.deadline;
         
+        // Check final publication deadline
         if (finalDeadline) {
-            const deadline = new Date(finalDeadline + 'T00:00:00');
-            
-            if (deadline >= monthStart && deadline <= monthEnd) {
-                thisMonthCount++;
-            }
-            
-            if (deadline >= weekStart && deadline <= weekEnd) {
-                thisWeekCount++;
-            }
-            
-            const state = getProjectState(project, currentView, currentUser);
-            if (deadline < now && state.column !== 'Completed') {
-                overdueCount++;
+            try {
+                const deadline = new Date(finalDeadline + 'T00:00:00');
+                
+                if (!isNaN(deadline.getTime())) {
+                    if (deadline >= monthStart && deadline <= monthEnd) {
+                        thisMonthCount++;
+                    }
+                    
+                    if (deadline >= weekStart && deadline <= weekEnd) {
+                        thisWeekCount++;
+                    }
+                    
+                    const state = getProjectState(project, currentView, currentUser);
+                    if (deadline < now && state.column !== 'Completed' && !state.statusText.includes('Completed')) {
+                        overdueCount++;
+                    }
+                }
+            } catch (error) {
+                console.error('[CALENDAR STATS] Error parsing final deadline:', error);
             }
         }
         
+        // Count intermediate deadlines
         const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
         deadlineTypes.forEach(type => {
             if (deadlines[type]) {
-                const deadline = new Date(deadlines[type] + 'T00:00:00');
-                
+                try {
+                    const deadline = new Date(deadlines[type] + 'T00:00:00');
+                    
+                    if (!isNaN(deadline.getTime())) {
+                        if (deadline >= monthStart && deadline <= monthEnd) {
+                            thisMonthCount++;
+                        }
+                        
+                        if (deadline >= weekStart && deadline <= weekEnd) {
+                            thisWeekCount++;
+                        }
+                    }
+                } catch (error) {
+                    console.error('[CALENDAR STATS] Error parsing deadline type:', type, error);
+                }
+            }
+        });
+    });
+    
+    // Count task deadlines
+    allTasks.forEach(task => {
+        if (!task.deadline) return;
+        
+        try {
+            const deadline = new Date(task.deadline + 'T00:00:00');
+            
+            if (!isNaN(deadline.getTime())) {
                 if (deadline >= monthStart && deadline <= monthEnd) {
                     thisMonthCount++;
                 }
@@ -2062,25 +2306,17 @@ function updateCalendarStats() {
                 if (deadline >= weekStart && deadline <= weekEnd) {
                     thisWeekCount++;
                 }
+                
+                if (deadline < now && task.status !== 'completed') {
+                    overdueCount++;
+                }
             }
-        });
+        } catch (error) {
+            console.error('[CALENDAR STATS] Error parsing task deadline:', error);
+        }
     });
     
-    allTasks.forEach(task => {
-        const deadline = new Date(task.deadline + 'T00:00:00');
-        
-        if (deadline >= monthStart && deadline <= monthEnd) {
-            thisMonthCount++;
-        }
-        
-        if (deadline >= weekStart && deadline <= weekEnd) {
-            thisWeekCount++;
-        }
-        
-        if (deadline < now && task.status !== 'completed') {
-            overdueCount++;
-        }
-    });
+    console.log('[CALENDAR STATS] Month:', thisMonthCount, 'Week:', thisWeekCount, 'Overdue:', overdueCount);
     
     const statMonth = document.getElementById('stat-month');
     const statWeek = document.getElementById('stat-week');
@@ -2176,133 +2412,406 @@ function setupCalendarKeyboardNavigation() {
 //  Modals
 // ==================
 function closeAllModals() {
-    document.querySelectorAll('.modal-overlay').forEach(modal => modal.style.display = 'none');
+    console.log('[MODAL] Closing all modals');
+    
+    // Get all modals
+    const modals = document.querySelectorAll('.modal-overlay');
+    
+    modals.forEach(modal => {
+        // Reset opacity immediately on all content
+        const detailsContainers = modal.querySelectorAll('.details-container');
+        detailsContainers.forEach(content => {
+            content.style.opacity = '1';
+            content.style.transition = 'none'; // Remove transition during close
+        });
+        
+        // Hide modal
+        modal.style.display = 'none';
+        
+        // Reset transition after a brief delay
+        setTimeout(() => {
+            detailsContainers.forEach(content => {
+                content.style.transition = 'opacity 0.2s ease-in-out';
+            });
+        }, 50);
+    });
+    
+    // Clear state
     currentlyViewedProjectId = null;
     currentlyViewedTaskId = null;
     disableProposalEditing();
+    
+    console.log('[MODAL] All modals closed and reset');
 }
 
 // ==================
 //  Status Reports
 // ==================
 function generateStatusReport() {
+    console.log('[REPORT] Generating comprehensive status report');
+    
     const reportModal = document.getElementById('report-modal');
     const reportContent = document.getElementById('report-content');
-    if (!reportModal || !reportContent) return;
+    if (!reportModal || !reportContent) {
+        console.error('[REPORT] Modal elements not found');
+        return;
+    }
 
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
     
-    const overdueProjects = allProjects.filter(p => {
-        const finalDeadline = p.deadlines ? p.deadlines.publication : p.deadline;
-        return finalDeadline && new Date(finalDeadline) < now && getProjectState(p, currentView, currentUser).column !== 'Completed';
+    // Group projects and tasks by user
+    const userWorkload = {};
+    
+    // Initialize all users
+    allUsers.forEach(user => {
+        userWorkload[user.id] = {
+            name: user.name,
+            role: user.role || 'member',
+            email: user.email,
+            projects: [],
+            tasks: [],
+            overdue: 0,
+            onTrack: 0,
+            completed: 0
+        };
     });
-
-    const pendingProposals = allProjects.filter(p => p.proposalStatus === 'pending');
-    const completedProjects = allProjects.filter(p => getProjectState(p, currentView, currentUser).column === 'Completed');
     
-    const overdueTasks = allTasks.filter(t => new Date(t.deadline) < now && t.status !== 'completed');
-    const pendingTasks = allTasks.filter(t => t.status === 'pending');
-    const completedTasks = allTasks.filter(t => t.status === 'completed');
+    // Categorize projects
+    allProjects.forEach(project => {
+        const state = getProjectState(project, currentView, currentUser);
+        const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
+        
+        let status = 'on-track';
+        let daysUntilDeadline = null;
+        
+        if (finalDeadline) {
+            try {
+                const deadline = new Date(finalDeadline + 'T00:00:00');
+                if (!isNaN(deadline.getTime())) {
+                    daysUntilDeadline = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+                    
+                    if (state.column === 'Completed' || state.statusText.includes('Completed')) {
+                        status = 'completed';
+                    } else if (daysUntilDeadline < 0) {
+                        status = 'overdue';
+                    } else if (daysUntilDeadline <= 3) {
+                        status = 'due-soon';
+                    }
+                }
+            } catch (error) {
+                console.error('[REPORT] Error processing project deadline:', error);
+            }
+        }
+        
+        const projectInfo = {
+            id: project.id,
+            title: project.title,
+            type: project.type,
+            status: status,
+            state: state.statusText,
+            deadline: finalDeadline,
+            daysUntilDeadline: daysUntilDeadline,
+            proposalStatus: project.proposalStatus
+        };
+        
+        // Add to author's workload
+        if (project.authorId && userWorkload[project.authorId]) {
+            userWorkload[project.authorId].projects.push(projectInfo);
+            if (status === 'overdue') userWorkload[project.authorId].overdue++;
+            else if (status === 'completed') userWorkload[project.authorId].completed++;
+            else userWorkload[project.authorId].onTrack++;
+        }
+        
+        // Add to editor's workload
+        if (project.editorId && userWorkload[project.editorId]) {
+            userWorkload[project.editorId].projects.push(projectInfo);
+            if (status === 'overdue') userWorkload[project.editorId].overdue++;
+            else if (status === 'completed') userWorkload[project.editorId].completed++;
+            else userWorkload[project.editorId].onTrack++;
+        }
+    });
     
+    // Categorize tasks
+    allTasks.forEach(task => {
+        let status = 'on-track';
+        let daysUntilDeadline = null;
+        
+        if (task.deadline) {
+            try {
+                const deadline = new Date(task.deadline + 'T00:00:00');
+                if (!isNaN(deadline.getTime())) {
+                    daysUntilDeadline = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+                    
+                    if (task.status === 'completed') {
+                        status = 'completed';
+                    } else if (daysUntilDeadline < 0) {
+                        status = 'overdue';
+                    } else if (daysUntilDeadline <= 3) {
+                        status = 'due-soon';
+                    }
+                }
+            } catch (error) {
+                console.error('[REPORT] Error processing task deadline:', error);
+            }
+        }
+        
+        const taskInfo = {
+            id: task.id,
+            title: task.title,
+            status: status,
+            taskStatus: task.status,
+            deadline: task.deadline,
+            daysUntilDeadline: daysUntilDeadline,
+            priority: task.priority || 'medium'
+        };
+        
+        // Add to all assignees
+        const assigneeIds = task.assigneeIds || [task.assigneeId];
+        assigneeIds.forEach(assigneeId => {
+            if (assigneeId && userWorkload[assigneeId]) {
+                userWorkload[assigneeId].tasks.push(taskInfo);
+                if (status === 'overdue') userWorkload[assigneeId].overdue++;
+                else if (status === 'completed') userWorkload[assigneeId].completed++;
+                else userWorkload[assigneeId].onTrack++;
+            }
+        });
+    });
+    
+    // Calculate overall statistics
+    const totalOverdue = Object.values(userWorkload).reduce((sum, user) => sum + user.overdue, 0);
+    const totalOnTrack = Object.values(userWorkload).reduce((sum, user) => sum + user.onTrack, 0);
+    const totalCompleted = Object.values(userWorkload).reduce((sum, user) => sum + user.completed, 0);
+    const activeUsers = Object.values(userWorkload).filter(u => u.projects.length > 0 || u.tasks.length > 0).length;
+    
+    // Start building report HTML
     let reportHTML = `
-        <div class="report-section executive-summary">
-            <h2>🎯 Executive Dashboard</h2>
-            <div class="summary-grid">
-                <div class="summary-item total">
-                    <div class="summary-value">${allProjects.length}</div>
-                    <div class="summary-label">Total Projects</div>
-                </div>
-                <div class="summary-item ${overdueProjects.length > 0 ? 'overdue' : ''}">
-                    <div class="summary-value">${overdueProjects.length}</div>
-                    <div class="summary-label">Overdue Projects</div>
-                </div>
-                <div class="summary-item completed">
-                    <div class="summary-value">${completedProjects.length}</div>
-                    <div class="summary-label">Completed Projects</div>
-                </div>
-                <div class="summary-item total">
-                    <div class="summary-value">${allTasks.length}</div>
-                    <div class="summary-label">Total Tasks</div>
-                </div>
-            </div>
+        <div class="report-header">
+            <h2>📊 Comprehensive Team Status Report</h2>
+            <p class="report-date">Generated: ${new Date().toLocaleString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })}</p>
         </div>
         
-        <div class="report-section">
-            <h2>📋 Task Overview</h2>
+        <div class="report-section executive-summary">
+            <h2>🎯 Executive Summary</h2>
             <div class="summary-grid">
-                <div class="summary-item ${overdueTasks.length > 0 ? 'overdue' : ''}">
-                    <div class="summary-value">${overdueTasks.length}</div>
-                    <div class="summary-label">Overdue Tasks</div>
+                <div class="summary-item total">
+                    <div class="summary-icon">👥</div>
+                    <div class="summary-value">${activeUsers}</div>
+                    <div class="summary-label">Active Team Members</div>
                 </div>
-                <div class="summary-item ${pendingTasks.length > 0 ? 'pending' : ''}">
-                    <div class="summary-value">${pendingTasks.length}</div>
-                    <div class="summary-label">Pending Approval</div>
+                <div class="summary-item ${totalOverdue > 0 ? 'overdue' : ''}">
+                    <div class="summary-icon">⚠️</div>
+                    <div class="summary-value">${totalOverdue}</div>
+                    <div class="summary-label">Overdue Items</div>
+                </div>
+                <div class="summary-item on-track">
+                    <div class="summary-icon">🎯</div>
+                    <div class="summary-value">${totalOnTrack}</div>
+                    <div class="summary-label">On Track</div>
                 </div>
                 <div class="summary-item completed">
-                    <div class="summary-value">${completedTasks.length}</div>
-                    <div class="summary-label">Completed Tasks</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-value">${allTasks.filter(t => t.status === 'approved').length}</div>
-                    <div class="summary-label">In Progress</div>
+                    <div class="summary-icon">✅</div>
+                    <div class="summary-value">${totalCompleted}</div>
+                    <div class="summary-label">Completed</div>
                 </div>
             </div>
         </div>
     `;
-
-    if (overdueProjects.length > 0 || overdueTasks.length > 0 || pendingProposals.length > 0) {
+    
+    // Team member details - sorted by workload
+    const sortedUsers = Object.values(userWorkload)
+        .filter(u => u.projects.length > 0 || u.tasks.length > 0)
+        .sort((a, b) => {
+            // Sort by overdue first, then total workload
+            if (b.overdue !== a.overdue) return b.overdue - a.overdue;
+            return (b.projects.length + b.tasks.length) - (a.projects.length + a.tasks.length);
+        });
+    
+    if (sortedUsers.length > 0) {
         reportHTML += `
-            <div class="report-section">
-                <h2>🚨 Actions Required</h2>
-                ${overdueProjects.length > 0 ? `<h3>Overdue Projects (${overdueProjects.length})</h3>` : ''}
-                ${overdueProjects.map(p => {
-                    const deadline = p.deadlines ? p.deadlines.publication : p.deadline;
-                    const daysPast = Math.ceil((now - new Date(deadline)) / (1000 * 60 * 60 * 24));
-                    return `
-                        <div class="report-item overdue-item" data-id="${p.id}">
-                            <span>${p.title}</span>
-                            <span class="meta">${daysPast} days overdue</span>
+            <div class="report-section team-details">
+                <h2>👥 Team Member Breakdown</h2>
+        `;
+        
+        sortedUsers.forEach(user => {
+            const totalItems = user.projects.length + user.tasks.length;
+            const workloadLevel = totalItems > 10 ? 'high' : totalItems > 5 ? 'medium' : 'low';
+            const performanceClass = user.overdue > 0 ? 'needs-attention' : user.onTrack > user.completed ? 'in-progress' : 'excellent';
+            
+            reportHTML += `
+                <div class="user-card ${performanceClass}">
+                    <div class="user-card-header">
+                        <div class="user-info">
+                            <div class="user-avatar" style="background-color: ${stringToColor(user.name)}">
+                                ${user.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <h3>${escapeHtml(user.name)}</h3>
+                                <p class="user-role">${escapeHtml(user.role)}</p>
+                            </div>
                         </div>
-                    `;
-                }).join('')}
-                
-                ${overdueTasks.length > 0 ? `<h3>Overdue Tasks (${overdueTasks.length})</h3>` : ''}
-                ${overdueTasks.map(t => {
-                    const daysPast = Math.ceil((now - new Date(t.deadline)) / (1000 * 60 * 60 * 24));
-                    const assigneeNames = getTaskAssigneeNames(t);
-                    return `
-                        <div class="report-item overdue-item" data-id="${t.id}" data-type="task">
-                            <span>${t.title} (assigned to ${assigneeNames.join(', ')})</span>
-                            <span class="meta">${daysPast} days overdue</span>
+                        <div class="workload-indicator ${workloadLevel}">
+                            <div class="workload-count">${totalItems}</div>
+                            <div class="workload-label">Total Items</div>
                         </div>
-                    `;
-                }).join('')}
-                
-                ${pendingProposals.length > 0 ? `<h3>Pending Proposals (${pendingProposals.length})</h3>` : ''}
-                ${pendingProposals.map(p => `
-                    <div class="report-item pending-item" data-id="${p.id}">
-                        <span>${p.title}</span>
-                        <span class="meta">by ${p.authorName}</span>
                     </div>
-                `).join('')}
+                    
+                    <div class="user-stats">
+                        <div class="stat-item ${user.overdue > 0 ? 'overdue' : ''}">
+                            <span class="stat-icon">⚠️</span>
+                            <span class="stat-value">${user.overdue}</span>
+                            <span class="stat-label">Overdue</span>
+                        </div>
+                        <div class="stat-item on-track">
+                            <span class="stat-icon">🎯</span>
+                            <span class="stat-value">${user.onTrack}</span>
+                            <span class="stat-label">On Track</span>
+                        </div>
+                        <div class="stat-item completed">
+                            <span class="stat-icon">✅</span>
+                            <span class="stat-value">${user.completed}</span>
+                            <span class="stat-label">Done</span>
+                        </div>
+                    </div>
+            `;
+            
+            // Projects section
+            if (user.projects.length > 0) {
+                reportHTML += `
+                    <div class="user-work-section">
+                        <h4>📝 Projects (${user.projects.length})</h4>
+                        <div class="work-items">
+                `;
+                
+                user.projects.forEach(project => {
+                    const deadlineText = project.daysUntilDeadline !== null 
+                        ? (project.daysUntilDeadline < 0 
+                            ? `${Math.abs(project.daysUntilDeadline)} days overdue` 
+                            : `${project.daysUntilDeadline} days remaining`)
+                        : 'No deadline';
+                    
+                    reportHTML += `
+                        <div class="work-item ${project.status}" data-id="${project.id}" onclick="openDetailsModal('${project.id}'); closeAllModals();">
+                            <div class="work-item-header">
+                                <span class="work-item-title">${escapeHtml(project.title)}</span>
+                                <span class="work-item-type">${escapeHtml(project.type)}</span>
+                            </div>
+                            <div class="work-item-meta">
+                                <span class="work-item-status">${escapeHtml(project.state)}</span>
+                                <span class="work-item-deadline ${project.status}">${deadlineText}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                reportHTML += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Tasks section
+            if (user.tasks.length > 0) {
+                reportHTML += `
+                    <div class="user-work-section">
+                        <h4>📋 Tasks (${user.tasks.length})</h4>
+                        <div class="work-items">
+                `;
+                
+                user.tasks.forEach(task => {
+                    const deadlineText = task.daysUntilDeadline !== null 
+                        ? (task.daysUntilDeadline < 0 
+                            ? `${Math.abs(task.daysUntilDeadline)} days overdue` 
+                            : `${task.daysUntilDeadline} days remaining`)
+                        : 'No deadline';
+                    
+                    reportHTML += `
+                        <div class="work-item ${task.status}" data-id="${task.id}" data-type="task" onclick="openTaskDetailsModal('${task.id}'); closeAllModals();">
+                            <div class="work-item-header">
+                                <span class="work-item-title">${escapeHtml(task.title)}</span>
+                                <span class="priority-badge ${task.priority}">${task.priority.toUpperCase()}</span>
+                            </div>
+                            <div class="work-item-meta">
+                                <span class="work-item-status">${escapeHtml(task.taskStatus)}</span>
+                                <span class="work-item-deadline ${task.status}">${deadlineText}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                reportHTML += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            reportHTML += `</div>`; // Close user-card
+        });
+        
+        reportHTML += `</div>`; // Close team-details section
+    }
+    
+    // Recommendations section
+    reportHTML += `
+        <div class="report-section recommendations">
+            <h2>💡 Recommendations</h2>
+            <div class="recommendation-list">
+    `;
+    
+    const highWorkloadUsers = sortedUsers.filter(u => (u.projects.length + u.tasks.length) > 10);
+    const overdueUsers = sortedUsers.filter(u => u.overdue > 0);
+    
+    if (overdueUsers.length > 0) {
+        reportHTML += `
+            <div class="recommendation-item urgent">
+                <span class="recommendation-icon">🚨</span>
+                <div>
+                    <h4>Immediate Attention Required</h4>
+                    <p>${overdueUsers.map(u => u.name).join(', ')} ${overdueUsers.length === 1 ? 'has' : 'have'} overdue items that need immediate attention.</p>
+                </div>
             </div>
         `;
     }
-
+    
+    if (highWorkloadUsers.length > 0) {
+        reportHTML += `
+            <div class="recommendation-item warning">
+                <span class="recommendation-icon">⚖️</span>
+                <div>
+                    <h4>High Workload Alert</h4>
+                    <p>${highWorkloadUsers.map(u => u.name).join(', ')} ${highWorkloadUsers.length === 1 ? 'has' : 'have'} a high number of assignments. Consider redistributing workload.</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    if (overdueUsers.length === 0 && totalOnTrack > totalCompleted) {
+        reportHTML += `
+            <div class="recommendation-item success">
+                <span class="recommendation-icon">🎉</span>
+                <div>
+                    <h4>Team On Track</h4>
+                    <p>No overdue items! The team is making good progress. Keep up the great work!</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    reportHTML += `
+            </div>
+        </div>
+    `;
+    
     reportContent.innerHTML = reportHTML;
-
-    reportContent.querySelectorAll('[data-id]').forEach(item => {
-        item.addEventListener('click', () => {
-            closeAllModals();
-            if (item.dataset.type === 'task') {
-                openTaskDetailsModal(item.dataset.id);
-            } else {
-                openDetailsModal(item.dataset.id);
-            }
-        });
-    });
-
     reportModal.style.display = 'flex';
+    console.log('[REPORT] Comprehensive status report generated successfully');
 }
 
 // ==================
