@@ -21,7 +21,13 @@ function setupBulletproofSubscriptions() {
     
     // Projects subscription with robust error handling
     db.collection('projects').onSnapshot(snapshot => {
-        console.log('[BULLETPROOF PROJECTS] Snapshot received:', snapshot.docs.length, 'projects');
+        console.log('[BULLETPROOF PROJECTS] ===== SNAPSHOT RECEIVED =====');
+        console.log('[BULLETPROOF PROJECTS] Document count:', snapshot.docs.length);
+        console.log('[BULLETPROOF PROJECTS] Changes:', snapshot.docChanges().map(c => `${c.type}: ${c.doc.id}`));
+        
+        if (typeof debugLog === 'function') {
+            debugLog(`📦 Projects update: ${snapshot.docs.length} documents`, 'info');
+        }
         
         try {
             allProjects = snapshot.docs.map(doc => {
@@ -34,10 +40,19 @@ function setupBulletproofSubscriptions() {
             });
             
             console.log('[BULLETPROOF] All projects loaded:', allProjects.length);
+            console.log('[BULLETPROOF] Current view:', currentView);
+            
+            if (typeof debugLog === 'function') {
+                debugLog(`✅ ${allProjects.length} projects loaded successfully`, 'success');
+            }
             
             // Force re-render
             if (currentView !== 'tasks') {
+                console.log('[BULLETPROOF] Triggering render for view:', currentView);
                 renderCurrentViewEnhanced();
+                if (typeof debugLog === 'function') {
+                    debugLog('🎨 UI updated with new project data', 'info');
+                }
             }
             updateNavCounts();
             
@@ -45,21 +60,37 @@ function setupBulletproofSubscriptions() {
             if (currentlyViewedProjectId) {
                 const project = allProjects.find(p => p.id === currentlyViewedProjectId);
                 if (project && typeof refreshDetailsModal === 'function') {
+                    console.log('[BULLETPROOF] Refreshing open project modal');
                     refreshDetailsModal(project);
                 } else if (!project) {
+                    console.log('[BULLETPROOF] Project no longer exists, closing modal');
                     closeAllModals();
                 }
             }
+            
+            console.log('[BULLETPROOF PROJECTS] ===== PROCESSING COMPLETE =====');
         } catch (error) {
             console.error('[BULLETPROOF ERROR] Projects processing failed:', error);
+            if (typeof debugLog === 'function') {
+                debugLog(`❌ Error processing projects: ${error.message}`, 'error');
+            }
         }
     }, error => {
         console.error('[BULLETPROOF ERROR] Projects subscription failed:', error);
+        if (typeof debugLog === 'function') {
+            debugLog(`❌ Projects subscription error: ${error.message}`, 'error');
+        }
     });
     
     // Tasks subscription with robust error handling  
     db.collection('tasks').onSnapshot(snapshot => {
-        console.log('[BULLETPROOF TASKS] Snapshot received:', snapshot.docs.length, 'tasks');
+        console.log('[BULLETPROOF TASKS] ===== SNAPSHOT RECEIVED =====');
+        console.log('[BULLETPROOF TASKS] Document count:', snapshot.docs.length);
+        console.log('[BULLETPROOF TASKS] Changes:', snapshot.docChanges().map(c => `${c.type}: ${c.doc.id}`));
+        
+        if (typeof debugLog === 'function') {
+            debugLog(`📝 Tasks update: ${snapshot.docs.length} documents`, 'info');
+        }
         
         try {
             allTasks = snapshot.docs.map(doc => {
@@ -72,10 +103,19 @@ function setupBulletproofSubscriptions() {
             });
             
             console.log('[BULLETPROOF] All tasks loaded:', allTasks.length);
+            console.log('[BULLETPROOF] Current view:', currentView);
+            
+            if (typeof debugLog === 'function') {
+                debugLog(`✅ ${allTasks.length} tasks loaded successfully`, 'success');
+            }
             
             // Force re-render
             if (currentView === 'tasks') {
+                console.log('[BULLETPROOF] Triggering tasks board render');
                 renderTasksBoard(allTasks);
+                if (typeof debugLog === 'function') {
+                    debugLog('🎨 Tasks board updated with new data', 'info');
+                }
             }
             updateNavCounts();
             
@@ -83,16 +123,26 @@ function setupBulletproofSubscriptions() {
             if (currentlyViewedTaskId) {
                 const task = allTasks.find(t => t.id === currentlyViewedTaskId);
                 if (task && typeof refreshTaskDetailsModal === 'function') {
+                    console.log('[BULLETPROOF] Refreshing open task modal');
                     refreshTaskDetailsModal(task);
                 } else if (!task) {
+                    console.log('[BULLETPROOF] Task no longer exists, closing modal');
                     closeAllModals();
                 }
             }
+            
+            console.log('[BULLETPROOF TASKS] ===== PROCESSING COMPLETE =====');
         } catch (error) {
             console.error('[BULLETPROOF ERROR] Tasks processing failed:', error);
+            if (typeof debugLog === 'function') {
+                debugLog(`❌ Error processing tasks: ${error.message}`, 'error');
+            }
         }
     }, error => {
         console.error('[BULLETPROOF ERROR] Tasks subscription failed:', error);
+        if (typeof debugLog === 'function') {
+            debugLog(`❌ Tasks subscription error: ${error.message}`, 'error');
+        }
     });
 }
 
@@ -150,15 +200,29 @@ function bulletproofNormalize(doc) {
     return normalized;
 }
 
-// Auto-initialize when this script loads
-if (typeof db !== 'undefined' && db) {
-    console.log('[BULLETPROOF] Auto-initializing...');
-    // Wait a moment for the main script to set up
-    setTimeout(() => {
-        if (typeof allProjects !== 'undefined' && typeof allTasks !== 'undefined') {
-            setupBulletproofSubscriptions();
-        } else {
-            console.error('[BULLETPROOF] Cannot initialize - main variables not ready');
-        }
-    }, 1000);
-}
+// Flag to ensure we only setup once
+let subscriptionsSetup = false;
+
+/**
+ * Public function to manually trigger subscription setup
+ * Call this from dashboard.js after auth completes
+ */
+window.initializeSubscriptions = function() {
+    if (subscriptionsSetup) {
+        console.log('[BULLETPROOF] Subscriptions already setup, skipping');
+        return;
+    }
+    
+    if (typeof db === 'undefined' || !db) {
+        console.error('[BULLETPROOF] Firebase not ready');
+        return;
+    }
+    
+    if (typeof allProjects === 'undefined' || typeof allTasks === 'undefined') {
+        console.error('[BULLETPROOF] Global variables not ready');
+        return;
+    }
+    
+    subscriptionsSetup = true;
+    setupBulletproofSubscriptions();
+};

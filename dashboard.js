@@ -615,11 +615,14 @@ auth.onAuthStateChanged(async (user) => {
         setupUI();
         setupNavAndListeners();
         
-        // DON'T call subscriptions here - fixedSubscriptions.js will handle it
-        // subscribeToProjects();
-        // subscribeToTasks();
-        
-        console.log('[INIT] Waiting for fixedSubscriptions.js to setup listeners...');
+        // Initialize subscriptions using the bulletproof system
+        console.log('[INIT] Initializing Firestore subscriptions...');
+        if (typeof window.initializeSubscriptions === 'function') {
+            window.initializeSubscriptions();
+            console.log('[INIT] Subscriptions initialized successfully');
+        } else {
+            console.error('[INIT] Subscription initializer not found! Check if fixedSubscriptions.js loaded.');
+        }
 
         document.getElementById('loader').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
@@ -837,66 +840,10 @@ function renderCurrentViewEnhanced() {
 // ==================
 //  Data Handling
 // ==================
-function subscribeToProjects() {
-    console.log("[FIREBASE] Setting up projects subscription...");
-    
-    db.collection('projects').onSnapshot(snapshot => {
-        console.log('[FIREBASE] Projects snapshot received, count:', snapshot.docs.length);
-        console.log('[FIREBASE] Current view:', currentView);
-        
-        // Normalize documents to handle pending server timestamps
-        allProjects = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return { id: doc.id, ...normalizeDocument(data) };
-        });
-        
-        if (currentView !== 'tasks') {
-            renderCurrentViewEnhanced();
-        }
-        updateNavCounts();
-
-        if (currentlyViewedProjectId) {
-            const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-            if (project) {
-                refreshDetailsModal(project);
-            } else {
-                closeAllModals();
-            }
-        }
-    }, error => {
-        console.error("[FIREBASE ERROR] Projects subscription failed:", error);
-    });
-}
-
-function subscribeToTasks() {
-    console.log("[FIREBASE] Setting up tasks subscription...");
-    
-    db.collection('tasks').onSnapshot(snapshot => {
-        console.log("[FIREBASE] Tasks updated, processing...");
-        
-        // Normalize documents to handle pending server timestamps
-        allTasks = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return { id: doc.id, ...normalizeDocument(data) };
-        });
-        
-        if (currentView === 'tasks') {
-            renderTasksBoard(allTasks);
-        }
-        updateNavCounts();
-
-        if (currentlyViewedTaskId) {
-            const task = allTasks.find(t => t.id === currentlyViewedTaskId);
-            if (task) {
-                refreshTaskDetailsModal(task);
-            } else {
-                closeAllModals();
-            }
-        }
-    }, error => {
-        console.error("[FIREBASE ERROR] Tasks subscription failed:", error);
-    });
-}
+// OLD SUBSCRIPTION FUNCTIONS REMOVED - Now handled by fixedSubscriptions.js
+// These functions caused conflicts with the bulletproof subscriptions
+// The issue was that BOTH old and new subscriptions were running simultaneously
+// causing the UI to not update properly after saves
 
 function updateNavCounts() {
     const myAssignmentsProjects = allProjects.filter(p => {
