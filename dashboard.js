@@ -657,7 +657,7 @@ async function handleTaskFormSubmit(e) {
         const assigneeIds = selectedAssignees.map(u => u.id);
         const assigneeNames = selectedAssignees.map(u => u.name);
         
-        const newTask = {
+        const taskData = {
             title: title,
             description: description || null,
             // Multiple assignees (new format)
@@ -671,23 +671,20 @@ async function handleTaskFormSubmit(e) {
             creatorId: currentUser.uid,
             creatorName: currentUserName,
             status: 'pending',
-            createdAt: new Date(), // Use local date for immediate display
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             activity: [{
                 text: assigneeIds.length === 1 ? 
                     `created this task and assigned it to ${assigneeNames[0]}` :
                     `created this task and assigned it to ${assigneeNames.join(', ')}`,
                 authorName: currentUserName,
-                timestamp: new Date()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             }]
         };
         
-        console.log('[TASK CREATE] Creating task:', newTask);
+        console.log('[TASK CREATE] Creating task:', taskData);
         
-        // Add server timestamp when writing to Firestore
-        await db.collection('tasks').add({
-            ...newTask,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        // Write to Firestore - the snapshot listener will handle the UI update
+        await db.collection('tasks').add(taskData);
         
         showNotification(`Task assigned to ${assigneeNames.join(', ')} successfully!`, 'success');
         closeAllModals();
@@ -1038,7 +1035,7 @@ async function updateTaskStatus(newStatus) {
         const activityEntry = {
             text: `marked task as ${newStatus.replace('_', ' ')}`,
             authorName: currentUserName,
-            timestamp: new Date()
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
         
         console.log('[TASK STATUS] Applying updates:', updates);
@@ -1085,7 +1082,7 @@ async function handleAddTaskComment() {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `commented: "${comment}"`,
                 authorName: currentUserName,
-                timestamp: new Date()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             })
         });
         
@@ -1120,12 +1117,12 @@ async function handleRequestExtension() {
                 requestedDate: newDate,
                 reason: reason.trim(),
                 status: 'pending',
-                requestedAt: new Date()
+                requestedAt: firebase.firestore.FieldValue.serverTimestamp()
             },
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `requested deadline extension to ${new Date(newDate).toLocaleDateString()}. Reason: ${reason.trim()}`,
                 authorName: currentUserName,
-                timestamp: new Date()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             })
         });
         
@@ -1505,7 +1502,7 @@ async function handleProjectFormSubmit(e) {
         
         tasks.forEach(task => timeline[task] = false);
 
-        const newProject = {
+        const projectData = {
             title: document.getElementById('project-title').value, 
             type: type,
             proposal: document.getElementById('project-proposal').value,
@@ -1524,21 +1521,18 @@ async function handleProjectFormSubmit(e) {
             editorName: null,
             proposalStatus: 'pending',
             timeline: timeline,
-            createdAt: new Date(), // Use local date for immediate display
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             activity: [{
                 text: 'created the project.',
                 authorName: currentUserName,
-                timestamp: new Date()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             }]
         };
         
-        console.log('[PROJECT CREATE] Creating project:', newProject);
+        console.log('[PROJECT CREATE] Creating project:', projectData);
 
-        // Add server timestamp when writing to Firestore
-        await db.collection('projects').add({
-            ...newProject,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        // Write to Firestore - the snapshot listener will handle the UI update
+        await db.collection('projects').add(projectData);
         
         console.log('[PROJECT CREATE] Project created successfully');
         
@@ -1666,7 +1660,7 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, database, 
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: activityText,
                 authorName: userName,
-                timestamp: new Date()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             })
         });
         
