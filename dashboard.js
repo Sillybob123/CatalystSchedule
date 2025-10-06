@@ -1133,9 +1133,13 @@ function openTaskDetailsModal(taskId) {
         return;
     }
 
+    console.log('[MODAL OPEN] Opening task modal:', taskId);
+    
+    // Force close all modals first and clear any lingering states
     closeAllModals();
 
-    requestAnimationFrame(() => {
+    // Use setTimeout to ensure closing is complete before opening new modal
+    setTimeout(() => {
         currentlyViewedTaskId = taskId;
 
         const modal = document.getElementById('task-details-modal');
@@ -1144,22 +1148,19 @@ function openTaskDetailsModal(taskId) {
             return;
         }
 
-        const content = modal.querySelector('.details-container');
-        if (content) {
-            content.style.opacity = '0';
-        }
-
+        // Clear any previous styles
+        modal.style.opacity = '';
+        modal.style.visibility = '';
         modal.style.display = 'flex';
+        
+        // Force browser reflow
+        void modal.offsetHeight;
 
         refreshTaskDetailsModal(task);
         attachTaskModalListeners();
-
-        requestAnimationFrame(() => {
-            if (content) {
-                content.style.opacity = '1';
-            }
-        });
-    });
+        
+        console.log('[MODAL OPEN] Task modal opened successfully');
+    }, 50);
 }
 
 function attachTaskModalListeners() {
@@ -1537,9 +1538,13 @@ function openDetailsModal(projectId) {
         return;
     }
 
+    console.log('[MODAL OPEN] Opening project modal:', projectId);
+    
+    // Force close all modals first and clear any lingering states
     closeAllModals();
-
-    requestAnimationFrame(() => {
+    
+    // Use setTimeout to ensure closing is complete before opening new modal
+    setTimeout(() => {
         currentlyViewedProjectId = projectId;
 
         const modal = document.getElementById('details-modal');
@@ -1548,22 +1553,19 @@ function openDetailsModal(projectId) {
             return;
         }
 
-        const content = modal.querySelector('.details-container');
-        if (content) {
-            content.style.opacity = '0';
-        }
-
+        // Clear any previous styles
+        modal.style.opacity = '';
+        modal.style.visibility = '';
         modal.style.display = 'flex';
+        
+        // Force browser reflow
+        void modal.offsetHeight;
 
         refreshDetailsModal(project);
         attachProjectModalListeners();
-
-        requestAnimationFrame(() => {
-            if (content) {
-                content.style.opacity = '1';
-            }
-        });
-    });
+        
+        console.log('[MODAL OPEN] Project modal opened successfully');
+    }, 50);
 }
 
 function attachProjectModalListeners() {
@@ -2668,14 +2670,26 @@ function closeAllModals() {
     const modals = document.querySelectorAll('.modal-overlay');
 
     modals.forEach(modal => {
+        // Remove all inline styles to reset state completely
         modal.style.display = 'none';
+        modal.style.opacity = '';
+        modal.style.visibility = '';
+        
+        // Clear any content opacity
+        const content = modal.querySelector('.details-container');
+        if (content) {
+            content.style.opacity = '';
+        }
     });
 
     currentlyViewedProjectId = null;
     currentlyViewedTaskId = null;
     disableProposalEditing();
     
-    console.log('[MODAL CLOSE] All modals closed, ready for next open');
+    // Force browser to apply the display:none before continuing
+    document.body.offsetHeight; // Force reflow
+    
+    console.log('[MODAL CLOSE] All modals closed and reset');
 }
 
 // ==================
