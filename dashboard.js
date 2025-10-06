@@ -31,7 +31,7 @@ const db = firebase.firestore();
 
 async function approveProposal(projectId) {
     if (!projectId) return;
-    
+
     try {
         await db.collection('projects').doc(projectId).update({
             proposalStatus: 'approved',
@@ -42,7 +42,7 @@ async function approveProposal(projectId) {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             })
         });
-        
+
         showNotification('Proposal approved successfully!', 'success');
     } catch (error) {
         console.error('[ERROR] Failed to approve proposal:', error);
@@ -52,7 +52,7 @@ async function approveProposal(projectId) {
 
 async function updateProposalStatus(status) {
     if (!currentlyViewedProjectId) return;
-    
+
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             proposalStatus: status,
@@ -62,7 +62,7 @@ async function updateProposalStatus(status) {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             })
         });
-        
+
         showNotification(`Proposal ${status} successfully!`, 'success');
     } catch (error) {
         console.error(`[ERROR] Failed to ${status} proposal:`, error);
@@ -73,13 +73,13 @@ async function updateProposalStatus(status) {
 async function handleAddComment() {
     const commentInput = document.getElementById('comment-input');
     if (!commentInput || !currentlyViewedProjectId) return;
-    
+
     const comment = commentInput.value.trim();
     if (!comment) {
         showNotification('Please enter a comment.', 'error');
         return;
     }
-    
+
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -88,7 +88,7 @@ async function handleAddComment() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             })
         });
-        
+
         commentInput.value = '';
         showNotification('Comment added successfully!', 'success');
     } catch (error) {
@@ -100,16 +100,16 @@ async function handleAddComment() {
 async function handleAssignEditor() {
     const editorDropdown = document.getElementById('editor-dropdown');
     if (!editorDropdown || !currentlyViewedProjectId) return;
-    
+
     const editorId = editorDropdown.value;
     if (!editorId) {
         showNotification('Please select an editor.', 'error');
         return;
     }
-    
+
     const editor = allEditors.find(e => e.id === editorId);
     if (!editor) return;
-    
+
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             editorId: editorId,
@@ -120,7 +120,7 @@ async function handleAssignEditor() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             })
         });
-        
+
         showNotification(`Editor ${editor.name} assigned successfully!`, 'success');
     } catch (error) {
         console.error('[ERROR] Failed to assign editor:', error);
@@ -130,18 +130,18 @@ async function handleAssignEditor() {
 
 async function handleDeleteProject() {
     if (!currentlyViewedProjectId) return;
-    
+
     const project = allProjects.find(p => p.id === currentlyViewedProjectId);
     if (!project) return;
-    
+
     const isAdmin = currentUserRole === 'admin';
     const isAuthor = currentUser.uid === project.authorId;
-    
+
     if (!isAdmin && !isAuthor) {
         showNotification('You can only delete projects you created.', 'error');
         return;
     }
-    
+
     if (confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
         try {
             await db.collection('projects').doc(currentlyViewedProjectId).delete();
@@ -154,20 +154,21 @@ async function handleDeleteProject() {
     }
 }
 
+
 function enableProposalEditing() {
     const proposalElement = document.getElementById('details-proposal');
     const editBtn = document.getElementById('edit-proposal-button');
     const saveBtn = document.getElementById('save-proposal-button');
     const cancelBtn = document.getElementById('cancel-proposal-button');
-    
+
     if (!proposalElement) return;
-    
+
     proposalElement.contentEditable = 'true';
     proposalElement.style.border = '1px solid #3b82f6';
     proposalElement.style.padding = '8px';
     proposalElement.style.borderRadius = '4px';
     proposalElement.focus();
-    
+
     if (editBtn) editBtn.style.display = 'none';
     if (saveBtn) saveBtn.style.display = 'inline-block';
     if (cancelBtn) cancelBtn.style.display = 'inline-block';
@@ -178,17 +179,17 @@ function disableProposalEditing() {
     const editBtn = document.getElementById('edit-proposal-button');
     const saveBtn = document.getElementById('save-proposal-button');
     const cancelBtn = document.getElementById('cancel-proposal-button');
-    
+
     if (!proposalElement) return;
-    
+
     proposalElement.contentEditable = 'false';
     proposalElement.style.border = 'none';
     proposalElement.style.padding = '0';
-    
+
     if (editBtn) editBtn.style.display = 'inline-block';
     if (saveBtn) saveBtn.style.display = 'none';
     if (cancelBtn) cancelBtn.style.display = 'none';
-    
+
     // Reload original content
     if (currentlyViewedProjectId) {
         const project = allProjects.find(p => p.id === currentlyViewedProjectId);
@@ -236,25 +237,25 @@ function calculateProgress(timeline) {
 
 function isUserAssignedToTask(task, userId) {
     if (!task || !userId) return false;
-    
+
     if (task.assigneeIds && Array.isArray(task.assigneeIds)) {
         return task.assigneeIds.includes(userId);
     }
-    
+
     return task.assigneeId === userId;
 }
 
 function getTaskAssigneeNames(task) {
     if (!task) return ['Not assigned'];
-    
+
     if (task.assigneeNames && Array.isArray(task.assigneeNames) && task.assigneeNames.length > 0) {
         return task.assigneeNames;
     }
-    
+
     if (task.assigneeName) {
         return [task.assigneeName];
     }
-    
+
     return ['Not assigned'];
 }
 
@@ -267,7 +268,7 @@ function isValidDate(dateString) {
 
 function showNotification(message, type = 'info') {
     const container = document.getElementById('notification-container') || createNotificationContainer();
-    
+
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.innerHTML = `
@@ -277,15 +278,15 @@ function showNotification(message, type = 'info') {
         </div>
         <button class="notification-close" aria-label="Close">×</button>
     `;
-    
+
     container.appendChild(notification);
-    
+
     setTimeout(() => notification.classList.add('show'), 10);
-    
+
     notification.querySelector('.notification-close').addEventListener('click', () => {
         removeNotification(notification);
     });
-    
+
     setTimeout(() => removeNotification(notification), 5000);
 }
 
@@ -327,7 +328,7 @@ function initializeMultiSelect() {
     selectedAssignees = [];
     filteredUsers = [...allUsers];
     isDropdownOpen = false;
-    
+
     renderSelectedAssignees();
     renderDropdownOptions();
     setupMultiSelectListeners();
@@ -338,30 +339,30 @@ function setupMultiSelectListeners() {
     const searchInput = document.getElementById('assignee-search');
     const header = document.getElementById('multi-select-header');
     const indicator = document.getElementById('dropdown-indicator');
-    
+
     if (!container || !searchInput || !header || !indicator) {
         console.error('[MULTI-SELECT] Required elements not found');
         return;
     }
-    
+
     const newContainer = container.cloneNode(true);
     container.parentNode.replaceChild(newContainer, container);
-    
+
     const freshContainer = document.getElementById('multi-select-container');
     const freshSearch = document.getElementById('assignee-search');
     const freshHeader = document.getElementById('multi-select-header');
     const freshIndicator = document.getElementById('dropdown-indicator');
-    
+
     freshSearch.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         filterUsers(searchTerm);
         if (!isDropdownOpen) openDropdown();
     });
-    
+
     freshSearch.addEventListener('focus', () => {
         openDropdown();
     });
-    
+
     freshSearch.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeDropdown();
@@ -369,7 +370,7 @@ function setupMultiSelectListeners() {
         } else if (e.key === 'Enter') {
             e.preventDefault();
             if (filteredUsers.length > 0) {
-                const firstUnselected = filteredUsers.find(user => 
+                const firstUnselected = filteredUsers.find(user =>
                     !selectedAssignees.some(selected => selected.id === user.id)
                 );
                 if (firstUnselected) {
@@ -383,26 +384,26 @@ function setupMultiSelectListeners() {
             removeAssignee(lastAssignee.id);
         }
     });
-    
+
     freshHeader.addEventListener('click', (e) => {
         if (!e.target.closest('.remove-assignee') && !e.target.closest('.dropdown-indicator')) {
             freshSearch.focus();
             if (!isDropdownOpen) openDropdown();
         }
     });
-    
+
     freshIndicator.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleDropdown();
         if (isDropdownOpen) freshSearch.focus();
     });
-    
+
     const handleOutsideClick = (e) => {
         if (freshContainer && !freshContainer.contains(e.target)) {
             closeDropdown();
         }
     };
-    
+
     document.removeEventListener('click', handleOutsideClick);
     document.addEventListener('click', handleOutsideClick);
 }
@@ -411,7 +412,7 @@ function openDropdown() {
     isDropdownOpen = true;
     const container = document.getElementById('multi-select-container');
     const dropdown = document.getElementById('assignee-dropdown');
-    
+
     if (container && dropdown) {
         container.classList.add('open');
         dropdown.classList.add('show');
@@ -422,7 +423,7 @@ function closeDropdown() {
     isDropdownOpen = false;
     const container = document.getElementById('multi-select-container');
     const dropdown = document.getElementById('assignee-dropdown');
-    
+
     if (container && dropdown) {
         container.classList.remove('open');
         dropdown.classList.remove('show');
@@ -455,7 +456,7 @@ function toggleAssignee(userId) {
     if (!user) return;
 
     const existingIndex = selectedAssignees.findIndex(selected => selected.id === userId);
-    
+
     if (existingIndex > -1) {
         selectedAssignees.splice(existingIndex, 1);
     } else {
@@ -477,12 +478,12 @@ function removeAssignee(userId) {
 function renderSelectedAssignees() {
     const container = document.getElementById('selected-assignees');
     if (!container) return;
-    
+
     if (selectedAssignees.length === 0) {
         container.innerHTML = '';
         return;
     }
-    
+
     container.innerHTML = selectedAssignees.map(user => `
         <div class="assignee-tag" data-user-id="${user.id}">
             <div class="assignee-avatar" style="background-color: ${stringToColor(user.name)}">
@@ -499,7 +500,7 @@ function renderSelectedAssignees() {
 function renderDropdownOptions() {
     const dropdown = document.getElementById('assignee-dropdown');
     if (!dropdown) return;
-    
+
     if (filteredUsers.length === 0) {
         dropdown.innerHTML = '<div class="no-results">No team members found</div>';
         return;
@@ -508,7 +509,7 @@ function renderDropdownOptions() {
     dropdown.innerHTML = filteredUsers.map(user => {
         const isSelected = selectedAssignees.some(selected => selected.id === user.id);
         return `
-            <div class="assignee-item ${isSelected ? 'selected' : ''}" 
+            <div class="assignee-item ${isSelected ? 'selected' : ''}"
                  onclick="toggleAssignee('${user.id}')"
                  data-user-id="${user.id}"
                  tabindex="0">
@@ -528,7 +529,7 @@ function renderDropdownOptions() {
 function updateSelectionCounter() {
     const counter = document.getElementById('selection-counter');
     if (!counter) return;
-    
+
     if (selectedAssignees.length > 0) {
         counter.textContent = selectedAssignees.length;
         counter.classList.add('show');
@@ -549,7 +550,7 @@ auth.onAuthStateChanged(async (user) => {
 
     try {
         const userDoc = await db.collection('users').doc(user.uid).get();
-        
+
         if (!userDoc.exists) {
             const defaultUserData = {
                 name: user.displayName || user.email.split('@')[0],
@@ -557,7 +558,7 @@ auth.onAuthStateChanged(async (user) => {
                 role: 'writer',
                 createdAt: new Date()
             };
-            
+
             await db.collection('users').doc(user.uid).set(defaultUserData);
             currentUserName = defaultUserData.name;
             currentUserRole = defaultUserData.role;
@@ -571,7 +572,7 @@ auth.onAuthStateChanged(async (user) => {
         await fetchAllUsers();
         setupUI();
         setupNavAndListeners();
-        
+
         if (typeof window.initializeSubscriptions === 'function') {
             window.initializeSubscriptions();
         } else {
@@ -580,7 +581,7 @@ auth.onAuthStateChanged(async (user) => {
 
         document.getElementById('loader').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
-        
+
     } catch (error) {
         console.error("Initialization Error:", error);
         alert("Could not load your profile. Please refresh the page and try again.");
@@ -623,14 +624,14 @@ function setupUI() {
 // ==================
 function setupNavAndListeners() {
     document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-    
+
     document.querySelectorAll('.nav-item').forEach(link => {
         link.addEventListener('click', e => {
             const href = link.getAttribute('href');
             if (href && href !== '#') {
                 return;
             }
-            
+
             e.preventDefault();
             const view = link.id.replace('nav-', '');
             handleNavClick(view);
@@ -639,12 +640,12 @@ function setupNavAndListeners() {
 
     document.getElementById('add-project-button').addEventListener('click', openProjectModal);
     document.getElementById('add-task-button').addEventListener('click', openTaskModal);
-    
+
     const statusReportBtn = document.getElementById('status-report-button');
     if (statusReportBtn) {
         statusReportBtn.addEventListener('click', generateStatusReport);
     }
-    
+
     document.getElementById('add-comment-button').addEventListener('click', handleAddComment);
     document.getElementById('assign-editor-button').addEventListener('click', handleAssignEditor);
     document.getElementById('delete-project-button').addEventListener('click', handleDeleteProject);
@@ -679,7 +680,7 @@ function setupNavAndListeners() {
         const newModal = modal.cloneNode(true);
         modal.parentNode.replaceChild(newModal, modal);
     });
-    
+
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', e => {
             if (e.target === modal || e.target.classList.contains('close-button')) {
@@ -688,7 +689,7 @@ function setupNavAndListeners() {
                 closeAllModals();
             }
         });
-        
+
         const closeButtons = modal.querySelectorAll('.close-button');
         closeButtons.forEach(btn => {
             btn.addEventListener('click', e => {
@@ -698,22 +699,22 @@ function setupNavAndListeners() {
             });
         });
     });
-    
+
     const projectForm = document.getElementById('project-form');
     const taskForm = document.getElementById('task-form');
-    
+
     if (projectForm) {
         projectForm.addEventListener('submit', handleProjectFormSubmit);
     } else {
         console.error('[SETUP] Project form not found!');
     }
-    
+
     if (taskForm) {
         taskForm.addEventListener('submit', handleTaskFormSubmit);
     } else {
         console.error('[SETUP] Task form not found!');
     }
-    
+
     setupCalendarListeners();
     setupCalendarKeyboardNavigation();
 }
@@ -735,7 +736,7 @@ function handleNavClick(view) {
         activeLink.classList.add('active');
         activeLink.setAttribute('aria-current', 'page');
     }
-    
+
     const viewTitles = {
         'dashboard': 'Catalyst in the Capital',
         'my-assignments': 'My Assignments',
@@ -745,10 +746,10 @@ function handleNavClick(view) {
         'tasks': 'Task Management'
     };
     document.getElementById('board-title').textContent = viewTitles[view] || view;
-    
+
     const addProjectBtn = document.getElementById('add-project-button');
     const addTaskBtn = document.getElementById('add-task-button');
-    
+
     if (view === 'tasks') {
         addProjectBtn.style.display = 'none';
         addTaskBtn.style.display = 'inline-flex';
@@ -756,7 +757,7 @@ function handleNavClick(view) {
         addProjectBtn.style.display = 'inline-flex';
         addTaskBtn.style.display = 'none';
     }
-    
+
     renderCurrentViewEnhanced();
 }
 
@@ -789,13 +790,13 @@ function updateNavCounts() {
     const myAssignmentsProjects = allProjects.filter(p => {
         return p.authorId === currentUser.uid || p.editorId === currentUser.uid;
     }).length;
-    
+
     const myAssignmentsTasks = allTasks.filter(t => {
         return t.creatorId === currentUser.uid || isUserAssignedToTask(t, currentUser.uid);
     }).length;
-    
+
     const totalAssignments = myAssignmentsProjects + myAssignmentsTasks;
-    
+
     const navLink = document.querySelector('#nav-my-assignments span');
     if (navLink) {
         navLink.textContent = `My Assignments (${totalAssignments})`;
@@ -808,15 +809,15 @@ function updateNavCounts() {
 function openTaskModal() {
     document.getElementById('task-form').reset();
     selectedAssignees = [];
-    
+
     initializeMultiSelect();
-    
+
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     document.getElementById('task-deadline').value = tomorrow.toISOString().split('T')[0];
-    
+
     document.getElementById('task-modal').style.display = 'flex';
-    
+
     setTimeout(() => {
         document.getElementById('task-title').focus();
     }, 100);
@@ -824,43 +825,43 @@ function openTaskModal() {
 
 async function handleTaskFormSubmit(e) {
     e.preventDefault();
-    
+
     const submitButton = document.getElementById('save-task-button');
     const originalText = submitButton.textContent;
-    
+
     try {
         const title = document.getElementById('task-title').value.trim();
         const deadline = document.getElementById('task-deadline').value;
-        
+
         const errors = [];
-        
+
         if (!title || title.length < 3) {
             errors.push('Task title must be at least 3 characters long');
         }
-        
+
         if (selectedAssignees.length === 0) {
             errors.push('Please select at least one person to assign this task to');
         }
-        
+
         if (!deadline) {
             errors.push('Please set a deadline for this task');
         }
-        
+
         if (errors.length > 0) {
             showNotification(errors.join('. '), 'error');
             return;
         }
-        
+
         submitButton.disabled = true;
         submitButton.classList.add('loading');
         submitButton.textContent = 'Creating Task...';
-        
+
         const description = document.getElementById('task-description').value.trim();
         const priority = document.getElementById('task-priority').value || 'medium';
-        
+
         const assigneeIds = selectedAssignees.map(u => u.id);
         const assigneeNames = selectedAssignees.map(u => u.name);
-        
+
         const taskData = {
             title: title,
             description: description || null,
@@ -875,25 +876,25 @@ async function handleTaskFormSubmit(e) {
             status: 'pending',
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             activity: [{
-                text: assigneeIds.length === 1 ? 
+                text: assigneeIds.length === 1 ?
                     `created this task and assigned it to ${assigneeNames[0]}` :
                     `created this task and assigned it to ${assigneeNames.join(', ')}`,
                 authorName: currentUserName,
                 timestamp: new Date()
             }]
         };
-        
+
         const docRef = await db.collection('tasks').add(taskData);
-        
+
         showNotification(`Task assigned to ${assigneeNames.join(', ')} successfully!`, 'success');
-        
+
         setTimeout(() => {
             closeAllModals();
         }, 1000);
-        
+
         document.getElementById('task-form').reset();
         selectedAssignees = [];
-        
+
     } catch (error) {
         console.error("[ERROR] Failed to create task:", error);
         showNotification(error.message || 'Failed to create task. Please try again.', 'error');
@@ -907,21 +908,21 @@ async function handleTaskFormSubmit(e) {
 function renderTasksBoard(tasks) {
     const board = document.getElementById('tasks-board');
     board.innerHTML = '';
-    
+
     const columns = [
         { id: 'pending', title: 'Pending Approval', icon: '⏳', color: '#f59e0b' },
         { id: 'approved', title: 'Approved', icon: '✅', color: '#10b981' },
         { id: 'in_progress', title: 'In Progress', icon: '🔄', color: '#3b82f6' },
         { id: 'completed', title: 'Completed', icon: '🎉', color: '#8b5cf6' }
     ];
-    
+
     columns.forEach((column) => {
         const columnTasks = tasks.filter(task => getTaskColumn(task) === column.id);
 
         const columnEl = document.createElement('div');
         columnEl.className = 'kanban-column';
         columnEl.style.setProperty('--column-accent', column.color);
-        
+
         columnEl.innerHTML = `
             <div class="column-header">
                 <div class="column-title">
@@ -936,9 +937,9 @@ function renderTasksBoard(tasks) {
                 <div class="kanban-cards"></div>
             </div>
         `;
-        
+
         const cardsContainer = columnEl.querySelector('.kanban-cards');
-        
+
         if (columnTasks.length === 0) {
             const emptyState = document.createElement('div');
             emptyState.className = 'empty-column';
@@ -953,7 +954,7 @@ function renderTasksBoard(tasks) {
                 cardsContainer.appendChild(createTaskCard(task));
             });
         }
-        
+
         board.appendChild(columnEl);
     });
 }
@@ -962,8 +963,8 @@ function getTaskColumn(task) {
     if (task.status === 'completed') return 'completed';
     if (task.status === 'rejected') return 'pending';
     if (task.status === 'approved') {
-        if (task.activity && task.activity.some(a => 
-            a.text.includes('started working') || 
+        if (task.activity && task.activity.some(a =>
+            a.text.includes('started working') ||
             a.text.includes('in progress') ||
             a.text.includes('commented:')
         )) {
@@ -980,36 +981,36 @@ function createTaskCard(task) {
     card.classList.add(`priority-${task.priority || 'medium'}`);
     card.dataset.id = task.id;
     card.dataset.type = 'task';
-    
+
     const isOverdue = new Date(task.deadline) < new Date() && task.status !== 'completed';
     const isDueSoon = !isOverdue && new Date(task.deadline) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-    
+
     if (isOverdue) card.classList.add('overdue');
     if (isDueSoon) card.classList.add('due-soon');
-    
+
     const deadline = new Date(task.deadline);
     const deadlineText = deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    
+
     const priorityColors = {
         urgent: '#dc2626',
         high: '#ea580c',
         medium: '#f59e0b',
         low: '#059669'
     };
-    
+
     const priorityColor = priorityColors[task.priority] || priorityColors.medium;
-    
+
     const assigneeNames = getTaskAssigneeNames(task);
     let displayNames = assigneeNames.join(', ');
     let multipleIndicator = '';
-    
+
     if (assigneeNames.length > 2) {
         displayNames = `${assigneeNames.slice(0, 2).join(', ')} +${assigneeNames.length - 2} more`;
         multipleIndicator = `<span class="multiple-assignees-indicator">+${assigneeNames.length}</span>`;
     } else if (assigneeNames.length > 1) {
         multipleIndicator = `<span class="multiple-assignees-indicator">+${assigneeNames.length}</span>`;
     }
-    
+
     card.innerHTML = `
         <h4 class="card-title">${escapeHtml(task.title)}</h4>
         <div class="card-meta">
@@ -1037,13 +1038,13 @@ function createTaskCard(task) {
             ${(task.priority || 'medium').toUpperCase()} PRIORITY
         </div>
     `;
-    
+
     card.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         openTaskDetailsModal(task.id);
     });
-    
+
     return card;
 }
 
@@ -1054,27 +1055,27 @@ function openTaskDetailsModal(taskId) {
         showNotification('Task not found. Please refresh the page.', 'error');
         return;
     }
-    
+
     closeAllModals();
-    
+
     requestAnimationFrame(() => {
         currentlyViewedTaskId = taskId;
-        
+
         const modal = document.getElementById('task-details-modal');
         if (!modal) {
             console.error('[MODAL] Task modal element not found');
             return;
         }
-        
+
         const content = modal.querySelector('.details-container');
         if (content) {
             content.style.opacity = '0';
         }
-        
+
         modal.style.display = 'flex';
-        
+
         refreshTaskDetailsModal(task);
-        
+
         requestAnimationFrame(() => {
             if (content) {
                 content.style.opacity = '1';
@@ -1092,65 +1093,65 @@ function refreshTaskDetailsModal(task) {
     const createdEl = document.getElementById('task-details-created');
     const deadlineEl = document.getElementById('task-details-deadline');
     const priorityEl = document.getElementById('task-details-priority');
-    
+
     if (!titleEl || !descEl || !statusEl || !creatorEl || !assigneeEl || !createdEl || !deadlineEl || !priorityEl) {
         console.error('[MODAL REFRESH] Required task elements not found in DOM');
         return;
     }
-    
+
     titleEl.textContent = task.title;
     descEl.textContent = task.description || 'No description provided.';
     statusEl.textContent = (task.status || 'pending').replace('_', ' ').toUpperCase();
     creatorEl.textContent = task.creatorName;
-    
+
     const assigneeElement = document.getElementById('task-details-assignee');
     const assigneeNames = getTaskAssigneeNames(task);
-    
+
     if (assigneeNames.length > 1) {
-        assigneeElement.innerHTML = assigneeNames.map(name => 
+        assigneeElement.innerHTML = assigneeNames.map(name =>
             `<span class="task-assignee-badge">${escapeHtml(name)}</span>`
         ).join(' ');
     } else {
         assigneeElement.textContent = assigneeNames[0] || 'Not assigned';
     }
-    
+
     const createdDate = getTimestampValue(task.createdAt);
     const deadlineDate = new Date(task.deadline);
-    
-    document.getElementById('task-details-created').textContent = createdDate.toLocaleDateString('en-US', { 
-        year: 'numeric', month: 'long', day: 'numeric' 
+
+    document.getElementById('task-details-created').textContent = createdDate.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
     });
-    document.getElementById('task-details-deadline').textContent = deadlineDate.toLocaleDateString('en-US', { 
-        year: 'numeric', month: 'long', day: 'numeric' 
+    document.getElementById('task-details-deadline').textContent = deadlineDate.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
     });
     document.getElementById('task-details-priority').textContent = (task.priority || 'medium').toUpperCase();
-    
+
     const isAdmin = currentUserRole === 'admin';
     const isCreator = currentUser.uid === task.creatorId;
     const isAssignee = isUserAssignedToTask(task, currentUser.uid);
-    
+
     const adminSection = document.getElementById('task-admin-approval-section');
     if (adminSection) {
         adminSection.style.display = isAdmin && task.status === 'pending' ? 'block' : 'none';
     }
-    
+
     const assigneeActions = document.getElementById('task-assignee-actions');
     if (assigneeActions) {
         assigneeActions.style.display = isAssignee && task.status === 'approved' ? 'block' : 'none';
     }
-    
+
     const deleteButton = document.getElementById('delete-task-button');
     if (deleteButton) {
         deleteButton.style.display = (isAdmin || isCreator) ? 'block' : 'none';
     }
-    
+
     renderTaskActivityFeed(task.activity || []);
 }
 
 function renderTaskActivityFeed(activity) {
     const feed = document.getElementById('task-details-activity-feed');
     if (!feed) return;
-    
+
     feed.innerHTML = renderActivityWithTimestamps(activity);
 }
 
@@ -1159,30 +1160,30 @@ async function updateTaskStatus(newStatus) {
         showNotification('No task selected. Please try again.', 'error');
         return;
     }
-    
+
     try {
         const updates = {
             status: newStatus,
             updatedAt: new Date()
         };
-        
+
         if (newStatus === 'completed') {
             updates.completedAt = new Date();
         }
-        
+
         const activityEntry = {
             text: `marked task as ${newStatus.replace('_', ' ')}`,
             authorName: currentUserName,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
-        
+
         await db.collection('tasks').doc(currentlyViewedTaskId).update({
             ...updates,
             activity: window.firebase.firestore.FieldValue.arrayUnion(activityEntry)
         });
-        
+
         showNotification(`Task ${newStatus.replace('_', ' ')} successfully!`, 'success');
-        
+
     } catch (error) {
         console.error(`[TASK STATUS ERROR] Failed to update task status:`, error);
         let errorMessage = 'Failed to update task. ';
@@ -1195,7 +1196,7 @@ async function updateTaskStatus(newStatus) {
         } else {
             errorMessage += 'Please try again or contact support if the problem persists.';
         }
-        
+
         showNotification(errorMessage, 'error');
     }
 }
@@ -1203,13 +1204,13 @@ async function updateTaskStatus(newStatus) {
 async function handleAddTaskComment() {
     const commentInput = document.getElementById('task-comment-input');
     if (!commentInput || !currentlyViewedTaskId) return;
-    
+
     const comment = commentInput.value.trim();
     if (!comment) {
         showNotification('Please enter a comment.', 'error');
         return;
     }
-    
+
     try {
         await db.collection('tasks').doc(currentlyViewedTaskId).update({
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -1218,10 +1219,10 @@ async function handleAddTaskComment() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             })
         });
-        
+
         commentInput.value = '';
         showNotification('Comment added successfully!', 'success');
-        
+
     } catch (error) {
         console.error("[ERROR] Failed to add comment:", error);
         showNotification('Failed to add comment. Please try again.', 'error');
@@ -1230,19 +1231,19 @@ async function handleAddTaskComment() {
 
 async function handleRequestExtension() {
     if (!currentlyViewedTaskId) return;
-    
+
     const newDate = prompt('Enter new deadline (YYYY-MM-DD format):');
     if (!newDate || !isValidDate(newDate)) {
         showNotification('Please enter a valid date in YYYY-MM-DD format.', 'error');
         return;
     }
-    
+
     const reason = prompt('Please provide a reason for the extension:');
     if (!reason || !reason.trim()) {
         showNotification('Please provide a reason for the extension.', 'error');
         return;
     }
-    
+
     try {
         await db.collection('tasks').doc(currentlyViewedTaskId).update({
             extensionRequest: {
@@ -1258,9 +1259,9 @@ async function handleRequestExtension() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             })
         });
-        
+
         showNotification('Extension request submitted successfully!', 'success');
-        
+
     } catch (error) {
         console.error("[ERROR] Failed to request extension:", error);
         showNotification('Failed to submit extension request. Please try again.', 'error');
@@ -1269,18 +1270,18 @@ async function handleRequestExtension() {
 
 async function handleDeleteTask() {
     if (!currentlyViewedTaskId) return;
-    
+
     const task = allTasks.find(t => t.id === currentlyViewedTaskId);
     if (!task) return;
-    
+
     const isAdmin = currentUserRole === 'admin';
     const isCreator = currentUser.uid === task.creatorId;
-    
+
     if (!isAdmin && !isCreator) {
         showNotification('You can only delete tasks you created.', 'error');
         return;
     }
-    
+
     if (confirm(`Are you sure you want to delete "${task.title}"? This action cannot be undone.`)) {
         try {
             await db.collection('tasks').doc(currentlyViewedTaskId).delete();
@@ -1315,27 +1316,27 @@ function openDetailsModal(projectId) {
         showNotification('Project not found. Please refresh the page.', 'error');
         return;
     }
-    
+
     closeAllModals();
-    
+
     requestAnimationFrame(() => {
         currentlyViewedProjectId = projectId;
-        
+
         const modal = document.getElementById('details-modal');
         if (!modal) {
             console.error('[MODAL] Modal element not found');
             return;
         }
-        
+
         const content = modal.querySelector('.details-container');
         if (content) {
             content.style.opacity = '0';
         }
-        
+
         modal.style.display = 'flex';
-        
+
         refreshDetailsModal(project);
-        
+
         requestAnimationFrame(() => {
             if (content) {
                 content.style.opacity = '1';
@@ -1351,34 +1352,34 @@ function refreshDetailsModal(project) {
     const statusEl = document.getElementById('details-status');
     const deadlineEl = document.getElementById('details-publication-deadline');
     const proposalEl = document.getElementById('details-proposal');
-    
+
     if (!titleEl || !authorEl || !editorEl || !statusEl || !deadlineEl || !proposalEl) {
         console.error('[MODAL REFRESH] Required elements not found in DOM');
         return;
     }
-    
+
     const isAuthor = currentUser.uid === project.authorId;
     const isEditor = currentUser.uid === project.editorId;
     const isAdmin = currentUserRole === 'admin';
-    
+
     titleEl.textContent = project.title;
     authorEl.textContent = project.authorName;
     editorEl.textContent = project.editorName || 'Not Assigned';
-    
+
     const state = getProjectState(project, currentView, currentUser);
     statusEl.textContent = state.statusText;
 
     const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
     if (finalDeadline) {
-        document.getElementById('details-publication-deadline').textContent = 
+        document.getElementById('details-publication-deadline').textContent =
             new Date(finalDeadline + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     } else {
         document.getElementById('details-publication-deadline').textContent = 'Not set';
     }
-    
+
     const proposalElement = document.getElementById('details-proposal');
     proposalElement.textContent = project.proposal || 'No proposal provided.';
-    
+
     const canEditProposal = isAuthor || isAdmin;
     const editBtn = document.getElementById('edit-proposal-button');
     if (editBtn) editBtn.style.display = canEditProposal ? 'inline-block' : 'none';
@@ -1387,19 +1388,19 @@ function refreshDetailsModal(project) {
     if (approvalSection) {
         approvalSection.style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
     }
-    
+
     const needsEditor = project.timeline && project.timeline["Article Writing Complete"] && !project.editorId;
     const assignSection = document.getElementById('assign-editor-section');
     if (assignSection) {
         assignSection.style.display = isAdmin && needsEditor ? 'flex' : 'none';
     }
-    
+
     populateEditorDropdown(project.editorId);
     renderTimeline(project, isAuthor, isEditor, isAdmin);
     renderDeadlines(project, isAuthor, isEditor, isAdmin);
     renderDeadlineRequestSection(project, isAuthor, isAdmin);
     renderActivityFeed(project.activity || []);
-    
+
     const deleteButton = document.getElementById('delete-project-button');
     if (deleteButton) {
         deleteButton.style.display = (isAuthor || isAdmin) ? 'block' : 'none';
@@ -1410,7 +1411,7 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
     const timelineContainer = document.getElementById('details-timeline');
     timelineContainer.innerHTML = '';
     const timeline = project.timeline || {};
-    
+
     const orderedTasks = [
         "Topic Proposal Complete",
         "Interview Scheduled",
@@ -1437,7 +1438,7 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
         } else if (isEditor && editorTasks.includes(task)) {
             canEditTask = true;
         }
-        
+
         if (task === "Topic Proposal Complete") canEditTask = false;
 
         const completed = timeline[task] || false;
@@ -1448,13 +1449,13 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
             <input type="checkbox" id="${taskId}" ${completed ? 'checked' : ''} ${!canEditTask ? 'disabled' : ''}>
             <label for="${taskId}">${task}</label>
         `;
-        
+
         if (canEditTask) {
             taskEl.querySelector('input').addEventListener('change', async (e) => {
                 await handleTaskCompletion(project.id, task, e.target.checked, db, currentUserName);
             });
         }
-        
+
         timelineContainer.appendChild(taskEl);
     });
 }
@@ -1486,12 +1487,12 @@ function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
         `;
         deadlinesList.appendChild(deadlineItem);
     });
-    
+
     const setButton = document.getElementById('set-deadlines-button');
     if (setButton) {
         setButton.style.display = isAdmin ? 'block' : 'none';
     }
-    
+
     const requestButton = document.getElementById('request-deadline-change-button');
     if (requestButton) {
         const hasRequest = project.deadlineRequest || project.deadlineChangeRequest;
@@ -1503,26 +1504,26 @@ function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
 function renderDeadlineRequestSection(project, isAuthor, isAdmin) {
     const deadlineSection = document.getElementById('deadline-request-section');
     if (!deadlineSection) return;
-    
+
     const hasRequest = project.deadlineRequest || project.deadlineChangeRequest;
-    
+
     if (hasRequest) {
         const request = project.deadlineRequest || project.deadlineChangeRequest;
-        
+
         if (request.status === 'pending') {
             let requestHTML = `
                 <h4>Pending Deadline Request</h4>
                 <p><strong>Requested by:</strong> ${request.requestedBy}</p>
                 <p><strong>Reason:</strong> ${request.reason}</p>
             `;
-            
+
             if (project.deadlineRequest) {
                 const requestDate = new Date(request.requestedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
                 requestHTML += `<p><strong>New deadline:</strong> ${requestDate}</p>`;
             } else if (project.deadlineChangeRequest) {
                 requestHTML += `<p><strong>Requested changes:</strong> ${Object.keys(request.requestedDeadlines || {}).join(', ')}</p>`;
             }
-            
+
             if (isAdmin) {
                 requestHTML += `
                     <div class="button-group" style="margin-top: 12px;">
@@ -1533,7 +1534,7 @@ function renderDeadlineRequestSection(project, isAuthor, isAdmin) {
             } else {
                 requestHTML += '<p style="font-style: italic; color: var(--warning-color);">Awaiting admin approval...</p>';
             }
-            
+
             deadlineSection.innerHTML = requestHTML;
             deadlineSection.style.display = 'block';
         } else {
@@ -1547,7 +1548,7 @@ function renderDeadlineRequestSection(project, isAuthor, isAdmin) {
 function populateEditorDropdown(currentEditorId) {
     const dropdown = document.getElementById('editor-dropdown');
     if (!dropdown) return;
-    
+
     dropdown.innerHTML = '<option value="">Assign an Editor</option>';
     allEditors.forEach(editor => {
         const option = document.createElement('option');
@@ -1561,38 +1562,38 @@ function populateEditorDropdown(currentEditorId) {
 function renderActivityFeed(activity) {
     const activityFeed = document.getElementById('details-activity-feed');
     if (!activityFeed) return;
-    
+
     if (!activity || !Array.isArray(activity)) {
         activityFeed.innerHTML = '<p>No activity yet.</p>';
         return;
     }
-    
+
     activityFeed.innerHTML = renderActivityWithTimestamps(activity);
 }
 
 async function handleProjectFormSubmit(e) {
     e.preventDefault();
-    
+
     const submitButton = document.getElementById('save-project-button');
     const originalText = submitButton.textContent;
-    
+
     try {
         submitButton.disabled = true;
         submitButton.classList.add('loading');
         submitButton.textContent = 'Submitting...';
-        
+
         const type = document.getElementById('project-type').value;
         const timeline = {};
-        const tasks = type === "Interview" 
-            ? ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete", 
-               "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"] 
-            : ["Topic Proposal Complete", "Article Writing Complete", 
+        const tasks = type === "Interview"
+            ? ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete",
+               "Article Writing Complete", "Review In Progress", "Review Complete", "Suggestions Reviewed"]
+            : ["Topic Proposal Complete", "Article Writing Complete",
                "Review In Progress", "Review Complete", "Suggestions Reviewed"];
-        
+
         tasks.forEach(task => timeline[task] = false);
 
         const projectData = {
-            title: document.getElementById('project-title').value, 
+            title: document.getElementById('project-title').value,
             type: type,
             proposal: document.getElementById('project-proposal').value,
             deadline: document.getElementById('project-deadline').value,
@@ -1604,9 +1605,9 @@ async function handleProjectFormSubmit(e) {
                 review: '',
                 edits: ''
             },
-            authorId: currentUser.uid, 
+            authorId: currentUser.uid,
             authorName: currentUserName,
-            editorId: null, 
+            editorId: null,
             editorName: null,
             proposalStatus: 'pending',
             timeline: timeline,
@@ -1617,19 +1618,19 @@ async function handleProjectFormSubmit(e) {
                 timestamp: new Date()
             }]
         };
-        
+
         const docRef = await db.collection('projects').add(projectData);
-        
+
         showNotification('Project proposal submitted successfully!', 'success');
-        
+
         setTimeout(() => {
             closeAllModals();
         }, 1000);
-        
+
     } catch (error) {
         console.error("[PROJECT ERROR] Failed to create project:", error);
         showNotification(`Failed to create project: ${error.message}`, 'error');
-        
+
     } finally {
         submitButton.disabled = false;
         submitButton.classList.remove('loading');
@@ -1655,38 +1656,38 @@ function getProjectState(project, view, user) {
     const timeline = project.timeline || {};
     const isAuthor = user && user.uid === project.authorId;
     const isEditor = user && user.uid === project.editorId;
-    
+
     const allTasksComplete = Object.values(timeline).every(task => task === true);
     if (allTasksComplete && timeline["Suggestions Reviewed"]) {
         return { column: 'Completed', statusText: 'Completed', color: 'success' };
     }
-    
+
     if (project.proposalStatus === 'rejected') {
         return { column: 'Pending Approval', statusText: 'Proposal Rejected', color: 'danger' };
     }
-    
+
     if (project.proposalStatus === 'pending') {
         return { column: 'Pending Approval', statusText: 'Awaiting Approval', color: 'warning' };
     }
-    
+
     if (timeline["Suggestions Reviewed"]) {
         return { column: 'Completed', statusText: 'Review Complete', color: 'success' };
     }
-    
+
     if (timeline["Review Complete"]) {
         if (isAuthor) {
             return { column: 'In Progress', statusText: 'Awaiting Your Review', color: 'info' };
         }
         return { column: 'In Progress', statusText: 'Author Reviewing Edits', color: 'info' };
     }
-    
+
     if (timeline["Review In Progress"]) {
         if (isEditor) {
             return { column: 'In Progress', statusText: 'You Are Reviewing', color: 'info' };
         }
         return { column: 'In Progress', statusText: 'Editor Reviewing', color: 'info' };
     }
-    
+
     if (timeline["Article Writing Complete"]) {
         if (!project.editorId) {
             return { column: 'Approved', statusText: 'Awaiting Editor Assignment', color: 'warning' };
@@ -1696,21 +1697,21 @@ function getProjectState(project, view, user) {
         }
         return { column: 'Approved', statusText: 'Ready for Review', color: 'primary' };
     }
-    
+
     if (timeline["Interview Complete"] || (project.type === 'Op-Ed' && timeline["Topic Proposal Complete"])) {
         if (isAuthor) {
             return { column: 'In Progress', statusText: 'Writing Article', color: 'info' };
         }
         return { column: 'In Progress', statusText: 'Author Writing', color: 'info' };
     }
-    
+
     if (timeline["Interview Scheduled"]) {
         if (isAuthor) {
             return { column: 'In Progress', statusText: 'Interview Scheduled', color: 'info' };
         }
         return { column: 'In Progress', statusText: 'Interview Pending', color: 'info' };
     }
-    
+
     if (timeline["Topic Proposal Complete"] || project.proposalStatus === 'approved') {
         if (project.type === 'Op-Ed') {
             if (isAuthor) {
@@ -1724,7 +1725,7 @@ function getProjectState(project, view, user) {
             return { column: 'Approved', statusText: 'Approved - Interview Pending', color: 'primary' };
         }
     }
-    
+
     return { column: 'Pending Approval', statusText: 'Awaiting Approval', color: 'warning' };
 }
 
@@ -1733,13 +1734,13 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, database, 
         console.error('[TASK COMPLETION] Missing required parameters');
         return;
     }
-    
+
     try {
         const updatePath = `timeline.${taskName}`;
-        const activityText = isCompleted ? 
-            `marked "${taskName}" as complete` : 
+        const activityText = isCompleted ?
+            `marked "${taskName}" as complete` :
             `marked "${taskName}" as incomplete`;
-        
+
         await database.collection('projects').doc(projectId).update({
             [updatePath]: isCompleted,
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -1748,7 +1749,7 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, database, 
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             })
         });
-        
+
     } catch (error) {
         console.error('[TASK COMPLETION ERROR]', error);
         showNotification('Failed to update task. Please try again.', 'error');
@@ -1761,9 +1762,9 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, database, 
 function renderKanbanBoard(projects) {
     const board = document.getElementById('kanban-board');
     board.innerHTML = '';
-    
+
     const columns = getColumnsForView(currentView);
-    
+
     columns.forEach(columnTitle => {
         const columnProjects = projects.filter(project => {
             const state = getProjectState(project, currentView, currentUser);
@@ -1772,7 +1773,7 @@ function renderKanbanBoard(projects) {
 
         const columnEl = document.createElement('div');
         columnEl.className = 'kanban-column';
-        
+
         columnEl.innerHTML = `
             <div class="column-header">
                 <div class="column-title">
@@ -1784,12 +1785,12 @@ function renderKanbanBoard(projects) {
                 <div class="kanban-cards"></div>
             </div>
         `;
-        
+
         const cardsContainer = columnEl.querySelector('.kanban-cards');
         columnProjects.forEach(project => {
             cardsContainer.appendChild(createProjectCard(project));
         });
-        
+
         board.appendChild(columnEl);
     });
 }
@@ -1814,24 +1815,24 @@ function createProjectCard(project) {
     if (project.isTask) {
         return createTaskCardForAssignments(project);
     }
-    
+
     const state = getProjectState(project, currentView, currentUser);
     const card = document.createElement('div');
-    
+
     card.className = `kanban-card status-${state.color}`;
     card.dataset.id = project.id;
     card.dataset.type = 'project';
-    
+
     const progress = calculateProgress(project.timeline);
-    
+
     const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
     const daysUntilDeadline = finalDeadline ? Math.ceil((new Date(finalDeadline) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
     const deadlineClass = daysUntilDeadline < 0 ? 'overdue' : daysUntilDeadline <= 3 ? 'due-soon' : '';
-    
-    const deadlineRequestIndicator = (project.deadlineRequest && project.deadlineRequest.status === 'pending') || 
-                                   (project.deadlineChangeRequest && project.deadlineChangeRequest.status === 'pending') ? 
+
+    const deadlineRequestIndicator = (project.deadlineRequest && project.deadlineRequest.status === 'pending') ||
+                                   (project.deadlineChangeRequest && project.deadlineChangeRequest.status === 'pending') ?
         '<span class="deadline-request-indicator">⏰</span>' : '';
-    
+
     card.innerHTML = `
         <h4 class="card-title">${project.title} ${deadlineRequestIndicator}</h4>
         <div class="card-meta">
@@ -1853,13 +1854,13 @@ function createProjectCard(project) {
             </div>
         </div>
     `;
-    
+
     card.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         openDetailsModal(project.id);
     });
-    
+
     return card;
 }
 
@@ -1868,36 +1869,36 @@ function createTaskCardForAssignments(task) {
     card.className = 'kanban-card task-card';
     card.dataset.id = task.id;
     card.dataset.type = 'task';
-    
+
     const isOverdue = new Date(task.deadline) < new Date() && task.status !== 'completed';
     const isDueSoon = !isOverdue && new Date(task.deadline) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-    
+
     if (isOverdue) card.classList.add('overdue');
     if (isDueSoon) card.classList.add('due-soon');
-    
+
     const deadline = new Date(task.deadline);
     const deadlineText = deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    
+
     const priorityColors = {
         low: '#10b981',
-        medium: '#f59e0b', 
+        medium: '#f59e0b',
         high: '#ef4444',
         urgent: '#dc2626'
     };
-    
+
     const priorityColor = priorityColors[task.priority] || priorityColors.medium;
-    
+
     const assigneeNames = getTaskAssigneeNames(task);
     let displayNames = assigneeNames.join(', ');
     let multipleIndicator = '';
-    
+
     if (assigneeNames.length > 2) {
         displayNames = `${assigneeNames.slice(0, 2).join(', ')} +${assigneeNames.length - 2} more`;
         multipleIndicator = `<span class="multiple-assignees-indicator">+${assigneeNames.length}</span>`;
     } else if (assigneeNames.length > 1) {
         multipleIndicator = `<span class="multiple-assignees-indicator">+${assigneeNames.length}</span>`;
     }
-    
+
     card.innerHTML = `
         <h4 class="card-title">📋 ${escapeHtml(task.title)}</h4>
         <div class="card-meta">
@@ -1920,7 +1921,7 @@ function createTaskCardForAssignments(task) {
             ${(task.priority || 'medium').toUpperCase()} PRIORITY
         </div>
     `;
-    
+
     card.addEventListener('click', () => openTaskDetailsModal(task.id));
     return card;
 }
@@ -1931,14 +1932,14 @@ function createTaskCardForAssignments(task) {
 function renderCalendar() {
     const calendarGrid = document.getElementById('calendar-grid');
     const monthYear = document.getElementById('month-year');
-    
+
     if (!calendarGrid || !monthYear) return;
-    
+
     calendarGrid.innerHTML = '';
-    
+
     const month = calendarDate.getMonth();
     const year = calendarDate.getFullYear();
-    
+
     monthYear.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
 
     const firstDay = new Date(year, month, 1).getDay();
@@ -1960,7 +1961,7 @@ function renderCalendar() {
     const totalCells = calendarGrid.children.length;
     const remainingCells = 42 - totalCells;
     const nextMonth = new Date(year, month + 1, 1);
-    
+
     for (let day = 1; day <= remainingCells; day++) {
         const dayDate = new Date(nextMonth);
         dayDate.setDate(day);
@@ -1973,11 +1974,11 @@ function renderCalendar() {
 function createCalendarDay(grid, date, isOtherMonth, today) {
     const dayEl = document.createElement('div');
     dayEl.className = 'calendar-day';
-    
+
     if (isOtherMonth) {
         dayEl.classList.add('other-month');
     }
-    
+
     if (isSameDay(date, today)) {
         dayEl.classList.add('today');
     }
@@ -1992,14 +1993,14 @@ function createCalendarDay(grid, date, isOtherMonth, today) {
     const dayProjects = allProjects.filter(project => {
         return hasProjectDeadlineOnDate(project, date);
     });
-    
+
     const dayTasks = allTasks.filter(task => {
         return hasTaskDeadlineOnDate(task, date);
     });
 
     const maxVisibleEvents = 3;
     const allEvents = [...dayProjects, ...dayTasks.map(t => ({...t, isTask: true}))];
-    
+
     allEvents.slice(0, maxVisibleEvents).forEach(item => {
         const eventEl = createCalendarEvent(item, date);
         eventsContainer.appendChild(eventEl);
@@ -2036,7 +2037,7 @@ function createCalendarDay(grid, date, isOtherMonth, today) {
 
 function createCalendarEvent(item, date) {
     const eventEl = document.createElement('div');
-    
+
     if (item.isTask) {
         eventEl.className = 'calendar-event task-event';
         eventEl.textContent = `📋 ${item.title}`;
@@ -2063,15 +2064,15 @@ function createCalendarEvent(item, date) {
 
 function hasTaskDeadlineOnDate(task, date) {
     if (!task.deadline) return false;
-    
+
     try {
         const taskDeadline = new Date(task.deadline + 'T00:00:00');
-        
+
         if (isNaN(taskDeadline.getTime())) {
             console.error('[CALENDAR] Invalid task deadline:', task.deadline);
             return false;
         }
-        
+
         return formatDateForComparison(taskDeadline) === formatDateForComparison(date);
     } catch (error) {
         console.error('[CALENDAR] Error parsing task deadline:', error);
@@ -2083,19 +2084,19 @@ function hasProjectDeadlineOnDate(project, date) {
     const deadlines = project.deadlines || {};
     const finalDeadline = deadlines.publication || project.deadline;
     const dateStr = formatDateForComparison(date);
-    
+
     const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
-    
+
     for (const type of deadlineTypes) {
         if (deadlines[type]) {
             try {
                 const deadlineDate = new Date(deadlines[type] + 'T00:00:00');
-                
+
                 if (isNaN(deadlineDate.getTime())) {
                     console.error('[CALENDAR] Invalid deadline for type:', type, deadlines[type]);
                     continue;
                 }
-                
+
                 if (formatDateForComparison(deadlineDate) === dateStr) {
                     return true;
                 }
@@ -2105,16 +2106,16 @@ function hasProjectDeadlineOnDate(project, date) {
             }
         }
     }
-    
+
     if (finalDeadline) {
         try {
             const publicationDate = new Date(finalDeadline + 'T00:00:00');
-            
+
             if (isNaN(publicationDate.getTime())) {
                 console.error('[CALENDAR] Invalid publication deadline:', finalDeadline);
                 return false;
             }
-            
+
             if (formatDateForComparison(publicationDate) === dateStr) {
                 return true;
             }
@@ -2123,7 +2124,7 @@ function hasProjectDeadlineOnDate(project, date) {
             return false;
         }
     }
-    
+
     return false;
 }
 
@@ -2131,7 +2132,7 @@ function getEventTypeForDate(project, date) {
     const deadlines = project.deadlines || {};
     const finalDeadline = deadlines.publication || project.deadline;
     const dateStr = formatDateForComparison(date);
-    
+
     if (deadlines.contact && formatDateForComparison(new Date(deadlines.contact + 'T00:00:00')) === dateStr) {
         return { eventType: 'interview', eventTitle: 'Contact Professor' };
     }
@@ -2152,7 +2153,7 @@ function getEventTypeForDate(project, date) {
         const eventType = isOverdue ? 'overdue' : 'publication';
         return { eventType, eventTitle: 'Publication Due' };
     }
-    
+
     return { eventType: 'publication', eventTitle: project.title };
 }
 
@@ -2161,8 +2162,8 @@ function formatDateForComparison(date) {
         console.error('[CALENDAR] Invalid date for comparison:', date);
         return '';
     }
-    
-    return date.getFullYear() + '-' + 
+
+    return date.getFullYear() + '-' +
            String(date.getMonth() + 1).padStart(2, '0') + '-' +
            String(date.getDate()).padStart(2, '0');
 }
@@ -2176,42 +2177,42 @@ function isSameDay(date1, date2) {
 function updateCalendarStats() {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    
+
     const monthStart = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
     monthStart.setHours(0, 0, 0, 0);
-    
+
     const monthEnd = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0);
     monthEnd.setHours(23, 59, 59, 999);
-    
+
     const weekStart = new Date(now);
     weekStart.setDate(now.getDate() - now.getDay());
     weekStart.setHours(0, 0, 0, 0);
-    
+
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
-    
+
     let thisMonthCount = 0;
     let thisWeekCount = 0;
     let overdueCount = 0;
-    
+
     allProjects.forEach(project => {
         const deadlines = project.deadlines || {};
         const finalDeadline = deadlines.publication || project.deadline;
-        
+
         if (finalDeadline) {
             try {
                 const deadline = new Date(finalDeadline + 'T00:00:00');
-                
+
                 if (!isNaN(deadline.getTime())) {
                     if (deadline >= monthStart && deadline <= monthEnd) {
                         thisMonthCount++;
                     }
-                    
+
                     if (deadline >= weekStart && deadline <= weekEnd) {
                         thisWeekCount++;
                     }
-                    
+
                     const state = getProjectState(project, currentView, currentUser);
                     if (deadline < now && state.column !== 'Completed' && !state.statusText.includes('Completed')) {
                         overdueCount++;
@@ -2221,18 +2222,18 @@ function updateCalendarStats() {
                 console.error('[CALENDAR STATS] Error parsing final deadline:', error);
             }
         }
-        
+
         const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
         deadlineTypes.forEach(type => {
             if (deadlines[type]) {
                 try {
                     const deadline = new Date(deadlines[type] + 'T00:00:00');
-                    
+
                     if (!isNaN(deadline.getTime())) {
                         if (deadline >= monthStart && deadline <= monthEnd) {
                             thisMonthCount++;
                         }
-                        
+
                         if (deadline >= weekStart && deadline <= weekEnd) {
                             thisWeekCount++;
                         }
@@ -2243,22 +2244,22 @@ function updateCalendarStats() {
             }
         });
     });
-    
+
     allTasks.forEach(task => {
         if (!task.deadline) return;
-        
+
         try {
             const deadline = new Date(task.deadline + 'T00:00:00');
-            
+
             if (!isNaN(deadline.getTime())) {
                 if (deadline >= monthStart && deadline <= monthEnd) {
                     thisMonthCount++;
                 }
-                
+
                 if (deadline >= weekStart && deadline <= weekEnd) {
                     thisWeekCount++;
                 }
-                
+
                 if (deadline < now && task.status !== 'completed') {
                     overdueCount++;
                 }
@@ -2267,26 +2268,26 @@ function updateCalendarStats() {
             console.error('[CALENDAR STATS] Error parsing task deadline:', error);
         }
     });
-    
+
     const statMonth = document.getElementById('stat-month');
     const statWeek = document.getElementById('stat-week');
     const statOverdue = document.getElementById('stat-overdue');
-    
+
     if (statMonth) statMonth.textContent = thisMonthCount;
     if (statWeek) statWeek.textContent = thisWeekCount;
     if (statOverdue) statOverdue.textContent = overdueCount;
 }
 
 function showDayDetails(date, items) {
-    const dateStr = date.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+    const dateStr = date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
     });
-    
+
     let message = `Events for ${dateStr}:\n\n`;
-    
+
     items.forEach((item, index) => {
         if (item.isTask) {
             const assigneeNames = getTaskAssigneeNames(item);
@@ -2296,7 +2297,7 @@ function showDayDetails(date, items) {
             message += `${index + 1}. ${item.title}\n   ${eventTitle}\n   Author: ${item.authorName}\n\n`;
         }
     });
-    
+
     message += 'Click on an individual event to view details.';
     alert(message);
 }
@@ -2315,11 +2316,11 @@ function setupCalendarListeners() {
     const prevBtn = document.getElementById('prev-month');
     const nextBtn = document.getElementById('next-month');
     const todayBtn = document.getElementById('today-btn');
-    
+
     if (prevBtn) prevBtn.addEventListener('click', () => changeMonth(-1));
     if (nextBtn) nextBtn.addEventListener('click', () => changeMonth(1));
     if (todayBtn) todayBtn.addEventListener('click', goToToday);
-    
+
     document.querySelectorAll('.view-toggle button').forEach((btn, index) => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.view-toggle button').forEach((b, i) => {
@@ -2333,7 +2334,7 @@ function setupCalendarListeners() {
 function setupCalendarKeyboardNavigation() {
     document.addEventListener('keydown', (e) => {
         if (currentView !== 'calendar') return;
-        
+
         switch(e.key) {
             case 'ArrowLeft':
                 if (e.ctrlKey || e.metaKey) {
@@ -2363,23 +2364,23 @@ function setupCalendarKeyboardNavigation() {
 // ==================
 function closeAllModals() {
     const modals = document.querySelectorAll('.modal-overlay');
-    
+
     modals.forEach(modal => {
         const detailsContainers = modal.querySelectorAll('.details-container');
         detailsContainers.forEach(content => {
             content.style.opacity = '1';
             content.style.transition = 'none';
         });
-        
+
         modal.style.display = 'none';
-        
+
         setTimeout(() => {
             detailsContainers.forEach(content => {
                 content.style.transition = 'opacity 0.2s ease-in-out';
             });
         }, 50);
     });
-    
+
     currentlyViewedProjectId = null;
     currentlyViewedTaskId = null;
     disableProposalEditing();
@@ -2398,9 +2399,9 @@ function generateStatusReport() {
 
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    
+
     const userWorkload = {};
-    
+
     allUsers.forEach(user => {
         userWorkload[user.id] = {
             name: user.name,
@@ -2413,20 +2414,20 @@ function generateStatusReport() {
             completed: 0
         };
     });
-    
+
     allProjects.forEach(project => {
         const state = getProjectState(project, currentView, currentUser);
         const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
-        
+
         let status = 'on-track';
         let daysUntilDeadline = null;
-        
+
         if (finalDeadline) {
             try {
                 const deadline = new Date(finalDeadline + 'T00:00:00');
                 if (!isNaN(deadline.getTime())) {
                     daysUntilDeadline = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
-                    
+
                     if (state.column === 'Completed' || state.statusText.includes('Completed')) {
                         status = 'completed';
                     } else if (daysUntilDeadline < 0) {
@@ -2439,7 +2440,7 @@ function generateStatusReport() {
                 console.error('[REPORT] Error processing project deadline:', error);
             }
         }
-        
+
         const projectInfo = {
             id: project.id,
             title: project.title,
@@ -2450,14 +2451,14 @@ function generateStatusReport() {
             daysUntilDeadline: daysUntilDeadline,
             proposalStatus: project.proposalStatus
         };
-        
+
         if (project.authorId && userWorkload[project.authorId]) {
             userWorkload[project.authorId].projects.push(projectInfo);
             if (status === 'overdue') userWorkload[project.authorId].overdue++;
             else if (status === 'completed') userWorkload[project.authorId].completed++;
             else userWorkload[project.authorId].onTrack++;
         }
-        
+
         if (project.editorId && userWorkload[project.editorId]) {
             userWorkload[project.editorId].projects.push(projectInfo);
             if (status === 'overdue') userWorkload[project.editorId].overdue++;
@@ -2465,17 +2466,17 @@ function generateStatusReport() {
             else userWorkload[project.editorId].onTrack++;
         }
     });
-    
+
     allTasks.forEach(task => {
         let status = 'on-track';
         let daysUntilDeadline = null;
-        
+
         if (task.deadline) {
             try {
                 const deadline = new Date(task.deadline + 'T00:00:00');
                 if (!isNaN(deadline.getTime())) {
                     daysUntilDeadline = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
-                    
+
                     if (task.status === 'completed') {
                         status = 'completed';
                     } else if (daysUntilDeadline < 0) {
@@ -2488,7 +2489,7 @@ function generateStatusReport() {
                 console.error('[REPORT] Error processing task deadline:', error);
             }
         }
-        
+
         const taskInfo = {
             id: task.id,
             title: task.title,
@@ -2498,7 +2499,7 @@ function generateStatusReport() {
             daysUntilDeadline: daysUntilDeadline,
             priority: task.priority || 'medium'
         };
-        
+
         const assigneeIds = task.assigneeIds || [task.assigneeId];
         assigneeIds.forEach(assigneeId => {
             if (assigneeId && userWorkload[assigneeId]) {
@@ -2509,25 +2510,25 @@ function generateStatusReport() {
             }
         });
     });
-    
+
     const totalOverdue = Object.values(userWorkload).reduce((sum, user) => sum + user.overdue, 0);
     const totalOnTrack = Object.values(userWorkload).reduce((sum, user) => sum + user.onTrack, 0);
     const totalCompleted = Object.values(userWorkload).reduce((sum, user) => sum + user.completed, 0);
     const activeUsers = Object.values(userWorkload).filter(u => u.projects.length > 0 || u.tasks.length > 0).length;
-    
+
     let reportHTML = `
         <div class="report-header">
             <h2>📊 Comprehensive Team Status Report</h2>
-            <p class="report-date">Generated: ${new Date().toLocaleString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
+            <p class="report-date">Generated: ${new Date().toLocaleString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
             })}</p>
         </div>
-        
+
         <div class="report-section executive-summary">
             <h2>🎯 Executive Summary</h2>
             <div class="summary-grid">
@@ -2554,25 +2555,25 @@ function generateStatusReport() {
             </div>
         </div>
     `;
-    
+
     const sortedUsers = Object.values(userWorkload)
         .filter(u => u.projects.length > 0 || u.tasks.length > 0)
         .sort((a, b) => {
             if (b.overdue !== a.overdue) return b.overdue - a.overdue;
             return (b.projects.length + b.tasks.length) - (a.projects.length + a.tasks.length);
         });
-    
+
     if (sortedUsers.length > 0) {
         reportHTML += `
             <div class="report-section team-details">
                 <h2>👥 Team Member Breakdown</h2>
         `;
-        
+
         sortedUsers.forEach(user => {
             const totalItems = user.projects.length + user.tasks.length;
             const workloadLevel = totalItems > 10 ? 'high' : totalItems > 5 ? 'medium' : 'low';
             const performanceClass = user.overdue > 0 ? 'needs-attention' : user.onTrack > user.completed ? 'in-progress' : 'excellent';
-            
+
             reportHTML += `
                 <div class="user-card ${performanceClass}">
                     <div class="user-card-header">
@@ -2590,7 +2591,7 @@ function generateStatusReport() {
                             <div class="workload-label">Total Items</div>
                         </div>
                     </div>
-                    
+
                     <div class="user-stats">
                         <div class="stat-item ${user.overdue > 0 ? 'overdue' : ''}">
                             <span class="stat-icon">⚠️</span>
@@ -2609,21 +2610,21 @@ function generateStatusReport() {
                         </div>
                     </div>
             `;
-            
+
             if (user.projects.length > 0) {
                 reportHTML += `
                     <div class="user-work-section">
                         <h4>📝 Projects (${user.projects.length})</h4>
                         <div class="work-items">
                 `;
-                
+
                 user.projects.forEach(project => {
-                    const deadlineText = project.daysUntilDeadline !== null 
-                        ? (project.daysUntilDeadline < 0 
-                            ? `${Math.abs(project.daysUntilDeadline)} days overdue` 
+                    const deadlineText = project.daysUntilDeadline !== null
+                        ? (project.daysUntilDeadline < 0
+                            ? `${Math.abs(project.daysUntilDeadline)} days overdue`
                             : `${project.daysUntilDeadline} days remaining`)
                         : 'No deadline';
-                    
+
                     reportHTML += `
                         <div class="work-item ${project.status}" data-id="${project.id}" onclick="openDetailsModal('${project.id}'); closeAllModals();">
                             <div class="work-item-header">
@@ -2637,27 +2638,27 @@ function generateStatusReport() {
                         </div>
                     `;
                 });
-                
+
                 reportHTML += `
                         </div>
                     </div>
                 `;
             }
-            
+
             if (user.tasks.length > 0) {
                 reportHTML += `
                     <div class="user-work-section">
                         <h4>📋 Tasks (${user.tasks.length})</h4>
                         <div class="work-items">
                 `;
-                
+
                 user.tasks.forEach(task => {
-                    const deadlineText = task.daysUntilDeadline !== null 
-                        ? (task.daysUntilDeadline < 0 
-                            ? `${Math.abs(task.daysUntilDeadline)} days overdue` 
+                    const deadlineText = task.daysUntilDeadline !== null
+                        ? (task.daysUntilDeadline < 0
+                            ? `${Math.abs(task.daysUntilDeadline)} days overdue`
                             : `${task.daysUntilDeadline} days remaining`)
                         : 'No deadline';
-                    
+
                     reportHTML += `
                         <div class="work-item ${task.status}" data-id="${task.id}" data-type="task" onclick="openTaskDetailsModal('${task.id}'); closeAllModals();">
                             <div class="work-item-header">
@@ -2671,28 +2672,28 @@ function generateStatusReport() {
                         </div>
                     `;
                 });
-                
+
                 reportHTML += `
                         </div>
                     </div>
                 `;
             }
-            
+
             reportHTML += `</div>`;
         });
-        
+
         reportHTML += `</div>`;
     }
-    
+
     reportHTML += `
         <div class="report-section recommendations">
             <h2>💡 Recommendations</h2>
             <div class="recommendation-list">
     `;
-    
+
     const highWorkloadUsers = sortedUsers.filter(u => (u.projects.length + u.tasks.length) > 10);
     const overdueUsers = sortedUsers.filter(u => u.overdue > 0);
-    
+
     if (overdueUsers.length > 0) {
         reportHTML += `
             <div class="recommendation-item urgent">
@@ -2704,7 +2705,7 @@ function generateStatusReport() {
             </div>
         `;
     }
-    
+
     if (highWorkloadUsers.length > 0) {
         reportHTML += `
             <div class="recommendation-item warning">
@@ -2716,7 +2717,7 @@ function generateStatusReport() {
             </div>
         `;
     }
-    
+
     if (overdueUsers.length === 0 && totalOnTrack > totalCompleted) {
         reportHTML += `
             <div class="recommendation-item success">
@@ -2728,12 +2729,12 @@ function generateStatusReport() {
             </div>
         `;
     }
-    
+
     reportHTML += `
             </div>
         </div>
     `;
-    
+
     reportContent.innerHTML = reportHTML;
     reportModal.style.display = 'flex';
 }
@@ -2746,7 +2747,7 @@ async function approveProposal(projectId) {
         showNotification('No project selected. Please try again.', 'error');
         return;
     }
-    
+
     try {
         await db.collection('projects').doc(projectId).update({
             proposalStatus: 'approved',
@@ -2757,9 +2758,9 @@ async function approveProposal(projectId) {
                 timestamp: new Date()
             })
         });
-        
+
         showNotification('Proposal approved successfully!', 'success');
-        
+
     } catch (error) {
         console.error('[APPROVE ERROR]', error);
         showNotification('Failed to approve proposal. Please try again.', 'error');
@@ -2771,7 +2772,7 @@ async function updateProposalStatus(newStatus) {
         showNotification('No project selected. Please try again.', 'error');
         return;
     }
-    
+
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             proposalStatus: newStatus,
@@ -2781,9 +2782,9 @@ async function updateProposalStatus(newStatus) {
                 timestamp: new Date()
             })
         });
-        
+
         showNotification(`Proposal ${newStatus} successfully!`, 'success');
-        
+
     } catch (error) {
         console.error('[STATUS UPDATE ERROR]', error);
         showNotification('Failed to update status. Please try again.', 'error');
@@ -2793,13 +2794,13 @@ async function updateProposalStatus(newStatus) {
 async function handleAddComment() {
     const commentInput = document.getElementById('comment-input');
     if (!commentInput || !currentlyViewedProjectId) return;
-    
+
     const comment = commentInput.value.trim();
     if (!comment) {
         showNotification('Please enter a comment.', 'error');
         return;
     }
-    
+
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -2808,10 +2809,10 @@ async function handleAddComment() {
                 timestamp: new Date()
             })
         });
-        
+
         commentInput.value = '';
         showNotification('Comment added successfully!', 'success');
-        
+
     } catch (error) {
         console.error('[COMMENT ERROR]', error);
         showNotification('Failed to add comment. Please try again.', 'error');
@@ -2820,19 +2821,19 @@ async function handleAddComment() {
 
 async function handleAssignEditor() {
     if (!currentlyViewedProjectId) return;
-    
+
     const editorDropdown = document.getElementById('editor-dropdown');
     if (!editorDropdown) return;
-    
+
     const editorId = editorDropdown.value;
     if (!editorId) {
         showNotification('Please select an editor.', 'error');
         return;
     }
-    
+
     const editor = allEditors.find(e => e.id === editorId);
     if (!editor) return;
-    
+
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             editorId: editorId,
@@ -2843,38 +2844,12 @@ async function handleAssignEditor() {
                 timestamp: new Date()
             })
         });
-        
+
         showNotification(`${editor.name} assigned as editor!`, 'success');
-        
+
     } catch (error) {
         console.error('[ASSIGN EDITOR ERROR]', error);
         showNotification('Failed to assign editor. Please try again.', 'error');
-    }
-}
-
-async function handleDeleteProject() {
-    if (!currentlyViewedProjectId) return;
-    
-    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!project) return;
-    
-    const isAdmin = currentUserRole === 'admin';
-    const isAuthor = currentUser.uid === project.authorId;
-    
-    if (!isAdmin && !isAuthor) {
-        showNotification('You can only delete projects you created.', 'error');
-        return;
-    }
-    
-    if (confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
-        try {
-            await db.collection('projects').doc(currentlyViewedProjectId).delete();
-            showNotification('Project deleted successfully!', 'success');
-            closeAllModals();
-        } catch (error) {
-            console.error('[DELETE ERROR]', error);
-            showNotification('Failed to delete project. Please try again.', 'error');
-        }
     }
 }
 
@@ -2886,9 +2861,9 @@ function enableProposalEditing() {
     const editBtn = document.getElementById('edit-proposal-button');
     const saveBtn = document.getElementById('save-proposal-button');
     const cancelBtn = document.getElementById('cancel-proposal-button');
-    
+
     if (!proposalElement) return;
-    
+
     const currentText = proposalElement.textContent;
     proposalElement.setAttribute('data-original-text', currentText);
     proposalElement.contentEditable = 'true';
@@ -2897,7 +2872,7 @@ function enableProposalEditing() {
     proposalElement.style.borderRadius = '8px';
     proposalElement.style.minHeight = '100px';
     proposalElement.focus();
-    
+
     if (editBtn) editBtn.style.display = 'none';
     if (saveBtn) saveBtn.style.display = 'inline-block';
     if (cancelBtn) cancelBtn.style.display = 'inline-block';
@@ -2908,13 +2883,13 @@ function disableProposalEditing() {
     const editBtn = document.getElementById('edit-proposal-button');
     const saveBtn = document.getElementById('save-proposal-button');
     const cancelBtn = document.getElementById('cancel-proposal-button');
-    
+
     if (!proposalElement) return;
-    
+
     proposalElement.contentEditable = 'false';
     proposalElement.style.border = 'none';
     proposalElement.style.padding = '0';
-    
+
     const originalText = proposalElement.getAttribute('data-original-text');
     if (originalText) {
         proposalElement.textContent = originalText;
@@ -2924,11 +2899,11 @@ function disableProposalEditing() {
     if (!currentlyViewedProjectId) return;
     const project = allProjects.find(p => p.id === currentlyViewedProjectId);
     if (!project) return;
-    
+
     const isAuthor = currentUser.uid === project.authorId;
     const isAdmin = currentUserRole === 'admin';
     const canEditProposal = isAuthor || isAdmin;
-    
+
     if (editBtn) editBtn.style.display = canEditProposal ? 'inline-block' : 'none';
     if (saveBtn) saveBtn.style.display = 'none';
     if (cancelBtn) cancelBtn.style.display = 'none';
@@ -2936,16 +2911,16 @@ function disableProposalEditing() {
 
 async function handleSaveProposal() {
     if (!currentlyViewedProjectId) return;
-    
+
     const proposalElement = document.getElementById('details-proposal');
     if (!proposalElement) return;
-    
+
     const newProposal = proposalElement.textContent.trim();
     if (!newProposal) {
         showNotification('Proposal cannot be empty.', 'error');
         return;
     }
-    
+
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             proposal: newProposal,
@@ -2955,10 +2930,10 @@ async function handleSaveProposal() {
                 timestamp: new Date()
             })
         });
-        
+
         showNotification('Proposal updated successfully!', 'success');
         disableProposalEditing();
-        
+
     } catch (error) {
         console.error('[SAVE PROPOSAL ERROR]', error);
         showNotification('Failed to save proposal. Please try again.', 'error');
@@ -2970,7 +2945,7 @@ async function handleSaveProposal() {
 // ==================
 async function handleSetDeadlines() {
     if (!currentlyViewedProjectId) return;
-    
+
     const deadlines = {
         contact: document.getElementById('deadline-contact')?.value || '',
         interview: document.getElementById('deadline-interview')?.value || '',
@@ -2978,12 +2953,12 @@ async function handleSetDeadlines() {
         review: document.getElementById('deadline-review')?.value || '',
         edits: document.getElementById('deadline-edits')?.value || ''
     };
-    
+
     const project = allProjects.find(p => p.id === currentlyViewedProjectId);
     if (project) {
         deadlines.publication = project.deadlines?.publication || project.deadline;
     }
-    
+
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             deadlines: deadlines,
@@ -2993,9 +2968,9 @@ async function handleSetDeadlines() {
                 timestamp: new Date()
             })
         });
-        
+
         showNotification('Deadlines updated successfully!', 'success');
-        
+
     } catch (error) {
         console.error('[SET DEADLINES ERROR]', error);
         showNotification('Failed to save deadlines. Please try again.', 'error');
@@ -3004,13 +2979,13 @@ async function handleSetDeadlines() {
 
 async function handleRequestDeadlineChange() {
     if (!currentlyViewedProjectId) return;
-    
+
     const reason = prompt('Please provide a reason for requesting deadline changes:');
     if (!reason || !reason.trim()) {
         showNotification('Please provide a reason for the deadline change request.', 'error');
         return;
     }
-    
+
     const requestedDeadlines = {
         contact: document.getElementById('deadline-contact')?.value || '',
         interview: document.getElementById('deadline-interview')?.value || '',
@@ -3018,7 +2993,7 @@ async function handleRequestDeadlineChange() {
         review: document.getElementById('deadline-review')?.value || '',
         edits: document.getElementById('deadline-edits')?.value || ''
     };
-    
+
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             deadlineChangeRequest: {
@@ -3034,9 +3009,9 @@ async function handleRequestDeadlineChange() {
                 timestamp: new Date()
             })
         });
-        
+
         showNotification('Deadline change request submitted successfully!', 'success');
-        
+
     } catch (error) {
         console.error('[DEADLINE REQUEST ERROR]', error);
         showNotification('Failed to submit deadline request. Please try again.', 'error');
@@ -3045,13 +3020,13 @@ async function handleRequestDeadlineChange() {
 
 async function handleApproveDeadlineRequest() {
     if (!currentlyViewedProjectId) return;
-    
+
     const project = allProjects.find(p => p.id === currentlyViewedProjectId);
     if (!project) return;
-    
+
     const request = project.deadlineRequest || project.deadlineChangeRequest;
     if (!request) return;
-    
+
     try {
         const updates = {
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -3060,7 +3035,7 @@ async function handleApproveDeadlineRequest() {
                 timestamp: new Date()
             })
         };
-        
+
         if (project.deadlineRequest) {
             updates.deadline = request.requestedDate;
             updates['deadlines.publication'] = request.requestedDate;
@@ -3069,11 +3044,11 @@ async function handleApproveDeadlineRequest() {
             updates.deadlines = request.requestedDeadlines;
             updates.deadlineChangeRequest = firebase.firestore.FieldValue.delete();
         }
-        
+
         await db.collection('projects').doc(currentlyViewedProjectId).update(updates);
-        
+
         showNotification('Deadline request approved!', 'success');
-        
+
     } catch (error) {
         console.error('[APPROVE DEADLINE ERROR]', error);
         showNotification('Failed to approve deadline request. Please try again.', 'error');
@@ -3082,13 +3057,13 @@ async function handleApproveDeadlineRequest() {
 
 async function handleRejectDeadlineRequest() {
     if (!currentlyViewedProjectId) return;
-    
+
     const project = allProjects.find(p => p.id === currentlyViewedProjectId);
     if (!project) return;
-    
+
     const request = project.deadlineRequest || project.deadlineChangeRequest;
     if (!request) return;
-    
+
     try {
         const updates = {
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -3097,17 +3072,17 @@ async function handleRejectDeadlineRequest() {
                 timestamp: new Date()
             })
         };
-        
+
         if (project.deadlineRequest) {
             updates.deadlineRequest = firebase.firestore.FieldValue.delete();
         } else if (project.deadlineChangeRequest) {
             updates.deadlineChangeRequest = firebase.firestore.FieldValue.delete();
         }
-        
+
         await db.collection('projects').doc(currentlyViewedProjectId).update(updates);
-        
+
         showNotification('Deadline request rejected.', 'info');
-        
+
     } catch (error) {
         console.error('[REJECT DEADLINE ERROR]', error);
         showNotification('Failed to reject deadline request. Please try again.', 'error');
@@ -3168,7 +3143,7 @@ function showNotification(message, type = 'success') {
         `;
         document.body.appendChild(container);
     }
-    
+
     const notification = document.createElement('div');
     notification.className = 'notification';
     notification.style.cssText = `
@@ -3185,7 +3160,7 @@ function showNotification(message, type = 'success') {
         pointer-events: auto;
         position: relative;
     `;
-    
+
     if (type === 'success') {
         notification.style.background = 'linear-gradient(135deg, #10b981, #059669)';
     } else if (type === 'error') {
@@ -3195,14 +3170,14 @@ function showNotification(message, type = 'success') {
     } else {
         notification.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
     }
-    
+
     notification.textContent = message;
     container.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.style.transform = 'translateX(0)';
     }, 100);
-    
+
     setTimeout(() => {
         notification.style.transform = 'translateX(400px)';
         setTimeout(() => {
