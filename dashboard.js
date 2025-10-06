@@ -671,7 +671,7 @@ async function handleTaskFormSubmit(e) {
             creatorId: currentUser.uid,
             creatorName: currentUserName,
             status: 'pending',
-            createdAt: new Date(),
+            createdAt: new Date(), // Use local date for immediate display
             activity: [{
                 text: assigneeIds.length === 1 ? 
                     `created this task and assigned it to ${assigneeNames[0]}` :
@@ -683,7 +683,11 @@ async function handleTaskFormSubmit(e) {
         
         console.log('[TASK CREATE] Creating task:', newTask);
         
-        await db.collection('tasks').add(newTask);
+        // Add server timestamp when writing to Firestore
+        await db.collection('tasks').add({
+            ...newTask,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
         
         showNotification(`Task assigned to ${assigneeNames.join(', ')} successfully!`, 'success');
         closeAllModals();
@@ -1520,7 +1524,7 @@ async function handleProjectFormSubmit(e) {
             editorName: null,
             proposalStatus: 'pending',
             timeline: timeline,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdAt: new Date(), // Use local date for immediate display
             activity: [{
                 text: 'created the project.',
                 authorName: currentUserName,
@@ -1530,7 +1534,11 @@ async function handleProjectFormSubmit(e) {
         
         console.log('[PROJECT CREATE] Creating project:', newProject);
 
-        await db.collection('projects').add(newProject);
+        // Add server timestamp when writing to Firestore
+        await db.collection('projects').add({
+            ...newProject,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
         
         console.log('[PROJECT CREATE] Project created successfully');
         
@@ -1547,6 +1555,7 @@ async function handleProjectFormSubmit(e) {
         submitButton.textContent = originalText;
     }
 }
+
 
 // ==================
 //  Kanban & Timeline Helpers
