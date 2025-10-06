@@ -266,6 +266,112 @@ function updateSelectionCounter() {
 window.toggleAssignee = toggleAssignee;
 window.removeAssignee = removeAssignee;
 
+// ==================
+//  Helper Functions
+// ==================
+
+/**
+ * Get all assignee names for a task (handles both single and multiple assignees)
+ */
+function getTaskAssigneeNames(task) {
+    // Prefer new format (multiple assignees)
+    if (task.assigneeNames && Array.isArray(task.assigneeNames) && task.assigneeNames.length > 0) {
+        return task.assigneeNames;
+    }
+    // Fall back to single assignee
+    if (task.assigneeName) {
+        return [task.assigneeName];
+    }
+    return ['Unassigned'];
+}
+
+/**
+ * Check if a user is assigned to a task
+ */
+function isUserAssignedToTask(task, userId) {
+    // Check new format (multiple assignees)
+    if (task.assigneeIds && Array.isArray(task.assigneeIds)) {
+        return task.assigneeIds.includes(userId);
+    }
+    // Fall back to single assignee
+    return task.assigneeId === userId;
+}
+
+/**
+ * Escape HTML to prevent XSS attacks
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Generate consistent color from string (for avatars)
+ */
+function stringToColor(str) {
+    if (!str) return '#667eea';
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = [
+        '#667eea', '#764ba2', '#f093fb', '#4facfe',
+        '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+        '#a8edea', '#fed6e3', '#c471f5', '#fa71cd'
+    ];
+    return colors[Math.abs(hash) % colors.length];
+}
+
+/**
+ * Calculate progress percentage from timeline
+ */
+function calculateProgress(timeline) {
+    if (!timeline) return 0;
+    const tasks = Object.keys(timeline);
+    if (tasks.length === 0) return 0;
+    const completed = tasks.filter(task => timeline[task]).length;
+    return Math.round((completed / tasks.length) * 100);
+}
+
+/**
+ * Validate date string (YYYY-MM-DD format)
+ */
+function isValidDate(dateString) {
+    if (!dateString) return false;
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateString)) return false;
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date);
+}
+
+/**
+ * Show notification toast
+ */
+function showNotification(message, type = 'info') {
+    const container = document.getElementById('notification-container');
+    if (!container) {
+        console.error('[NOTIFICATION] Container not found');
+        return;
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    container.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
 // ======================
 //  Initialization
 // ======================
