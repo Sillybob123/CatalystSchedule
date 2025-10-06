@@ -614,8 +614,12 @@ auth.onAuthStateChanged(async (user) => {
         await fetchAllUsers();
         setupUI();
         setupNavAndListeners();
-        subscribeToProjects();
-        subscribeToTasks();
+        
+        // DON'T call subscriptions here - fixedSubscriptions.js will handle it
+        // subscribeToProjects();
+        // subscribeToTasks();
+        
+        console.log('[INIT] Waiting for fixedSubscriptions.js to setup listeners...');
 
         document.getElementById('loader').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
@@ -1004,9 +1008,15 @@ async function handleTaskFormSubmit(e) {
         };
         
         console.log('[TASK CREATE] Creating task:', taskData);
+        if (typeof debugLog === 'function') debugLog('📝 Creating task: ' + title, 'info');
+        if (typeof debugLog === 'function') debugLog('👥 Assigned to: ' + assigneeNames.join(', '), 'info');
         
         // Write to Firestore - the snapshot listener will handle the UI update
-        await db.collection('tasks').add(taskData);
+        const docRef = await db.collection('tasks').add(taskData);
+        
+        console.log('[TASK CREATE] Task created with ID:', docRef.id);
+        if (typeof debugLog === 'function') debugLog('✅ Task created successfully! ID: ' + docRef.id, 'success');
+        if (typeof debugLog === 'function') debugLog('⏳ Waiting for Firestore to sync and render...', 'info');
         
         showNotification(`Task assigned to ${assigneeNames.join(', ')} successfully!`, 'success');
         closeAllModals();
@@ -1802,11 +1812,15 @@ async function handleProjectFormSubmit(e) {
         };
         
         console.log('[PROJECT CREATE] Creating project:', projectData);
+        if (typeof debugLog === 'function') debugLog('📄 Creating project: ' + projectData.title, 'info');
+        if (typeof debugLog === 'function') debugLog('📅 Deadline: ' + projectData.deadline, 'info');
 
         // Write to Firestore - the snapshot listener will handle the UI update
-        await db.collection('projects').add(projectData);
+        const docRef = await db.collection('projects').add(projectData);
         
-        console.log('[PROJECT CREATE] Project created successfully');
+        console.log('[PROJECT CREATE] Project created with ID:', docRef.id);
+        if (typeof debugLog === 'function') debugLog('✅ Project created successfully! ID: ' + docRef.id, 'success');
+        if (typeof debugLog === 'function') debugLog('⏳ Waiting for Firestore to sync and render...', 'info');
         
         showNotification('Project proposal submitted successfully!', 'success');
         closeAllModals();
