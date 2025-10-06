@@ -265,14 +265,40 @@
 
 /* === KANBAN BOARD === */
 .kanban-board {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--space-4);
-  height: calc(100vh - 180px);
-  overflow-x: auto;
-  overflow-y: hidden;
   padding: var(--space-3);
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border-radius: var(--radius-lg);
+  height: auto;
+  max-height: calc(100vh - 180px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+@media (min-width: 1400px) {
+  .kanban-board {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1399px) {
+  .kanban-board {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .kanban-board {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .kanban-board {
+    grid-template-columns: 1fr;
+  }
 }
 
 .kanban-column {
@@ -282,10 +308,9 @@
   box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
-  width: 320px;
-  min-width: 320px;
-  flex-shrink: 0;
-  height: calc(100vh - 220px);
+  height: fit-content;
+  max-height: 600px;
+  min-height: 300px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
