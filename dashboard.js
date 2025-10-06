@@ -3404,3 +3404,541 @@ window.toggleAssignee = toggleAssignee;
 window.removeAssignee = removeAssignee;
 
 console.log('[DASHBOARD] Fixed dashboard.js loaded successfully!');
+
+// ==========================================
+// COMPLETE MISSING FUNCTIONS FOR dashboard.js
+// COPY ALL OF THIS AND PASTE AT THE END OF dashboard.js
+// ==========================================
+
+// ==================
+//  Helper Functions for Kanban Board
+// ==================
+
+function getColumnsForView(view) {
+    switch (view) {
+        case 'my-assignments':
+            return ['Pending', 'In Progress', 'Completed'];
+        default:
+            return ['Pending Approval', 'Approved', 'In Progress', 'Completed'];
+    }
+}
+
+function getProjectState(project, view, user) {
+    const timeline = project.timeline || {};
+    const isAuthor = user && user.uid === project.authorId;
+    const isEditor = user && user.uid === project.editorId;
+    
+    // Check completion status
+    const allTasksComplete = Object.values(timeline).every(task => task === true);
+    if (allTasksComplete && timeline["Suggestions Reviewed"]) {
+        return { column: 'Completed', statusText: 'Completed', color: 'success' };
+    }
+    
+    // Check if proposal is rejected
+    if (project.proposalStatus === 'rejected') {
+        return { column: 'Pending Approval', statusText: 'Proposal Rejected', color: 'danger' };
+    }
+    
+    // Check if proposal is pending
+    if (project.proposalStatus === 'pending') {
+        return { column: 'Pending Approval', statusText: 'Awaiting Approval', color: 'warning' };
+    }
+    
+    // Proposal is approved, check progress
+    if (timeline["Suggestions Reviewed"]) {
+        return { column: 'Completed', statusText: 'Review Complete', color: 'success' };
+    }
+    
+    if (timeline["Review Complete"]) {
+        if (isAuthor) {
+            return { column: 'In Progress', statusText: 'Awaiting Your Review', color: 'info' };
+        }
+        return { column: 'In Progress', statusText: 'Author Reviewing Edits', color: 'info' };
+    }
+    
+    if (timeline["Review In Progress"]) {
+        if (isEditor) {
+            return { column: 'In Progress', statusText: 'You Are Reviewing', color: 'info' };
+        }
+        return { column: 'In Progress', statusText: 'Editor Reviewing', color: 'info' };
+    }
+    
+    if (timeline["Article Writing Complete"]) {
+        if (!project.editorId) {
+            return { column: 'Approved', statusText: 'Awaiting Editor Assignment', color: 'warning' };
+        }
+        if (isEditor) {
+            return { column: 'In Progress', statusText: 'Ready for Your Review', color: 'info' };
+        }
+        return { column: 'Approved', statusText: 'Ready for Review', color: 'primary' };
+    }
+    
+    if (timeline["Interview Complete"] || (project.type === 'Op-Ed' && timeline["Topic Proposal Complete"])) {
+        if (isAuthor) {
+            return { column: 'In Progress', statusText: 'Writing Article', color: 'info' };
+        }
+        return { column: 'In Progress', statusText: 'Author Writing', color: 'info' };
+    }
+    
+    if (timeline["Interview Scheduled"]) {
+        if (isAuthor) {
+            return { column: 'In Progress', statusText: 'Interview Scheduled', color: 'info' };
+        }
+        return { column: 'In Progress', statusText: 'Interview Pending', color: 'info' };
+    }
+    
+    if (timeline["Topic Proposal Complete"] || project.proposalStatus === 'approved') {
+        if (project.type === 'Op-Ed') {
+            if (isAuthor) {
+                return { column: 'Approved', statusText: 'Ready to Write', color: 'primary' };
+            }
+            return { column: 'Approved', statusText: 'Approved - Writing', color: 'primary' };
+        } else {
+            if (isAuthor) {
+                return { column: 'Approved', statusText: 'Schedule Interview', color: 'primary' };
+            }
+            return { column: 'Approved', statusText: 'Approved - Interview Pending', color: 'primary' };
+        }
+    }
+    
+    return { column: 'Pending Approval', statusText: 'Awaiting Approval', color: 'warning' };
+}
+
+// ==================
+//  Timeline Task Completion Handler
+// ==================
+
+async function handleTaskCompletion(projectId, taskName, isCompleted, database, userName) {
+    if (!projectId || !database || !userName) {
+        console.error('[TASK COMPLETION] Missing required parameters');
+        return;
+    }
+    
+    console.log(`[TASK COMPLETION] Updating task "${taskName}" to ${isCompleted ? 'completed' : 'incomplete'}`);
+    
+    try {
+        const updatePath = `timeline.${taskName}`;
+        const activityText = isCompleted ? 
+            `marked "${taskName}" as complete` : 
+            `marked "${taskName}" as incomplete`;
+        
+        await database.collection('projects').doc(projectId).update({
+            [updatePath]: isCompleted,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: activityText,
+                authorName: userName,
+                timestamp: new Date()
+            })
+        });
+        
+        console.log('[TASK COMPLETION] Task updated successfully');
+        
+    } catch (error) {
+        console.error('[TASK COMPLETION ERROR]', error);
+        showNotification('Failed to update task. Please try again.', 'error');
+    }
+}
+
+// ==================
+//  Project Actions
+// ==================
+
+async function approveProposal(projectId) {
+    if (!projectId) {
+        console.error('[APPROVE] No project ID provided');
+        showNotification('No project selected. Please try again.', 'error');
+        return;
+    }
+    
+    console.log('[APPROVE] Approving project:', projectId);
+    
+    try {
+        await db.collection('projects').doc(projectId).update({
+            proposalStatus: 'approved',
+            'timeline.Topic Proposal Complete': true,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: 'approved the proposal',
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        });
+        
+        showNotification('Proposal approved successfully!', 'success');
+        console.log('[APPROVE] Project approved successfully');
+        
+    } catch (error) {
+        console.error('[APPROVE ERROR]', error);
+        showNotification('Failed to approve proposal. Please try again.', 'error');
+    }
+}
+
+async function updateProposalStatus(newStatus) {
+    if (!currentlyViewedProjectId) {
+        console.error('[STATUS UPDATE] No project ID set');
+        showNotification('No project selected. Please try again.', 'error');
+        return;
+    }
+    
+    console.log(`[STATUS UPDATE] Updating project ${currentlyViewedProjectId} to: ${newStatus}`);
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            proposalStatus: newStatus,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `marked proposal as ${newStatus}`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        });
+        
+        showNotification(`Proposal ${newStatus} successfully!`, 'success');
+        console.log('[STATUS UPDATE] Update successful');
+        
+    } catch (error) {
+        console.error('[STATUS UPDATE ERROR]', error);
+        showNotification('Failed to update status. Please try again.', 'error');
+    }
+}
+
+async function handleAddComment() {
+    const commentInput = document.getElementById('comment-input');
+    if (!commentInput || !currentlyViewedProjectId) return;
+    
+    const comment = commentInput.value.trim();
+    if (!comment) {
+        showNotification('Please enter a comment.', 'error');
+        return;
+    }
+    
+    console.log('[COMMENT] Adding comment to project:', currentlyViewedProjectId);
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `commented: "${comment}"`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        });
+        
+        commentInput.value = '';
+        showNotification('Comment added successfully!', 'success');
+        
+    } catch (error) {
+        console.error('[COMMENT ERROR]', error);
+        showNotification('Failed to add comment. Please try again.', 'error');
+    }
+}
+
+async function handleAssignEditor() {
+    if (!currentlyViewedProjectId) return;
+    
+    const editorDropdown = document.getElementById('editor-dropdown');
+    if (!editorDropdown) return;
+    
+    const editorId = editorDropdown.value;
+    if (!editorId) {
+        showNotification('Please select an editor.', 'error');
+        return;
+    }
+    
+    const editor = allEditors.find(e => e.id === editorId);
+    if (!editor) return;
+    
+    console.log('[ASSIGN EDITOR] Assigning editor:', editor.name);
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            editorId: editorId,
+            editorName: editor.name,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `assigned ${editor.name} as editor`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        });
+        
+        showNotification(`${editor.name} assigned as editor!`, 'success');
+        
+    } catch (error) {
+        console.error('[ASSIGN EDITOR ERROR]', error);
+        showNotification('Failed to assign editor. Please try again.', 'error');
+    }
+}
+
+async function handleDeleteProject() {
+    if (!currentlyViewedProjectId) return;
+    
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!project) return;
+    
+    const isAdmin = currentUserRole === 'admin';
+    const isAuthor = currentUser.uid === project.authorId;
+    
+    if (!isAdmin && !isAuthor) {
+        showNotification('You can only delete projects you created.', 'error');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
+        console.log('[DELETE] Deleting project:', currentlyViewedProjectId);
+        
+        try {
+            await db.collection('projects').doc(currentlyViewedProjectId).delete();
+            showNotification('Project deleted successfully!', 'success');
+            closeAllModals();
+        } catch (error) {
+            console.error('[DELETE ERROR]', error);
+            showNotification('Failed to delete project. Please try again.', 'error');
+        }
+    }
+}
+
+// ==================
+//  Proposal Editing
+// ==================
+
+function enableProposalEditing() {
+    const proposalElement = document.getElementById('details-proposal');
+    const editBtn = document.getElementById('edit-proposal-button');
+    const saveBtn = document.getElementById('save-proposal-button');
+    const cancelBtn = document.getElementById('cancel-proposal-button');
+    
+    if (!proposalElement) return;
+    
+    console.log('[EDIT PROPOSAL] Enabling editing mode');
+    
+    const currentText = proposalElement.textContent;
+    proposalElement.setAttribute('data-original-text', currentText);
+    proposalElement.contentEditable = 'true';
+    proposalElement.style.border = '2px solid #667eea';
+    proposalElement.style.padding = '12px';
+    proposalElement.style.borderRadius = '8px';
+    proposalElement.style.minHeight = '100px';
+    proposalElement.focus();
+    
+    if (editBtn) editBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'inline-block';
+    if (cancelBtn) cancelBtn.style.display = 'inline-block';
+}
+
+function disableProposalEditing() {
+    const proposalElement = document.getElementById('details-proposal');
+    const editBtn = document.getElementById('edit-proposal-button');
+    const saveBtn = document.getElementById('save-proposal-button');
+    const cancelBtn = document.getElementById('cancel-proposal-button');
+    
+    if (!proposalElement) return;
+    
+    console.log('[EDIT PROPOSAL] Disabling editing mode');
+    
+    proposalElement.contentEditable = 'false';
+    proposalElement.style.border = 'none';
+    proposalElement.style.padding = '0';
+    
+    const originalText = proposalElement.getAttribute('data-original-text');
+    if (originalText) {
+        proposalElement.textContent = originalText;
+        proposalElement.removeAttribute('data-original-text');
+    }
+    
+    if (editBtn) editBtn.style.display = 'inline-block';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
+async function handleSaveProposal() {
+    if (!currentlyViewedProjectId) return;
+    
+    const proposalElement = document.getElementById('details-proposal');
+    if (!proposalElement) return;
+    
+    const newProposal = proposalElement.textContent.trim();
+    if (!newProposal) {
+        showNotification('Proposal cannot be empty.', 'error');
+        return;
+    }
+    
+    console.log('[SAVE PROPOSAL] Saving updated proposal');
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            proposal: newProposal,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: 'updated the proposal',
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        });
+        
+        showNotification('Proposal updated successfully!', 'success');
+        disableProposalEditing();
+        
+    } catch (error) {
+        console.error('[SAVE PROPOSAL ERROR]', error);
+        showNotification('Failed to save proposal. Please try again.', 'error');
+    }
+}
+
+// ==================
+//  Deadline Management
+// ==================
+
+async function handleSetDeadlines() {
+    if (!currentlyViewedProjectId) return;
+    
+    console.log('[SET DEADLINES] Saving deadlines');
+    
+    const deadlines = {
+        contact: document.getElementById('deadline-contact')?.value || '',
+        interview: document.getElementById('deadline-interview')?.value || '',
+        draft: document.getElementById('deadline-draft')?.value || '',
+        review: document.getElementById('deadline-review')?.value || '',
+        edits: document.getElementById('deadline-edits')?.value || ''
+    };
+    
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (project) {
+        deadlines.publication = project.deadlines?.publication || project.deadline;
+    }
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            deadlines: deadlines,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: 'updated project deadlines',
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        });
+        
+        showNotification('Deadlines updated successfully!', 'success');
+        
+    } catch (error) {
+        console.error('[SET DEADLINES ERROR]', error);
+        showNotification('Failed to save deadlines. Please try again.', 'error');
+    }
+}
+
+async function handleRequestDeadlineChange() {
+    if (!currentlyViewedProjectId) return;
+    
+    const reason = prompt('Please provide a reason for requesting deadline changes:');
+    if (!reason || !reason.trim()) {
+        showNotification('Please provide a reason for the deadline change request.', 'error');
+        return;
+    }
+    
+    console.log('[DEADLINE REQUEST] Submitting deadline change request');
+    
+    const requestedDeadlines = {
+        contact: document.getElementById('deadline-contact')?.value || '',
+        interview: document.getElementById('deadline-interview')?.value || '',
+        draft: document.getElementById('deadline-draft')?.value || '',
+        review: document.getElementById('deadline-review')?.value || '',
+        edits: document.getElementById('deadline-edits')?.value || ''
+    };
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            deadlineChangeRequest: {
+                requestedBy: currentUserName,
+                requestedDeadlines: requestedDeadlines,
+                reason: reason.trim(),
+                status: 'pending',
+                requestedAt: new Date()
+            },
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `requested deadline changes. Reason: ${reason.trim()}`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        });
+        
+        showNotification('Deadline change request submitted successfully!', 'success');
+        
+    } catch (error) {
+        console.error('[DEADLINE REQUEST ERROR]', error);
+        showNotification('Failed to submit deadline request. Please try again.', 'error');
+    }
+}
+
+async function handleApproveDeadlineRequest() {
+    if (!currentlyViewedProjectId) return;
+    
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!project) return;
+    
+    const request = project.deadlineRequest || project.deadlineChangeRequest;
+    if (!request) return;
+    
+    console.log('[APPROVE DEADLINE] Approving deadline request');
+    
+    try {
+        const updates = {
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `approved deadline change request from ${request.requestedBy}`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        };
+        
+        if (project.deadlineRequest) {
+            updates.deadline = request.requestedDate;
+            updates.deadlineRequest = firebase.firestore.FieldValue.delete();
+        } else if (project.deadlineChangeRequest) {
+            updates.deadlines = request.requestedDeadlines;
+            updates.deadlineChangeRequest = firebase.firestore.FieldValue.delete();
+        }
+        
+        await db.collection('projects').doc(currentlyViewedProjectId).update(updates);
+        
+        showNotification('Deadline request approved!', 'success');
+        
+    } catch (error) {
+        console.error('[APPROVE DEADLINE ERROR]', error);
+        showNotification('Failed to approve deadline request. Please try again.', 'error');
+    }
+}
+
+async function handleRejectDeadlineRequest() {
+    if (!currentlyViewedProjectId) return;
+    
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!project) return;
+    
+    const request = project.deadlineRequest || project.deadlineChangeRequest;
+    if (!request) return;
+    
+    console.log('[REJECT DEADLINE] Rejecting deadline request');
+    
+    try {
+        const updates = {
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `rejected deadline change request from ${request.requestedBy}`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        };
+        
+        if (project.deadlineRequest) {
+            updates.deadlineRequest = firebase.firestore.FieldValue.delete();
+        } else if (project.deadlineChangeRequest) {
+            updates.deadlineChangeRequest = firebase.firestore.FieldValue.delete();
+        }
+        
+        await db.collection('projects').doc(currentlyViewedProjectId).update(updates);
+        
+        showNotification('Deadline request rejected.', 'info');
+        
+    } catch (error) {
+        console.error('[REJECT DEADLINE ERROR]', error);
+        showNotification('Failed to reject deadline request. Please try again.', 'error');
+    }
+}
+
+// Make functions globally available for onclick handlers
+window.handleApproveDeadlineRequest = handleApproveDeadlineRequest;
+window.handleRejectDeadlineRequest = handleRejectDeadlineRequest;
+
+console.log('[INIT] ✅ All missing functions loaded successfully - Saving is now fixed!');
