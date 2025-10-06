@@ -262,119 +262,9 @@ function updateSelectionCounter() {
     }
 }
 
-// Make functions globally available
-window.toggleAssignee = toggleAssignee;
-window.removeAssignee = removeAssignee;
-
 // ==================
-//  Helper Functions
+//  Initialization & Auth
 // ==================
-
-/**
- * Get all assignee names for a task (handles both single and multiple assignees)
- */
-function getTaskAssigneeNames(task) {
-    // Prefer new format (multiple assignees)
-    if (task.assigneeNames && Array.isArray(task.assigneeNames) && task.assigneeNames.length > 0) {
-        return task.assigneeNames;
-    }
-    // Fall back to single assignee
-    if (task.assigneeName) {
-        return [task.assigneeName];
-    }
-    return ['Unassigned'];
-}
-
-/**
- * Check if a user is assigned to a task
- */
-function isUserAssignedToTask(task, userId) {
-    // Check new format (multiple assignees)
-    if (task.assigneeIds && Array.isArray(task.assigneeIds)) {
-        return task.assigneeIds.includes(userId);
-    }
-    // Fall back to single assignee
-    return task.assigneeId === userId;
-}
-
-/**
- * Escape HTML to prevent XSS attacks
- */
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-/**
- * Generate consistent color from string (for avatars)
- */
-function stringToColor(str) {
-    if (!str) return '#667eea';
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const colors = [
-        '#667eea', '#764ba2', '#f093fb', '#4facfe',
-        '#43e97b', '#fa709a', '#fee140', '#30cfd0',
-        '#a8edea', '#fed6e3', '#c471f5', '#fa71cd'
-    ];
-    return colors[Math.abs(hash) % colors.length];
-}
-
-/**
- * Calculate progress percentage from timeline
- */
-function calculateProgress(timeline) {
-    if (!timeline) return 0;
-    const tasks = Object.keys(timeline);
-    if (tasks.length === 0) return 0;
-    const completed = tasks.filter(task => timeline[task]).length;
-    return Math.round((completed / tasks.length) * 100);
-}
-
-/**
- * Validate date string (YYYY-MM-DD format)
- */
-function isValidDate(dateString) {
-    if (!dateString) return false;
-    const regex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!regex.test(dateString)) return false;
-    const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date);
-}
-
-/**
- * Show notification toast
- */
-function showNotification(message, type = 'info') {
-    const container = document.getElementById('notification-container');
-    if (!container) {
-        console.error('[NOTIFICATION] Container not found');
-        return;
-    }
-    
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    
-    container.appendChild(notification);
-    
-    // Animate in
-    setTimeout(() => notification.classList.add('show'), 10);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => notification.remove(), 300);
-    }, 5000);
-}
-
-// ======================
-//  Initialization
-// ======================
 auth.onAuthStateChanged(async (user) => {
     if (!user) {
         window.location.href = 'index.html';
@@ -706,8 +596,6 @@ function openTaskModal() {
     // Reset form and state
     document.getElementById('task-form').reset();
     selectedAssignees = [];
-    filteredUsers = [...allUsers];
-    isDropdownOpen = false;
     
     // Initialize multi-select
     initializeMultiSelect();
@@ -724,221 +612,6 @@ function openTaskModal() {
     setTimeout(() => {
         document.getElementById('task-title').focus();
     }, 100);
-}
-
-function initializeMultiSelect() {
-    filteredUsers = [...allUsers];
-    renderSelectedAssignees();
-    renderDropdownOptions();
-    setupMultiSelectListeners();
-    
-    console.log('[MULTI-SELECT] Initialized with', allUsers.length, 'users');
-}
-
-function setupMultiSelectListeners() {
-    const container = document.getElementById('multi-select-container');
-    const searchInput = document.getElementById('assignee-search');
-    const dropdown = document.getElementById('assignee-dropdown');
-    const indicator = document.getElementById('dropdown-indicator');
-    
-    if (!container || !searchInput || !dropdown || !indicator) {
-        console.error('[MULTI-SELECT] Required elements not found');
-        return;
-    }
-    
-    // Remove existing listeners to prevent duplicates
-    const newContainer = container.cloneNode(true);
-    container.parentNode.replaceChild(newContainer, container);
-    
-    // Get fresh references
-    const freshContainer = document.getElementById('multi-select-container');
-    const freshSearch = document.getElementById('assignee-search');
-    const freshIndicator = document.getElementById('dropdown-indicator');
-    
-    // Search input events
-    freshSearch.addEventListener('input', handleSearchInput);
-    freshSearch.addEventListener('focus', () => openDropdown());
-    freshSearch.addEventListener('keydown', handleSearchKeydown);
-    
-    // Container click events
-    freshContainer.addEventListener('click', (e) => {
-        if (e.target === freshContainer || e.target.closest('.multi-select-header')) {
-            freshSearch.focus();
-            if (!isDropdownOpen) openDropdown();
-        }
-    });
-    
-    // Dropdown indicator
-    freshIndicator.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleDropdown();
-        if (isDropdownOpen) freshSearch.focus();
-    });
-    
-    // Close dropdown when clicking outside
-    document.addEventListener('click', handleOutsideClick);
-    
-    console.log('[MULTI-SELECT] Event listeners attached');
-}
-
-function handleSearchInput(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    filterUsers(searchTerm);
-    if (!isDropdownOpen) openDropdown();
-}
-
-function handleSearchKeydown(e) {
-    switch (e.key) {
-        case 'Escape':
-            closeDropdown();
-            e.target.blur();
-            break;
-        case 'Enter':
-            e.preventDefault();
-            if (filteredUsers.length > 0) {
-                const firstUnselected = filteredUsers.find(user => 
-                    !selectedAssignees.some(selected => selected.id === user.id)
-                );
-                if (firstUnselected) {
-                    toggleAssignee(firstUnselected.id);
-                    e.target.value = '';
-                    filterUsers('');
-                }
-            }
-            break;
-        case 'Backspace':
-            if (e.target.value === '' && selectedAssignees.length > 0) {
-                const lastAssignee = selectedAssignees[selectedAssignees.length - 1];
-                removeAssignee(lastAssignee.id);
-            }
-            break;
-    }
-}
-
-function handleOutsideClick(e) {
-    const container = document.getElementById('multi-select-container');
-    if (container && !container.contains(e.target)) {
-        closeDropdown();
-    }
-}
-
-function openDropdown() {
-    isDropdownOpen = true;
-    updateDropdownState();
-}
-
-function closeDropdown() {
-    isDropdownOpen = false;
-    updateDropdownState();
-}
-
-function toggleDropdown() {
-    isDropdownOpen = !isDropdownOpen;
-    updateDropdownState();
-}
-
-function updateDropdownState() {
-    const container = document.getElementById('multi-select-container');
-    const dropdown = document.getElementById('assignee-dropdown');
-    
-    if (container && dropdown) {
-        container.classList.toggle('open', isDropdownOpen);
-        dropdown.classList.toggle('show', isDropdownOpen);
-    }
-}
-
-function filterUsers(searchTerm) {
-    if (!searchTerm.trim()) {
-        filteredUsers = [...allUsers];
-    } else {
-        filteredUsers = allUsers.filter(user =>
-            user.name.toLowerCase().includes(searchTerm) ||
-            (user.role && user.role.toLowerCase().includes(searchTerm)) ||
-            (user.email && user.email.toLowerCase().includes(searchTerm))
-        );
-    }
-    renderDropdownOptions();
-}
-
-function toggleAssignee(userId) {
-    const user = allUsers.find(u => u.id === userId);
-    if (!user) {
-        console.error('[MULTI-SELECT] User not found:', userId);
-        return;
-    }
-
-    const existingIndex = selectedAssignees.findIndex(selected => selected.id === userId);
-    
-    if (existingIndex > -1) {
-        selectedAssignees.splice(existingIndex, 1);
-        console.log('[MULTI-SELECT] Removed assignee:', user.name);
-    } else {
-        selectedAssignees.push(user);
-        console.log('[MULTI-SELECT] Added assignee:', user.name);
-    }
-
-    renderSelectedAssignees();
-    renderDropdownOptions();
-}
-
-function removeAssignee(userId) {
-    selectedAssignees = selectedAssignees.filter(user => user.id !== userId);
-    renderSelectedAssignees();
-    renderDropdownOptions();
-    
-    const user = allUsers.find(u => u.id === userId);
-    console.log('[MULTI-SELECT] Removed assignee:', user?.name);
-}
-
-function renderSelectedAssignees() {
-    const container = document.getElementById('selected-assignees');
-    if (!container) return;
-    
-    if (selectedAssignees.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-    
-    container.innerHTML = selectedAssignees.map(user => `
-        <div class="assignee-tag" data-user-id="${user.id}">
-            <div class="assignee-avatar" style="background-color: ${stringToColor(user.name)}">
-                ${user.name.charAt(0).toUpperCase()}
-            </div>
-            <span>${escapeHtml(user.name)}</span>
-            <div class="remove-assignee" onclick="removeAssignee('${user.id}')" title="Remove ${escapeHtml(user.name)}">
-                ×
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderDropdownOptions() {
-    const dropdown = document.getElementById('assignee-dropdown');
-    if (!dropdown) return;
-    
-    if (filteredUsers.length === 0) {
-        dropdown.innerHTML = '<div class="no-results">No team members found</div>';
-        return;
-    }
-
-    dropdown.innerHTML = filteredUsers.map(user => {
-        const isSelected = selectedAssignees.some(selected => selected.id === user.id);
-        return `
-            <div class="assignee-item ${isSelected ? 'selected' : ''}" 
-                 onclick="toggleAssignee('${user.id}')"
-                 data-user-id="${user.id}"
-                 tabindex="0">
-                <div class="user-avatar" style="background-color: ${stringToColor(user.name)}">
-                    ${user.name.charAt(0).toUpperCase()}
-                </div>
-                <div class="assignee-info">
-                    <div class="assignee-name">${escapeHtml(user.name)}</div>
-                    <div class="assignee-role">${escapeHtml(user.role || 'member')}</div>
-                </div>
-                <div class="assignee-status">available</div>
-            </div>
-        `;
-    }).join('');
 }
 
 async function handleTaskFormSubmit(e) {
@@ -1393,7 +1066,6 @@ async function updateTaskStatus(newStatus) {
     }
 }
 
-
 async function handleAddTaskComment() {
     const commentInput = document.getElementById('task-comment-input');
     if (!commentInput || !currentlyViewedTaskId) return;
@@ -1811,17 +1483,14 @@ function renderActivityFeed(activity) {
 async function handleProjectFormSubmit(e) {
     e.preventDefault();
     
-    // Get submit button reference for loading states
     const submitButton = document.getElementById('save-project-button');
     const originalText = submitButton.textContent;
     
     try {
-        // Show loading state to user
         submitButton.disabled = true;
         submitButton.classList.add('loading');
         submitButton.textContent = 'Submitting...';
         
-        // Build timeline tasks based on project type
         const type = document.getElementById('project-type').value;
         const timeline = {};
         const tasks = type === "Interview" 
@@ -1830,10 +1499,8 @@ async function handleProjectFormSubmit(e) {
             : ["Topic Proposal Complete", "Article Writing Complete", 
                "Review In Progress", "Review Complete", "Suggestions Reviewed"];
         
-        // Initialize all timeline tasks as incomplete
         tasks.forEach(task => timeline[task] = false);
 
-        // ✅ FIX: Use new Date() instead of serverTimestamp in the activity array
         const newProject = {
             title: document.getElementById('project-title').value, 
             type: type,
@@ -1854,42 +1521,153 @@ async function handleProjectFormSubmit(e) {
             proposalStatus: 'pending',
             timeline: timeline,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            // ✅ FIXED: Initialize with activity entry using new Date()
             activity: [{
                 text: 'created the project.',
                 authorName: currentUserName,
-                timestamp: new Date() // ✅ Use new Date() instead of serverTimestamp()
+                timestamp: new Date()
             }]
         };
         
         console.log('[PROJECT CREATE] Creating project:', newProject);
 
-        // ✅ SIMPLIFIED: Create the document with activity included - ONE operation instead of two
         await db.collection('projects').add(newProject);
         
         console.log('[PROJECT CREATE] Project created successfully');
         
-        // Show success message and close modal
         showNotification('Project proposal submitted successfully!', 'success');
         closeAllModals();
         
     } catch (error) {
-        // Log detailed error information
         console.error("[PROJECT ERROR] Failed to create project:", error);
-        console.error("[PROJECT ERROR] Error code:", error.code);
-        console.error("[PROJECT ERROR] Error message:", error.message);
-        
-        // Show user-friendly error message
         showNotification(`Failed to create project: ${error.message}`, 'error');
         
     } finally {
-        // ALWAYS reset button state, even if there was an error
         submitButton.disabled = false;
         submitButton.classList.remove('loading');
         submitButton.textContent = originalText;
     }
 }
 
+// ==================
+//  Kanban & Timeline Helpers
+// ==================
+
+function getColumnsForView(view) {
+    switch (view) {
+        case 'my-assignments':
+            return ['Pending', 'In Progress', 'Completed'];
+        default:
+            return ['Pending Approval', 'Approved', 'In Progress', 'Completed'];
+    }
+}
+
+function getProjectState(project, view, user) {
+    const timeline = project.timeline || {};
+    const isAuthor = user && user.uid === project.authorId;
+    const isEditor = user && user.uid === project.editorId;
+    
+    const allTasksComplete = Object.values(timeline).every(task => task === true);
+    if (allTasksComplete && timeline["Suggestions Reviewed"]) {
+        return { column: 'Completed', statusText: 'Completed', color: 'success' };
+    }
+    
+    if (project.proposalStatus === 'rejected') {
+        return { column: 'Pending Approval', statusText: 'Proposal Rejected', color: 'danger' };
+    }
+    
+    if (project.proposalStatus === 'pending') {
+        return { column: 'Pending Approval', statusText: 'Awaiting Approval', color: 'warning' };
+    }
+    
+    if (timeline["Suggestions Reviewed"]) {
+        return { column: 'Completed', statusText: 'Review Complete', color: 'success' };
+    }
+    
+    if (timeline["Review Complete"]) {
+        if (isAuthor) {
+            return { column: 'In Progress', statusText: 'Awaiting Your Review', color: 'info' };
+        }
+        return { column: 'In Progress', statusText: 'Author Reviewing Edits', color: 'info' };
+    }
+    
+    if (timeline["Review In Progress"]) {
+        if (isEditor) {
+            return { column: 'In Progress', statusText: 'You Are Reviewing', color: 'info' };
+        }
+        return { column: 'In Progress', statusText: 'Editor Reviewing', color: 'info' };
+    }
+    
+    if (timeline["Article Writing Complete"]) {
+        if (!project.editorId) {
+            return { column: 'Approved', statusText: 'Awaiting Editor Assignment', color: 'warning' };
+        }
+        if (isEditor) {
+            return { column: 'In Progress', statusText: 'Ready for Your Review', color: 'info' };
+        }
+        return { column: 'Approved', statusText: 'Ready for Review', color: 'primary' };
+    }
+    
+    if (timeline["Interview Complete"] || (project.type === 'Op-Ed' && timeline["Topic Proposal Complete"])) {
+        if (isAuthor) {
+            return { column: 'In Progress', statusText: 'Writing Article', color: 'info' };
+        }
+        return { column: 'In Progress', statusText: 'Author Writing', color: 'info' };
+    }
+    
+    if (timeline["Interview Scheduled"]) {
+        if (isAuthor) {
+            return { column: 'In Progress', statusText: 'Interview Scheduled', color: 'info' };
+        }
+        return { column: 'In Progress', statusText: 'Interview Pending', color: 'info' };
+    }
+    
+    if (timeline["Topic Proposal Complete"] || project.proposalStatus === 'approved') {
+        if (project.type === 'Op-Ed') {
+            if (isAuthor) {
+                return { column: 'Approved', statusText: 'Ready to Write', color: 'primary' };
+            }
+            return { column: 'Approved', statusText: 'Approved - Writing', color: 'primary' };
+        } else {
+            if (isAuthor) {
+                return { column: 'Approved', statusText: 'Schedule Interview', color: 'primary' };
+            }
+            return { column: 'Approved', statusText: 'Approved - Interview Pending', color: 'primary' };
+        }
+    }
+    
+    return { column: 'Pending Approval', statusText: 'Awaiting Approval', color: 'warning' };
+}
+
+async function handleTaskCompletion(projectId, taskName, isCompleted, database, userName) {
+    if (!projectId || !database || !userName) {
+        console.error('[TASK COMPLETION] Missing required parameters');
+        return;
+    }
+    
+    console.log(`[TASK COMPLETION] Updating task "${taskName}" to ${isCompleted ? 'completed' : 'incomplete'}`);
+    
+    try {
+        const updatePath = `timeline.${taskName}`;
+        const activityText = isCompleted ? 
+            `marked "${taskName}" as complete` : 
+            `marked "${taskName}" as incomplete`;
+        
+        await database.collection('projects').doc(projectId).update({
+            [updatePath]: isCompleted,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: activityText,
+                authorName: userName,
+                timestamp: new Date()
+            })
+        });
+        
+        console.log('[TASK COMPLETION] Task updated successfully');
+        
+    } catch (error) {
+        console.error('[TASK COMPLETION ERROR]', error);
+        showNotification('Failed to update task. Please try again.', 'error');
+    }
+}
 
 // ==================
 //  Kanban Board
@@ -1948,7 +1726,6 @@ function filterProjects() {
     }
 }
 
-
 function createProjectCard(project) {
     if (project.isTask) {
         return createTaskCardForAssignments(project);
@@ -1993,7 +1770,6 @@ function createProjectCard(project) {
         </div>
     `;
     
-    // Prevent event bubbling issues
     card.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -2028,7 +1804,6 @@ function createTaskCardForAssignments(task) {
     
     const priorityColor = priorityColors[task.priority] || priorityColors.medium;
     
-    // Handle multiple assignees display
     const assigneeNames = getTaskAssigneeNames(task);
     let displayNames = assigneeNames.join(', ');
     let multipleIndicator = '';
@@ -2088,20 +1863,17 @@ function renderCalendar() {
     const prevMonth = new Date(year, month, 0);
     const today = new Date();
 
-    // Previous month's trailing days
     for (let i = firstDay - 1; i >= 0; i--) {
         const dayDate = new Date(prevMonth);
         dayDate.setDate(prevMonth.getDate() - i);
         createCalendarDay(calendarGrid, dayDate, true, today);
     }
 
-    // Current month days
     for (let day = 1; day <= daysInMonth; day++) {
         const dayDate = new Date(year, month, day);
         createCalendarDay(calendarGrid, dayDate, false, today);
     }
 
-    // Next month's leading days to fill the grid
     const totalCells = calendarGrid.children.length;
     const remainingCells = 42 - totalCells;
     const nextMonth = new Date(year, month + 1, 1);
@@ -2210,7 +1982,6 @@ function hasTaskDeadlineOnDate(task, date) {
     if (!task.deadline) return false;
     
     try {
-        // Handle both date strings and Date objects
         const taskDeadline = new Date(task.deadline + 'T00:00:00');
         
         if (isNaN(taskDeadline.getTime())) {
@@ -2232,7 +2003,6 @@ function hasProjectDeadlineOnDate(project, date) {
     
     const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
     
-    // Check intermediate deadlines
     for (const type of deadlineTypes) {
         if (deadlines[type]) {
             try {
@@ -2253,7 +2023,6 @@ function hasProjectDeadlineOnDate(project, date) {
         }
     }
     
-    // Check final publication deadline
     if (finalDeadline) {
         try {
             const publicationDate = new Date(finalDeadline + 'T00:00:00');
@@ -2325,7 +2094,7 @@ function updateCalendarStats() {
     console.log('[CALENDAR] Updating calendar statistics');
     
     const now = new Date();
-    now.setHours(0, 0, 0, 0); // Normalize to start of day
+    now.setHours(0, 0, 0, 0);
     
     const monthStart = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
     monthStart.setHours(0, 0, 0, 0);
@@ -2345,12 +2114,10 @@ function updateCalendarStats() {
     let thisWeekCount = 0;
     let overdueCount = 0;
     
-    // Count project deadlines
     allProjects.forEach(project => {
         const deadlines = project.deadlines || {};
         const finalDeadline = deadlines.publication || project.deadline;
         
-        // Check final publication deadline
         if (finalDeadline) {
             try {
                 const deadline = new Date(finalDeadline + 'T00:00:00');
@@ -2374,7 +2141,6 @@ function updateCalendarStats() {
             }
         }
         
-        // Count intermediate deadlines
         const deadlineTypes = ['contact', 'interview', 'draft', 'review', 'edits'];
         deadlineTypes.forEach(type => {
             if (deadlines[type]) {
@@ -2397,7 +2163,6 @@ function updateCalendarStats() {
         });
     });
     
-    // Count task deadlines
     allTasks.forEach(task => {
         if (!task.deadline) return;
         
@@ -2448,7 +2213,7 @@ function showDayDetails(date, items) {
             const assigneeNames = getTaskAssigneeNames(item);
             message += `${index + 1}. [TASK] ${item.title}\n   Assigned to: ${assigneeNames.join(', ')}\n   Priority: ${item.priority || 'medium'}\n\n`;
         } else {
-            const { eventType, eventTitle } = getEventTypeForDate(item, date);
+            const { eventTitle } = getEventTypeForDate(item, date);
             message += `${index + 1}. ${item.title}\n   ${eventTitle}\n   Author: ${item.authorName}\n\n`;
         }
     });
@@ -2520,21 +2285,17 @@ function setupCalendarKeyboardNavigation() {
 function closeAllModals() {
     console.log('[MODAL] Closing all modals');
     
-    // Get all modals
     const modals = document.querySelectorAll('.modal-overlay');
     
     modals.forEach(modal => {
-        // Reset opacity immediately on all content
         const detailsContainers = modal.querySelectorAll('.details-container');
         detailsContainers.forEach(content => {
             content.style.opacity = '1';
-            content.style.transition = 'none'; // Remove transition during close
+            content.style.transition = 'none';
         });
         
-        // Hide modal
         modal.style.display = 'none';
         
-        // Reset transition after a brief delay
         setTimeout(() => {
             detailsContainers.forEach(content => {
                 content.style.transition = 'opacity 0.2s ease-in-out';
@@ -2542,7 +2303,6 @@ function closeAllModals() {
         }, 50);
     });
     
-    // Clear state
     currentlyViewedProjectId = null;
     currentlyViewedTaskId = null;
     disableProposalEditing();
@@ -2566,10 +2326,8 @@ function generateStatusReport() {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     
-    // Group projects and tasks by user
     const userWorkload = {};
     
-    // Initialize all users
     allUsers.forEach(user => {
         userWorkload[user.id] = {
             name: user.name,
@@ -2583,7 +2341,6 @@ function generateStatusReport() {
         };
     });
     
-    // Categorize projects
     allProjects.forEach(project => {
         const state = getProjectState(project, currentView, currentUser);
         const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
@@ -2621,7 +2378,6 @@ function generateStatusReport() {
             proposalStatus: project.proposalStatus
         };
         
-        // Add to author's workload
         if (project.authorId && userWorkload[project.authorId]) {
             userWorkload[project.authorId].projects.push(projectInfo);
             if (status === 'overdue') userWorkload[project.authorId].overdue++;
@@ -2629,7 +2385,6 @@ function generateStatusReport() {
             else userWorkload[project.authorId].onTrack++;
         }
         
-        // Add to editor's workload
         if (project.editorId && userWorkload[project.editorId]) {
             userWorkload[project.editorId].projects.push(projectInfo);
             if (status === 'overdue') userWorkload[project.editorId].overdue++;
@@ -2638,7 +2393,6 @@ function generateStatusReport() {
         }
     });
     
-    // Categorize tasks
     allTasks.forEach(task => {
         let status = 'on-track';
         let daysUntilDeadline = null;
@@ -2672,7 +2426,6 @@ function generateStatusReport() {
             priority: task.priority || 'medium'
         };
         
-        // Add to all assignees
         const assigneeIds = task.assigneeIds || [task.assigneeId];
         assigneeIds.forEach(assigneeId => {
             if (assigneeId && userWorkload[assigneeId]) {
@@ -2684,13 +2437,11 @@ function generateStatusReport() {
         });
     });
     
-    // Calculate overall statistics
     const totalOverdue = Object.values(userWorkload).reduce((sum, user) => sum + user.overdue, 0);
     const totalOnTrack = Object.values(userWorkload).reduce((sum, user) => sum + user.onTrack, 0);
     const totalCompleted = Object.values(userWorkload).reduce((sum, user) => sum + user.completed, 0);
     const activeUsers = Object.values(userWorkload).filter(u => u.projects.length > 0 || u.tasks.length > 0).length;
     
-    // Start building report HTML
     let reportHTML = `
         <div class="report-header">
             <h2>📊 Comprehensive Team Status Report</h2>
@@ -2731,11 +2482,9 @@ function generateStatusReport() {
         </div>
     `;
     
-    // Team member details - sorted by workload
     const sortedUsers = Object.values(userWorkload)
         .filter(u => u.projects.length > 0 || u.tasks.length > 0)
         .sort((a, b) => {
-            // Sort by overdue first, then total workload
             if (b.overdue !== a.overdue) return b.overdue - a.overdue;
             return (b.projects.length + b.tasks.length) - (a.projects.length + a.tasks.length);
         });
@@ -2788,7 +2537,6 @@ function generateStatusReport() {
                     </div>
             `;
             
-            // Projects section
             if (user.projects.length > 0) {
                 reportHTML += `
                     <div class="user-work-section">
@@ -2823,7 +2571,6 @@ function generateStatusReport() {
                 `;
             }
             
-            // Tasks section
             if (user.tasks.length > 0) {
                 reportHTML += `
                     <div class="user-work-section">
@@ -2858,13 +2605,12 @@ function generateStatusReport() {
                 `;
             }
             
-            reportHTML += `</div>`; // Close user-card
+            reportHTML += `</div>`;
         });
         
-        reportHTML += `</div>`; // Close team-details section
+        reportHTML += `</div>`;
     }
     
-    // Recommendations section
     reportHTML += `
         <div class="report-section recommendations">
             <h2>💡 Recommendations</h2>
@@ -2923,626 +2669,6 @@ function generateStatusReport() {
 // ==================
 //  Project Actions
 // ==================
-async function addActivity(projectId, text) {
-    const activity = { text, authorName: currentUserName, timestamp: new Date() };
-    try {
-        await db.collection('projects').doc(projectId).update({ 
-            activity: firebase.firestore.FieldValue.arrayUnion(activity) 
-        });
-    } catch (error) {
-        console.error(`[ACTIVITY ERROR] Failed to add activity:`, error);
-    }
-}
-
-async function handleAddComment() {
-    const commentInput = document.getElementById('comment-input');
-    if (commentInput.value.trim() && currentlyViewedProjectId) {
-        await addActivity(currentlyViewedProjectId, `commented: "${commentInput.value.trim()}"`);
-        commentInput.value = '';
-    }
-}
-
-async function approveProposal(projectId) {
-    if (!projectId) return;
-    try {
-        await db.collection('projects').doc(projectId).update({
-            proposalStatus: 'approved',
-            'timeline.Topic Proposal Complete': true
-        });
-        
-        await addActivity(projectId, 'approved the proposal.');
-        
-    } catch (error) {
-        console.error('[APPROVAL ERROR]', error);
-        alert('Failed to approve proposal. Please try again.');
-    }
-}
-
-async function updateProposalStatus(newStatus) {
-    if (!currentlyViewedProjectId || newStatus !== 'rejected') return;
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            proposalStatus: newStatus
-        });
-        await addActivity(currentlyViewedProjectId, `rejected the proposal.`);
-    } catch (error) {
-        console.error(`[REJECTION ERROR] Failed to reject proposal:`, error);
-        alert(`Failed to reject proposal. Please try again.`);
-    }
-}
-
-async function handleAssignEditor() {
-    const dropdown = document.getElementById('editor-dropdown');
-    if (!dropdown) return;
-    
-    const editorId = dropdown.value;
-    if (!editorId) return;
-    
-    const selectedEditor = allEditors.find(e => e.id === editorId);
-    if (!selectedEditor || !currentlyViewedProjectId) return;
-    
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            editorId: editorId,
-            editorName: selectedEditor.name
-        });
-        
-        await addActivity(currentlyViewedProjectId, `assigned **${selectedEditor.name}** as the editor.`);
-        
-    } catch (error) {
-        console.error(`[EDITOR ERROR] Failed to assign editor:`, error);
-        alert('Failed to assign editor. Please try again.');
-    }
-}
-
-async function handleSetDeadlines() {
-    if (!currentlyViewedProjectId) return;
-
-    const currentProject = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!currentProject) return;
-
-    const newDeadlines = {
-        publication: currentProject.deadlines?.publication || '',
-    };
-    
-    let changes = [];
-    const deadlineFields = ['contact', 'interview', 'draft', 'review', 'edits'];
-    deadlineFields.forEach(field => {
-        const input = document.getElementById(`deadline-${field}`);
-        if (input && input.value) {
-            const oldValue = currentProject.deadlines?.[field] || '';
-            const newValue = input.value;
-            if (oldValue !== newValue) {
-                changes.push(`${field} deadline to ${newValue}`);
-            }
-            newDeadlines[field] = newValue;
-        }
-    });
-
-    if (changes.length > 0) {
-        try {
-            await db.collection('projects').doc(currentlyViewedProjectId).update({
-                deadlines: newDeadlines
-            });
-            await addActivity(currentlyViewedProjectId, `set deadlines: ${changes.join(', ')}.`);
-            alert('Deadlines set successfully!');
-        } catch (error) {
-            console.error('[DEADLINE SET ERROR]', error);
-            alert('Failed to set deadlines. Please try again.');
-        }
-    }
-}
-
-async function handleRequestDeadlineChange() {
-    if (!currentlyViewedProjectId) return;
-    
-    const reason = prompt('Please provide a reason for the deadline change request:');
-    if (!reason || !reason.trim()) return;
-    
-    const newDate = prompt('Enter the new deadline (YYYY-MM-DD format):');
-    if (!newDate || !isValidDate(newDate)) {
-        alert('Please enter a valid date in YYYY-MM-DD format.');
-        return;
-    }
-    
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            deadlineRequest: {
-                requestedBy: currentUserName,
-                requestedDate: newDate,
-                reason: reason.trim(),
-                status: 'pending',
-                requestedAt: new Date()
-            }
-        });
-        
-        await addActivity(currentlyViewedProjectId, `requested a deadline change to ${new Date(newDate).toLocaleDateString()}. Reason: ${reason.trim()}`);
-        
-    } catch (error) {
-        console.error('[DEADLINE REQUEST ERROR]', error);
-        alert('Failed to submit deadline request. Please try again.');
-    }
-}
-
-window.handleApproveDeadlineRequest = async function() {
-    if (!currentlyViewedProjectId) return;
-    
-    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!project) return;
-    
-    const request = project.deadlineRequest || project.deadlineChangeRequest;
-    if (!request) return;
-    
-    try {
-        if (project.deadlineRequest) {
-            const newDeadlines = {
-                ...project.deadlines,
-                publication: request.requestedDate
-            };
-            
-            await db.collection('projects').doc(currentlyViewedProjectId).update({
-                deadlines: newDeadlines,
-                'deadlineRequest.status': 'approved',
-                'deadlineRequest.approvedBy': currentUserName,
-                'deadlineRequest.approvedAt': new Date()
-            });
-            
-            await addActivity(currentlyViewedProjectId, `approved the deadline change request. New deadline: ${new Date(request.requestedDate).toLocaleDateString()}`);
-        } else if (project.deadlineChangeRequest) {
-            const newDeadlines = {
-                ...project.deadlines,
-                ...request.requestedDeadlines
-            };
-            
-            await db.collection('projects').doc(currentlyViewedProjectId).update({
-                deadlines: newDeadlines,
-                'deadlineChangeRequest.status': 'approved',
-                'deadlineChangeRequest.approvedBy': currentUserName,
-                'deadlineChangeRequest.approvedAt': new Date()
-            });
-            
-            const changedFields = Object.keys(request.requestedDeadlines).join(', ');
-            await addActivity(currentlyViewedProjectId, `approved deadline changes for: ${changedFields}`);
-        }
-        
-    } catch (error) {
-        console.error('[DEADLINE APPROVAL ERROR]', error);
-        alert('Failed to approve deadline request. Please try again.');
-    }
-};
-
-window.handleRejectDeadlineRequest = async function() {
-    if (!currentlyViewedProjectId) return;
-    
-    const reason = prompt('Please provide a reason for rejecting this deadline request (optional):');
-    
-    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!project) return;
-    
-    try {
-        if (project.deadlineRequest) {
-            const updates = {
-                'deadlineRequest.status': 'rejected',
-                'deadlineRequest.rejectedBy': currentUserName,
-                'deadlineRequest.rejectedAt': new Date()
-            };
-            
-            if (reason && reason.trim()) {
-                updates['deadlineRequest.rejectionReason'] = reason.trim();
-            }
-            
-            await db.collection('projects').doc(currentlyViewedProjectId).update(updates);
-        } else if (project.deadlineChangeRequest) {
-            const updates = {
-                'deadlineChangeRequest.status': 'rejected',
-                'deadlineChangeRequest.rejectedBy': currentUserName,
-                'deadlineChangeRequest.rejectedAt': new Date()
-            };
-            
-            if (reason && reason.trim()) {
-                updates['deadlineChangeRequest.rejectionReason'] = reason.trim();
-            }
-            
-            await db.collection('projects').doc(currentlyViewedProjectId).update(updates);
-        }
-        
-        const activityText = reason ? 
-            `rejected the deadline change request. Reason: ${reason.trim()}` :
-            'rejected the deadline change request.';
-        
-        await addActivity(currentlyViewedProjectId, activityText);
-        
-    } catch (error) {
-        console.error('[DEADLINE REJECTION ERROR]', error);
-        alert('Failed to reject deadline request. Please try again.');
-    }
-};
-
-async function handleDeleteProject() {
-    if (!currentlyViewedProjectId) return;
-    
-    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!project) return;
-    
-    const isAuthor = currentUser.uid === project.authorId;
-    const isAdmin = currentUserRole === 'admin';
-    
-    if (!isAuthor && !isAdmin) {
-        alert('You can only delete your own projects.');
-        return;
-    }
-    
-    if (confirm("Are you sure you want to permanently delete this project? This action cannot be undone.")) {
-        try {
-            await db.collection('projects').doc(currentlyViewedProjectId).delete();
-            closeAllModals();
-        } catch (error) {
-            console.error(`[DELETE ERROR] Failed to delete project:`, error);
-            alert('Failed to delete project. Please try again.');
-        }
-    }
-}
-
-// ==================
-//  Proposal Editing
-// ==================
-function enableProposalEditing() {
-    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!project) return;
-    
-    const titleElement = document.getElementById('details-title');
-    const titleInput = document.createElement('input');
-    titleInput.type = 'text';
-    titleInput.id = 'edit-title-input';
-    titleInput.value = project.title;
-    titleInput.className = 'edit-title-input';
-    titleElement.replaceWith(titleInput);
-    
-    const proposalElement = document.getElementById('details-proposal');
-    const proposalTextarea = document.createElement('textarea');
-    proposalTextarea.id = 'edit-proposal-textarea';
-    proposalTextarea.value = project.proposal || '';
-    proposalTextarea.className = 'edit-proposal-textarea';
-    proposalTextarea.rows = 6;
-    proposalElement.replaceWith(proposalTextarea);
-    
-    const editBtn = document.getElementById('edit-proposal-button');
-    const saveBtn = document.getElementById('save-proposal-button');
-    const cancelBtn = document.getElementById('cancel-proposal-button');
-    
-    if (editBtn) editBtn.style.display = 'none';
-    if (saveBtn) saveBtn.style.display = 'inline-block';
-    if (cancelBtn) cancelBtn.style.display = 'inline-block';
-}
-
-function disableProposalEditing() {
-    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!project) return;
-    
-    const titleInput = document.getElementById('edit-title-input');
-    if (titleInput) {
-        const titleElement = document.createElement('h2');
-        titleElement.id = 'details-title';
-        titleElement.textContent = project.title;
-        titleInput.replaceWith(titleElement);
-    }
-    
-    const proposalTextarea = document.getElementById('edit-proposal-textarea');
-    if (proposalTextarea) {
-        const proposalElement = document.createElement('p');
-        proposalElement.id = 'details-proposal';
-        proposalElement.textContent = project.proposal || 'No proposal provided.';
-        proposalTextarea.replaceWith(proposalElement);
-    }
-    
-    const isAuthor = currentUser.uid === project.authorId;
-    const isAdmin = currentUserRole === 'admin';
-    const canEditProposal = isAuthor || isAdmin;
-    
-    const editBtn = document.getElementById('edit-proposal-button');
-    const saveBtn = document.getElementById('save-proposal-button');
-    const cancelBtn = document.getElementById('cancel-proposal-button');
-    
-    if (editBtn) editBtn.style.display = canEditProposal ? 'inline-block' : 'none';
-    if (saveBtn) saveBtn.style.display = 'none';
-    if (cancelBtn) cancelBtn.style.display = 'none';
-}
-
-async function handleSaveProposal() {
-    if (!currentlyViewedProjectId) return;
-    
-    const titleInput = document.getElementById('edit-title-input');
-    const proposalTextarea = document.getElementById('edit-proposal-textarea');
-    
-    if (!titleInput || !proposalTextarea) return;
-    
-    const newTitle = titleInput.value.trim();
-    const newProposal = proposalTextarea.value.trim();
-    
-    if (!newTitle) {
-        alert('Title cannot be empty.');
-        return;
-    }
-    
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            title: newTitle,
-            proposal: newProposal
-        });
-        
-        await addActivity(currentlyViewedProjectId, 'updated the project title and proposal.');
-        
-    } catch (error) {
-        console.error('[PROPOSAL UPDATE ERROR]', error);
-        alert('Failed to update proposal. Please try again.');
-    }
-}
-
-// ==================
-//  Helper Functions
-// ==================
-function stringToColor(str) {
-    if (!str) return '#cccccc';
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    let color = '#';
-    for (let i = 0; i < 3; i++) {
-        let value = (hash >> (i * 8)) & 0xFF;
-        color += ('00' + value.toString(16)).substr(-2);
-    }
-    return color;
-}
-
-function calculateProgress(timeline) {
-    if (!timeline) return 0;
-    const totalTasks = Object.keys(timeline).length;
-    const completedTasks = Object.values(timeline).filter(Boolean).length;
-    return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-}
-
-function isValidDate(dateString) {
-    const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function showNotification(message, type = 'success') {
-    console.log(`[NOTIFICATION ${type.toUpperCase()}] ${message}`);
-    
-    let container = document.getElementById('notification-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notification-container';
-        container.className = 'notification-container';
-        container.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            pointer-events: none;
-        `;
-        document.body.appendChild(container);
-    }
-    
-    const notification = document.createElement('div');
-    notification.className = 'notification';
-    notification.style.cssText = `
-        padding: 16px 20px;
-        margin-bottom: 8px;
-        border-radius: 12px;
-        color: white;
-        font-weight: 600;
-        font-size: 14px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        transform: translateX(400px);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        max-width: 350px;
-        pointer-events: auto;
-        position: relative;
-    `;
-    
-    if (type === 'success') {
-        notification.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-    } else if (type === 'error') {
-        notification.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
-    } else if (type === 'warning') {
-        notification.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-    } else {
-        notification.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
-    }
-    
-    notification.textContent = message;
-    container.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.transform = 'translateX(0)';
-    }, 100);
-    
-    setTimeout(() => {
-        notification.style.transform = 'translateX(400px)';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 4000);
-}
-
-function getTaskAssigneeNames(task) {
-    if (Array.isArray(task.assigneeNames) && task.assigneeNames.length > 0) {
-        return task.assigneeNames.filter(name => name && name.trim());
-    } else if (task.assigneeName && task.assigneeName.trim()) {
-        return [task.assigneeName];
-    }
-    return ['Unassigned'];
-}
-
-function getTaskAssigneeIds(task) {
-    if (Array.isArray(task.assigneeIds) && task.assigneeIds.length > 0) {
-        return task.assigneeIds.filter(id => id && id.trim());
-    } else if (task.assigneeId && task.assigneeId.trim()) {
-        return [task.assigneeId];
-    }
-    return [];
-}
-
-function isUserAssignedToTask(task, userId) {
-    if (task.creatorId === userId) return true;
-    const assigneeIds = getTaskAssigneeIds(task);
-    return assigneeIds.includes(userId);
-}
-
-// Make global functions available for onclick handlers
-window.toggleAssignee = toggleAssignee;
-window.removeAssignee = removeAssignee;
-
-console.log('[DASHBOARD] Fixed dashboard.js loaded successfully!');
-
-// ==========================================
-// COMPLETE MISSING FUNCTIONS FOR dashboard.js
-// COPY ALL OF THIS AND PASTE AT THE END OF dashboard.js
-// ==========================================
-
-// ==================
-//  Helper Functions for Kanban Board
-// ==================
-
-function getColumnsForView(view) {
-    switch (view) {
-        case 'my-assignments':
-            return ['Pending', 'In Progress', 'Completed'];
-        default:
-            return ['Pending Approval', 'Approved', 'In Progress', 'Completed'];
-    }
-}
-
-function getProjectState(project, view, user) {
-    const timeline = project.timeline || {};
-    const isAuthor = user && user.uid === project.authorId;
-    const isEditor = user && user.uid === project.editorId;
-    
-    // Check completion status
-    const allTasksComplete = Object.values(timeline).every(task => task === true);
-    if (allTasksComplete && timeline["Suggestions Reviewed"]) {
-        return { column: 'Completed', statusText: 'Completed', color: 'success' };
-    }
-    
-    // Check if proposal is rejected
-    if (project.proposalStatus === 'rejected') {
-        return { column: 'Pending Approval', statusText: 'Proposal Rejected', color: 'danger' };
-    }
-    
-    // Check if proposal is pending
-    if (project.proposalStatus === 'pending') {
-        return { column: 'Pending Approval', statusText: 'Awaiting Approval', color: 'warning' };
-    }
-    
-    // Proposal is approved, check progress
-    if (timeline["Suggestions Reviewed"]) {
-        return { column: 'Completed', statusText: 'Review Complete', color: 'success' };
-    }
-    
-    if (timeline["Review Complete"]) {
-        if (isAuthor) {
-            return { column: 'In Progress', statusText: 'Awaiting Your Review', color: 'info' };
-        }
-        return { column: 'In Progress', statusText: 'Author Reviewing Edits', color: 'info' };
-    }
-    
-    if (timeline["Review In Progress"]) {
-        if (isEditor) {
-            return { column: 'In Progress', statusText: 'You Are Reviewing', color: 'info' };
-        }
-        return { column: 'In Progress', statusText: 'Editor Reviewing', color: 'info' };
-    }
-    
-    if (timeline["Article Writing Complete"]) {
-        if (!project.editorId) {
-            return { column: 'Approved', statusText: 'Awaiting Editor Assignment', color: 'warning' };
-        }
-        if (isEditor) {
-            return { column: 'In Progress', statusText: 'Ready for Your Review', color: 'info' };
-        }
-        return { column: 'Approved', statusText: 'Ready for Review', color: 'primary' };
-    }
-    
-    if (timeline["Interview Complete"] || (project.type === 'Op-Ed' && timeline["Topic Proposal Complete"])) {
-        if (isAuthor) {
-            return { column: 'In Progress', statusText: 'Writing Article', color: 'info' };
-        }
-        return { column: 'In Progress', statusText: 'Author Writing', color: 'info' };
-    }
-    
-    if (timeline["Interview Scheduled"]) {
-        if (isAuthor) {
-            return { column: 'In Progress', statusText: 'Interview Scheduled', color: 'info' };
-        }
-        return { column: 'In Progress', statusText: 'Interview Pending', color: 'info' };
-    }
-    
-    if (timeline["Topic Proposal Complete"] || project.proposalStatus === 'approved') {
-        if (project.type === 'Op-Ed') {
-            if (isAuthor) {
-                return { column: 'Approved', statusText: 'Ready to Write', color: 'primary' };
-            }
-            return { column: 'Approved', statusText: 'Approved - Writing', color: 'primary' };
-        } else {
-            if (isAuthor) {
-                return { column: 'Approved', statusText: 'Schedule Interview', color: 'primary' };
-            }
-            return { column: 'Approved', statusText: 'Approved - Interview Pending', color: 'primary' };
-        }
-    }
-    
-    return { column: 'Pending Approval', statusText: 'Awaiting Approval', color: 'warning' };
-}
-
-// ==================
-//  Timeline Task Completion Handler
-// ==================
-
-async function handleTaskCompletion(projectId, taskName, isCompleted, database, userName) {
-    if (!projectId || !database || !userName) {
-        console.error('[TASK COMPLETION] Missing required parameters');
-        return;
-    }
-    
-    console.log(`[TASK COMPLETION] Updating task "${taskName}" to ${isCompleted ? 'completed' : 'incomplete'}`);
-    
-    try {
-        const updatePath = `timeline.${taskName}`;
-        const activityText = isCompleted ? 
-            `marked "${taskName}" as complete` : 
-            `marked "${taskName}" as incomplete`;
-        
-        await database.collection('projects').doc(projectId).update({
-            [updatePath]: isCompleted,
-            activity: firebase.firestore.FieldValue.arrayUnion({
-                text: activityText,
-                authorName: userName,
-                timestamp: new Date()
-            })
-        });
-        
-        console.log('[TASK COMPLETION] Task updated successfully');
-        
-    } catch (error) {
-        console.error('[TASK COMPLETION ERROR]', error);
-        showNotification('Failed to update task. Please try again.', 'error');
-    }
-}
-
-// ==================
-//  Project Actions
-// ==================
-
 async function approveProposal(projectId) {
     if (!projectId) {
         console.error('[APPROVE] No project ID provided');
@@ -3697,7 +2823,6 @@ async function handleDeleteProject() {
 // ==================
 //  Proposal Editing
 // ==================
-
 function enableProposalEditing() {
     const proposalElement = document.getElementById('details-proposal');
     const editBtn = document.getElementById('edit-proposal-button');
@@ -3741,8 +2866,16 @@ function disableProposalEditing() {
         proposalElement.textContent = originalText;
         proposalElement.removeAttribute('data-original-text');
     }
+
+    if (!currentlyViewedProjectId) return;
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!project) return;
     
-    if (editBtn) editBtn.style.display = 'inline-block';
+    const isAuthor = currentUser.uid === project.authorId;
+    const isAdmin = currentUserRole === 'admin';
+    const canEditProposal = isAuthor || isAdmin;
+    
+    if (editBtn) editBtn.style.display = canEditProposal ? 'inline-block' : 'none';
     if (saveBtn) saveBtn.style.display = 'none';
     if (cancelBtn) cancelBtn.style.display = 'none';
 }
@@ -3783,7 +2916,6 @@ async function handleSaveProposal() {
 // ==================
 //  Deadline Management
 // ==================
-
 async function handleSetDeadlines() {
     if (!currentlyViewedProjectId) return;
     
@@ -3941,4 +3073,132 @@ async function handleRejectDeadlineRequest() {
 window.handleApproveDeadlineRequest = handleApproveDeadlineRequest;
 window.handleRejectDeadlineRequest = handleRejectDeadlineRequest;
 
+// ==================
+//  General Helper Functions
+// ==================
+function stringToColor(str) {
+    if (!str) return '#cccccc';
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+        let value = (hash >> (i * 8)) & 0xFF;
+        color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+}
+
+function calculateProgress(timeline) {
+    if (!timeline) return 0;
+    const totalTasks = Object.keys(timeline).length;
+    const completedTasks = Object.values(timeline).filter(Boolean).length;
+    return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+}
+
+function isValidDate(dateString) {
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showNotification(message, type = 'success') {
+    console.log(`[NOTIFICATION ${type.toUpperCase()}] ${message}`);
+    
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.className = 'notification-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            pointer-events: none;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.style.cssText = `
+        padding: 16px 20px;
+        margin-bottom: 8px;
+        border-radius: 12px;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        transform: translateX(400px);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        max-width: 350px;
+        pointer-events: auto;
+        position: relative;
+    `;
+    
+    if (type === 'success') {
+        notification.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    } else if (type === 'error') {
+        notification.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+    } else if (type === 'warning') {
+        notification.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+    } else {
+        notification.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+    }
+    
+    notification.textContent = message;
+    container.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    setTimeout(() => {
+        notification.style.transform = 'translateX(400px)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 4000);
+}
+
+function getTaskAssigneeNames(task) {
+    if (Array.isArray(task.assigneeNames) && task.assigneeNames.length > 0) {
+        return task.assigneeNames.filter(name => name && name.trim());
+    } else if (task.assigneeName && task.assigneeName.trim()) {
+        return [task.assigneeName];
+    }
+    return ['Unassigned'];
+}
+
+function getTaskAssigneeIds(task) {
+    if (Array.isArray(task.assigneeIds) && task.assigneeIds.length > 0) {
+        return task.assigneeIds.filter(id => id && id.trim());
+    } else if (task.assigneeId && task.assigneeId.trim()) {
+        return [task.assigneeId];
+    }
+    return [];
+}
+
+function isUserAssignedToTask(task, userId) {
+    if (!task) return false;
+    if (task.creatorId === userId) return true;
+    const assigneeIds = getTaskAssigneeIds(task);
+    return assigneeIds.includes(userId);
+}
+
+// Make global functions available for onclick handlers
+window.toggleAssignee = toggleAssignee;
+window.removeAssignee = removeAssignee;
+
+console.log('[DASHBOARD] Fixed dashboard.js loaded successfully!');
 console.log('[INIT] ✅ All missing functions loaded successfully - Saving is now fixed!');
