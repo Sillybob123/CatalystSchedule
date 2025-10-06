@@ -1791,7 +1791,8 @@ async function handleProjectFormSubmit(e) {
             }]
         };
         
-        console.log('[PROJECT CREATE] Creating project:', projectData);
+        console.log('[PROJECT CREATE] Creating project:', projectData.title);
+        console.log('[PROJECT CREATE] Type:', projectData.type, 'Deadline:', projectData.deadline);
         if (typeof debugLog === 'function') debugLog('📄 Creating project: ' + projectData.title, 'info');
         if (typeof debugLog === 'function') debugLog('📅 Deadline: ' + projectData.deadline, 'info');
 
