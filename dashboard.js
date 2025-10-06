@@ -1041,8 +1041,21 @@ function getTaskColumn(task) {
 
 function createTaskCard(task) {
     const card = document.createElement('div');
-    card.className = 'kanban-card';
-    card.classList.add(`priority-${task.priority || 'medium'}`);
+    
+    // Get column for task
+    const taskColumn = getTaskColumn(task);
+    let columnClass = '';
+    if (taskColumn === 'completed') {
+        columnClass = 'column-completed';
+    } else if (taskColumn === 'in_progress') {
+        columnClass = 'column-in-progress';
+    } else if (taskColumn === 'approved') {
+        columnClass = 'column-approved';
+    } else if (taskColumn === 'pending') {
+        columnClass = 'column-pending';
+    }
+    
+    card.className = `kanban-card priority-${task.priority || 'medium'} ${columnClass}`;
     card.dataset.id = task.id;
     card.dataset.type = 'task';
 
@@ -2095,7 +2108,19 @@ function createProjectCard(project) {
     const state = getProjectState(project, currentView, currentUser);
     const card = document.createElement('div');
 
-    card.className = `kanban-card status-${state.color}`;
+    // Add column-based class for color coding
+    let columnClass = '';
+    if (state.column === 'Completed') {
+        columnClass = 'column-completed';
+    } else if (state.column === 'In Progress') {
+        columnClass = 'column-in-progress';
+    } else if (state.column === 'Approved') {
+        columnClass = 'column-approved';
+    } else if (state.column === 'Pending Approval') {
+        columnClass = 'column-pending';
+    }
+
+    card.className = `kanban-card status-${state.color} ${columnClass}`;
     card.dataset.id = project.id;
     card.dataset.type = 'project';
 
@@ -2639,27 +2664,18 @@ function setupCalendarKeyboardNavigation() {
 //  Modals
 // ==================
 function closeAllModals() {
+    console.log('[MODAL CLOSE] Closing all modals');
     const modals = document.querySelectorAll('.modal-overlay');
 
     modals.forEach(modal => {
-        const detailsContainers = modal.querySelectorAll('.details-container');
-        detailsContainers.forEach(content => {
-            content.style.opacity = '1';
-            content.style.transition = 'none';
-        });
-
         modal.style.display = 'none';
-
-        setTimeout(() => {
-            detailsContainers.forEach(content => {
-                content.style.transition = 'opacity 0.2s ease-in-out';
-            });
-        }, 50);
     });
 
     currentlyViewedProjectId = null;
     currentlyViewedTaskId = null;
     disableProposalEditing();
+    
+    console.log('[MODAL CLOSE] All modals closed, ready for next open');
 }
 
 // ==================

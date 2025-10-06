@@ -375,6 +375,67 @@
   gap: var(--space-3);
 }
 
+/* === Column-Based Card Colors === */
+.kanban-card.column-completed {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+  border-color: rgba(34, 197, 94, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15) !important;
+}
+
+.kanban-card.column-completed::before {
+  background: linear-gradient(180deg, #22c55e, #16a34a) !important;
+}
+
+.kanban-card.column-completed:hover {
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.25) !important;
+  border-color: rgba(34, 197, 94, 0.6) !important;
+}
+
+.kanban-card.column-in-progress {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
+}
+
+.kanban-card.column-in-progress::before {
+  background: linear-gradient(180deg, #3b82f6, #2563eb) !important;
+}
+
+.kanban-card.column-in-progress:hover {
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25) !important;
+  border-color: rgba(59, 130, 246, 0.6) !important;
+}
+
+.kanban-card.column-approved {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%) !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15) !important;
+}
+
+.kanban-card.column-approved::before {
+  background: linear-gradient(180deg, #8b5cf6, #7c3aed) !important;
+}
+
+.kanban-card.column-approved:hover {
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.25) !important;
+  border-color: rgba(139, 92, 246, 0.6) !important;
+}
+
+.kanban-card.column-pending {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15) !important;
+}
+
+.kanban-card.column-pending::before {
+  background: linear-gradient(180deg, #f59e0b, #d97706) !important;
+}
+
+.kanban-card.column-pending:hover {
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.25) !important;
+  border-color: rgba(245, 158, 11, 0.6) !important;
+}
+
 /* === KANBAN CARDS === */
 .kanban-card {
   background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
