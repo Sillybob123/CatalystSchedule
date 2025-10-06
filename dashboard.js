@@ -26,12 +26,326 @@ try {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// ==================
+//  Missing Helper Functions
+// ==================
+
+async function approveProposal(projectId) {
+    if (!projectId) return;
+    
+    try {
+        await db.collection('projects').doc(projectId).update({
+            proposalStatus: 'approved',
+            'timeline.Topic Proposal Complete': true,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: 'approved the proposal',
+                authorName: currentUserName,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+        });
+        
+        showNotification('Proposal approved successfully!', 'success');
+    } catch (error) {
+        console.error('[ERROR] Failed to approve proposal:', error);
+        showNotification('Failed to approve proposal. Please try again.', 'error');
+    }
+}
+
+async function updateProposalStatus(status) {
+    if (!currentlyViewedProjectId) return;
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            proposalStatus: status,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `${status} the proposal`,
+                authorName: currentUserName,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+        });
+        
+        showNotification(`Proposal ${status} successfully!`, 'success');
+    } catch (error) {
+        console.error(`[ERROR] Failed to ${status} proposal:`, error);
+        showNotification(`Failed to ${status} proposal. Please try again.`, 'error');
+    }
+}
+
+async function handleAddComment() {
+    const commentInput = document.getElementById('comment-input');
+    if (!commentInput || !currentlyViewedProjectId) return;
+    
+    const comment = commentInput.value.trim();
+    if (!comment) {
+        showNotification('Please enter a comment.', 'error');
+        return;
+    }
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `commented: "${comment}"`,
+                authorName: currentUserName,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+        });
+        
+        commentInput.value = '';
+        showNotification('Comment added successfully!', 'success');
+    } catch (error) {
+        console.error('[ERROR] Failed to add comment:', error);
+        showNotification('Failed to add comment. Please try again.', 'error');
+    }
+}
+
+async function handleAssignEditor() {
+    const editorDropdown = document.getElementById('editor-dropdown');
+    if (!editorDropdown || !currentlyViewedProjectId) return;
+    
+    const editorId = editorDropdown.value;
+    if (!editorId) {
+        showNotification('Please select an editor.', 'error');
+        return;
+    }
+    
+    const editor = allEditors.find(e => e.id === editorId);
+    if (!editor) return;
+    
+    try {
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
+            editorId: editorId,
+            editorName: editor.name,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `assigned ${editor.name} as editor`,
+                authorName: currentUserName,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+        });
+        
+        showNotification(`Editor ${editor.name} assigned successfully!`, 'success');
+    } catch (error) {
+        console.error('[ERROR] Failed to assign editor:', error);
+        showNotification('Failed to assign editor. Please try again.', 'error');
+    }
+}
+
+async function handleDeleteProject() {
+    if (!currentlyViewedProjectId) return;
+    
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    if (!project) return;
+    
+    const isAdmin = currentUserRole === 'admin';
+    const isAuthor = currentUser.uid === project.authorId;
+    
+    if (!isAdmin && !isAuthor) {
+        showNotification('You can only delete projects you created.', 'error');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
+        try {
+            await db.collection('projects').doc(currentlyViewedProjectId).delete();
+            showNotification('Project deleted successfully!', 'success');
+            closeAllModals();
+        } catch (error) {
+            console.error('[ERROR] Failed to delete project:', error);
+            showNotification('Failed to delete project. Please try again.', 'error');
+        }
+    }
+}
+
+function enableProposalEditing() {
+    const proposalElement = document.getElementById('details-proposal');
+    const editBtn = document.getElementById('edit-proposal-button');
+    const saveBtn = document.getElementById('save-proposal-button');
+    const cancelBtn = document.getElementById('cancel-proposal-button');
+    
+    if (!proposalElement) return;
+    
+    proposalElement.contentEditable = 'true';
+    proposalElement.style.border = '1px solid #3b82f6';
+    proposalElement.style.padding = '8px';
+    proposalElement.style.borderRadius = '4px';
+    proposalElement.focus();
+    
+    if (editBtn) editBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'inline-block';
+    if (cancelBtn) cancelBtn.style.display = 'inline-block';
+}
+
+function disableProposalEditing() {
+    const proposalElement = document.getElementById('details-proposal');
+    const editBtn = document.getElementById('edit-proposal-button');
+    const saveBtn = document.getElementById('save-proposal-button');
+    const cancelBtn = document.getElementById('cancel-proposal-button');
+    
+    if (!proposalElement) return;
+    
+    proposalElement.contentEditable = 'false';
+    proposalElement.style.border = 'none';
+    proposalElement.style.padding = '0';
+    
+    if (editBtn) editBtn.style.display = 'inline-block';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    
+    // Reload original content
+    if (currentlyViewedProjectId) {
+        const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+        if (project) {
+            proposalElement.textContent = project.proposal || 'No proposal provided.';
+        }
+    }
+}
+
 // ---- App State ----
 let currentUser = null, currentUserName = null, currentUserRole = null;
 let allProjects = [], allEditors = [], allTasks = [], allUsers = [];
 let currentlyViewedProjectId = null, currentlyViewedTaskId = null;
 let currentView = 'interviews';
 let calendarDate = new Date();
+
+// ==================
+//  Utility Functions
+// ==================
+
+/**
+ * Generate a consistent color from a string (for avatars)
+ */
+function stringToColor(str) {
+    if (!str) return '#64748b';
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = hash % 360;
+    return `hsl(${hue}, 65%, 50%)`;
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Calculate progress percentage for a project
+ */
+function calculateProgress(timeline) {
+    if (!timeline) return 0;
+    const tasks = Object.values(timeline);
+    if (tasks.length === 0) return 0;
+    const completed = tasks.filter(t => t === true).length;
+    return Math.round((completed / tasks.length) * 100);
+}
+
+/**
+ * Check if a user is assigned to a task
+ */
+function isUserAssignedToTask(task, userId) {
+    if (!task || !userId) return false;
+    
+    // Check new format (multiple assignees)
+    if (task.assigneeIds && Array.isArray(task.assigneeIds)) {
+        return task.assigneeIds.includes(userId);
+    }
+    
+    // Check old format (single assignee)
+    return task.assigneeId === userId;
+}
+
+/**
+ * Get all assignee names for a task
+ */
+function getTaskAssigneeNames(task) {
+    if (!task) return ['Not assigned'];
+    
+    // Try new format first
+    if (task.assigneeNames && Array.isArray(task.assigneeNames) && task.assigneeNames.length > 0) {
+        return task.assigneeNames;
+    }
+    
+    // Fallback to old format
+    if (task.assigneeName) {
+        return [task.assigneeName];
+    }
+    
+    return ['Not assigned'];
+}
+
+/**
+ * Validate date string
+ */
+function isValidDate(dateString) {
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateString)) return false;
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date);
+}
+
+/**
+ * Show notification to user
+ */
+function showNotification(message, type = 'info') {
+    console.log(`[NOTIFICATION ${type.toUpperCase()}]`, message);
+    
+    const container = document.getElementById('notification-container') || createNotificationContainer();
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-icon">${getNotificationIcon(type)}</span>
+            <span class="notification-message">${escapeHtml(message)}</span>
+        </div>
+        <button class="notification-close" aria-label="Close">×</button>
+    `;
+    
+    container.appendChild(notification);
+    
+    // Trigger animation
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    // Close button handler
+    notification.querySelector('.notification-close').addEventListener('click', () => {
+        removeNotification(notification);
+    });
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => removeNotification(notification), 5000);
+}
+
+function createNotificationContainer() {
+    const container = document.createElement('div');
+    container.id = 'notification-container';
+    container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px;';
+    document.body.appendChild(container);
+    return container;
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        success: '✓',
+        error: '✕',
+        warning: '⚠',
+        info: 'ℹ'
+    };
+    return icons[type] || icons.info;
+}
+
+function removeNotification(notification) {
+    notification.classList.remove('show');
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 300);
+}
 
 // ==================
 //  Multi-Select State & Functions
@@ -526,7 +840,11 @@ function subscribeToProjects() {
         console.log('[FIREBASE] Projects snapshot received, count:', snapshot.docs.length);
         console.log('[FIREBASE] Current view:', currentView);
         
-        allProjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Normalize documents to handle pending server timestamps
+        allProjects = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return { id: doc.id, ...normalizeDocument(data) };
+        });
         
         if (currentView !== 'tasks') {
             renderCurrentViewEnhanced();
@@ -552,7 +870,11 @@ function subscribeToTasks() {
     db.collection('tasks').onSnapshot(snapshot => {
         console.log("[FIREBASE] Tasks updated, processing...");
         
-        allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Normalize documents to handle pending server timestamps
+        allTasks = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return { id: doc.id, ...normalizeDocument(data) };
+        });
         
         if (currentView === 'tasks') {
             renderTasksBoard(allTasks);
@@ -940,7 +1262,7 @@ function refreshTaskDetailsModal(task) {
         assigneeElement.textContent = assigneeNames[0] || 'Not assigned';
     }
     
-    const createdDate = task.createdAt ? new Date(task.createdAt.seconds * 1000) : new Date();
+    const createdDate = getTimestampValue(task.createdAt);
     const deadlineDate = new Date(task.deadline);
     
     document.getElementById('task-details-created').textContent = createdDate.toLocaleDateString('en-US', { 
@@ -978,36 +1300,7 @@ function renderTaskActivityFeed(activity) {
     const feed = document.getElementById('task-details-activity-feed');
     if (!feed) return;
     
-    feed.innerHTML = '';
-    
-    if (!activity || activity.length === 0) {
-        feed.innerHTML = '<p>No activity yet.</p>';
-        return;
-    }
-    
-    const sortedActivity = [...activity].sort((a, b) => {
-        const aTime = a.timestamp?.seconds || 0;
-        const bTime = b.timestamp?.seconds || 0;
-        return bTime - aTime;
-    });
-    
-    sortedActivity.forEach(item => {
-        const timestamp = item.timestamp?.seconds ? 
-            new Date(item.timestamp.seconds * 1000).toLocaleString() : 
-            'Unknown time';
-        
-        feed.innerHTML += `
-            <div class="feed-item">
-                <div class="user-avatar" style="background-color: ${stringToColor(item.authorName)}">
-                    ${item.authorName.charAt(0)}
-                </div>
-                <div class="feed-content">
-                    <p><span class="author">${item.authorName}</span> ${item.text}</p>
-                    <span class="timestamp">${timestamp}</span>
-                </div>
-            </div>
-        `;
-    });
+    feed.innerHTML = renderActivityWithTimestamps(activity);
 }
 
 async function updateTaskStatus(newStatus) {
@@ -1452,33 +1745,12 @@ function renderActivityFeed(activity) {
     const activityFeed = document.getElementById('details-activity-feed');
     if (!activityFeed) return;
     
-    activityFeed.innerHTML = '';
     if (!activity || !Array.isArray(activity)) {
         activityFeed.innerHTML = '<p>No activity yet.</p>';
         return;
     }
     
-    [...activity].sort((a, b) => {
-        const aTime = a.timestamp?.seconds || 0;
-        const bTime = b.timestamp?.seconds || 0;
-        return bTime - aTime;
-    }).forEach(item => {
-        const timestamp = item.timestamp?.seconds ? 
-            new Date(item.timestamp.seconds * 1000).toLocaleString() : 
-            'Unknown time';
-        
-        activityFeed.innerHTML += `
-            <div class="feed-item">
-                <div class="user-avatar" style="background-color: ${stringToColor(item.authorName)}">
-                    ${item.authorName.charAt(0)}
-                </div>
-                <div class="feed-content">
-                    <p><span class="author">${item.authorName}</span> ${item.text}</p>
-                    <span class="timestamp">${timestamp}</span>
-                </div>
-            </div>
-        `;
-    });
+    activityFeed.innerHTML = renderActivityWithTimestamps(activity);
 }
 
 async function handleProjectFormSubmit(e) {
