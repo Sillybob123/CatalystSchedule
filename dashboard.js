@@ -720,18 +720,8 @@ function setupNavAndListeners() {
         statusReportBtn.addEventListener('click', generateStatusReport);
     }
 
-    document.getElementById('add-comment-button').addEventListener('click', handleAddComment);
-    document.getElementById('assign-editor-button').addEventListener('click', handleAssignEditor);
-    document.getElementById('delete-project-button').addEventListener('click', handleDeleteProject);
-    document.getElementById('approve-button').addEventListener('click', () => approveProposal(currentlyViewedProjectId));
-    document.getElementById('reject-button').addEventListener('click', () => updateProposalStatus('rejected'));
-
-    document.getElementById('add-task-comment-button').addEventListener('click', handleAddTaskComment);
-    document.getElementById('approve-task-button').addEventListener('click', () => updateTaskStatus('approved'));
-    document.getElementById('reject-task-button').addEventListener('click', () => updateTaskStatus('rejected'));
-    document.getElementById('complete-task-button').addEventListener('click', () => updateTaskStatus('completed'));
-    document.getElementById('request-extension-button').addEventListener('click', handleRequestExtension);
-    document.getElementById('delete-task-button').addEventListener('click', handleDeleteTask);
+    // Project modal buttons - using event delegation since these are in modals
+    // These will be reattached when modals open
 
     document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
     document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
@@ -1149,6 +1139,7 @@ function openTaskDetailsModal(taskId) {
         modal.style.display = 'flex';
 
         refreshTaskDetailsModal(task);
+        attachTaskModalListeners();
 
         requestAnimationFrame(() => {
             if (content) {
@@ -1156,6 +1147,77 @@ function openTaskDetailsModal(taskId) {
             }
         });
     });
+}
+
+function attachTaskModalListeners() {
+    console.log('[LISTENERS] Attaching task modal listeners');
+    
+    const addTaskCommentBtn = document.getElementById('add-task-comment-button');
+    const approveTaskBtn = document.getElementById('approve-task-button');
+    const rejectTaskBtn = document.getElementById('reject-task-button');
+    const completeTaskBtn = document.getElementById('complete-task-button');
+    const requestExtensionBtn = document.getElementById('request-extension-button');
+    const deleteTaskBtn = document.getElementById('delete-task-button');
+
+    // Remove old listeners by cloning and replacing
+    if (addTaskCommentBtn) {
+        const newBtn = addTaskCommentBtn.cloneNode(true);
+        addTaskCommentBtn.parentNode.replaceChild(newBtn, addTaskCommentBtn);
+        newBtn.addEventListener('click', handleAddTaskComment);
+    }
+
+    if (approveTaskBtn) {
+        const newBtn = approveTaskBtn.cloneNode(true);
+        approveTaskBtn.parentNode.replaceChild(newBtn, approveTaskBtn);
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[BUTTON CLICK] Approve task button clicked');
+            updateTaskStatus('approved');
+        });
+        console.log('[LISTENERS] Approve task button listener attached');
+    }
+
+    if (rejectTaskBtn) {
+        const newBtn = rejectTaskBtn.cloneNode(true);
+        rejectTaskBtn.parentNode.replaceChild(newBtn, rejectTaskBtn);
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[BUTTON CLICK] Reject task button clicked');
+            updateTaskStatus('rejected');
+        });
+        console.log('[LISTENERS] Reject task button listener attached');
+    }
+
+    if (completeTaskBtn) {
+        const newBtn = completeTaskBtn.cloneNode(true);
+        completeTaskBtn.parentNode.replaceChild(newBtn, completeTaskBtn);
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[BUTTON CLICK] Complete task button clicked');
+            updateTaskStatus('completed');
+        });
+    }
+
+    if (requestExtensionBtn) {
+        const newBtn = requestExtensionBtn.cloneNode(true);
+        requestExtensionBtn.parentNode.replaceChild(newBtn, requestExtensionBtn);
+        newBtn.addEventListener('click', handleRequestExtension);
+    }
+
+    if (deleteTaskBtn) {
+        const newBtn = deleteTaskBtn.cloneNode(true);
+        deleteTaskBtn.parentNode.replaceChild(newBtn, deleteTaskBtn);
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[BUTTON CLICK] Delete task button clicked');
+            handleDeleteTask();
+        });
+        console.log('[LISTENERS] Delete task button listener attached');
+    }
 }
 
 function refreshTaskDetailsModal(task) {
@@ -1481,6 +1543,7 @@ function openDetailsModal(projectId) {
         modal.style.display = 'flex';
 
         refreshDetailsModal(project);
+        attachProjectModalListeners();
 
         requestAnimationFrame(() => {
             if (content) {
@@ -1488,6 +1551,65 @@ function openDetailsModal(projectId) {
             }
         });
     });
+}
+
+function attachProjectModalListeners() {
+    console.log('[LISTENERS] Attaching project modal listeners');
+    
+    const addCommentBtn = document.getElementById('add-comment-button');
+    const assignEditorBtn = document.getElementById('assign-editor-button');
+    const deleteProjectBtn = document.getElementById('delete-project-button');
+    const approveBtn = document.getElementById('approve-button');
+    const rejectBtn = document.getElementById('reject-button');
+
+    // Remove old listeners by cloning and replacing
+    if (addCommentBtn) {
+        const newBtn = addCommentBtn.cloneNode(true);
+        addCommentBtn.parentNode.replaceChild(newBtn, addCommentBtn);
+        newBtn.addEventListener('click', handleAddComment);
+    }
+
+    if (assignEditorBtn) {
+        const newBtn = assignEditorBtn.cloneNode(true);
+        assignEditorBtn.parentNode.replaceChild(newBtn, assignEditorBtn);
+        newBtn.addEventListener('click', handleAssignEditor);
+    }
+
+    if (deleteProjectBtn) {
+        const newBtn = deleteProjectBtn.cloneNode(true);
+        deleteProjectBtn.parentNode.replaceChild(newBtn, deleteProjectBtn);
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[BUTTON CLICK] Delete project button clicked');
+            handleDeleteProject();
+        });
+        console.log('[LISTENERS] Delete project button listener attached');
+    }
+
+    if (approveBtn) {
+        const newBtn = approveBtn.cloneNode(true);
+        approveBtn.parentNode.replaceChild(newBtn, approveBtn);
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[BUTTON CLICK] Approve button clicked');
+            approveProposal(currentlyViewedProjectId);
+        });
+        console.log('[LISTENERS] Approve button listener attached');
+    }
+
+    if (rejectBtn) {
+        const newBtn = rejectBtn.cloneNode(true);
+        rejectBtn.parentNode.replaceChild(newBtn, rejectBtn);
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[BUTTON CLICK] Reject button clicked');
+            updateProposalStatus('rejected');
+        });
+        console.log('[LISTENERS] Reject button listener attached');
+    }
 }
 
 function refreshDetailsModal(project) {
