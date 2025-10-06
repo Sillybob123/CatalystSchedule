@@ -967,7 +967,7 @@ async function handleTaskFormSubmit(e) {
                     `created this task and assigned it to ${assigneeNames[0]}` :
                     `created this task and assigned it to ${assigneeNames.join(', ')}`,
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date() // Use client-side timestamp
             }]
         };
         
@@ -1787,7 +1787,7 @@ async function handleProjectFormSubmit(e) {
             activity: [{
                 text: 'created the project.',
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date() // Use client-side timestamp
             }]
         };
         
@@ -3303,6 +3303,7 @@ async function handleApproveDeadlineRequest() {
         
         if (project.deadlineRequest) {
             updates.deadline = request.requestedDate;
+            updates['deadlines.publication'] = request.requestedDate;
             updates.deadlineRequest = firebase.firestore.FieldValue.delete();
         } else if (project.deadlineChangeRequest) {
             updates.deadlines = request.requestedDeadlines;
