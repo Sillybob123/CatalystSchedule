@@ -694,8 +694,6 @@ function setupNavAndListeners() {
     // Modal and form listeners
     document.getElementById('add-project-button').addEventListener('click', openProjectModal);
     document.getElementById('add-task-button').addEventListener('click', openTaskModal);
-    document.getElementById('project-form').addEventListener('submit', handleProjectFormSubmit);
-    document.getElementById('task-form').addEventListener('submit', handleTaskFormSubmit);
     
     // Status report button
     const statusReportBtn = document.getElementById('status-report-button');
@@ -766,6 +764,25 @@ function setupNavAndListeners() {
             });
         });
     });
+    
+    // CRITICAL: Attach form submit handlers AFTER modal cloning
+    console.log('[SETUP] Attaching form submit handlers...');
+    const projectForm = document.getElementById('project-form');
+    const taskForm = document.getElementById('task-form');
+    
+    if (projectForm) {
+        projectForm.addEventListener('submit', handleProjectFormSubmit);
+        console.log('[SETUP] Project form submit handler attached');
+    } else {
+        console.error('[SETUP] Project form not found!');
+    }
+    
+    if (taskForm) {
+        taskForm.addEventListener('submit', handleTaskFormSubmit);
+        console.log('[SETUP] Task form submit handler attached');
+    } else {
+        console.error('[SETUP] Task form not found!');
+    }
     
     setupCalendarListeners();
     setupCalendarKeyboardNavigation();
@@ -961,12 +978,28 @@ async function handleTaskFormSubmit(e) {
         // Write to Firestore - the snapshot listener will handle the UI update
         const docRef = await db.collection('tasks').add(taskData);
         
-        console.log('[TASK CREATE] Task created with ID:', docRef.id);
-        if (typeof debugLog === 'function') debugLog('✅ Task created successfully! ID: ' + docRef.id, 'success');
-        if (typeof debugLog === 'function') debugLog('⏳ Waiting for Firestore to sync and render...', 'info');
+        console.log('[TASK CREATE] ===== TASK SAVED TO FIRESTORE =====');
+        console.log('[TASK CREATE] Task ID:', docRef.id);
+        console.log('[TASK CREATE] Current view:', currentView);
+        console.log('[TASK CREATE] Current allTasks count:', allTasks.length);
+        
+        if (typeof debugLog === 'function') {
+            debugLog('✅ Task created successfully! ID: ' + docRef.id, 'success');
+            debugLog('⏳ Waiting for Firestore snapshot to trigger...', 'info');
+            debugLog('📊 Currently have ' + allTasks.length + ' tasks', 'info');
+        }
         
         showNotification(`Task assigned to ${assigneeNames.join(', ')} successfully!`, 'success');
-        closeAllModals();
+        
+        // Wait a moment before closing modal to see snapshot trigger
+        console.log('[TASK CREATE] Waiting 1 second for snapshot...');
+        setTimeout(() => {
+            console.log('[TASK CREATE] After wait - allTasks count:', allTasks.length);
+            if (typeof debugLog === 'function') {
+                debugLog('📊 After 1s: ' + allTasks.length + ' tasks', 'info');
+            }
+            closeAllModals();
+        }, 1000);
         
         // Reset form and state
         document.getElementById('task-form').reset();
@@ -1765,12 +1798,28 @@ async function handleProjectFormSubmit(e) {
         // Write to Firestore - the snapshot listener will handle the UI update
         const docRef = await db.collection('projects').add(projectData);
         
-        console.log('[PROJECT CREATE] Project created with ID:', docRef.id);
-        if (typeof debugLog === 'function') debugLog('✅ Project created successfully! ID: ' + docRef.id, 'success');
-        if (typeof debugLog === 'function') debugLog('⏳ Waiting for Firestore to sync and render...', 'info');
+        console.log('[PROJECT CREATE] ===== PROJECT SAVED TO FIRESTORE =====');
+        console.log('[PROJECT CREATE] Project ID:', docRef.id);
+        console.log('[PROJECT CREATE] Current view:', currentView);
+        console.log('[PROJECT CREATE] Current allProjects count:', allProjects.length);
+        
+        if (typeof debugLog === 'function') {
+            debugLog('✅ Project created successfully! ID: ' + docRef.id, 'success');
+            debugLog('⏳ Waiting for Firestore snapshot to trigger...', 'info');
+            debugLog('📊 Currently have ' + allProjects.length + ' projects', 'info');
+        }
         
         showNotification('Project proposal submitted successfully!', 'success');
-        closeAllModals();
+        
+        // Wait a moment before closing modal to see snapshot trigger
+        console.log('[PROJECT CREATE] Waiting 1 second for snapshot...');
+        setTimeout(() => {
+            console.log('[PROJECT CREATE] After wait - allProjects count:', allProjects.length);
+            if (typeof debugLog === 'function') {
+                debugLog('📊 After 1s: ' + allProjects.length + ' projects', 'info');
+            }
+            closeAllModals();
+        }, 1000);
         
     } catch (error) {
         console.error("[PROJECT ERROR] Failed to create project:", error);
