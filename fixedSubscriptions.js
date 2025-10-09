@@ -56,15 +56,25 @@ function setupBulletproofSubscriptions() {
             }
             updateNavCounts();
             
-            // Update modal if open
+            // Update modal if open - but DON'T re-render timeline to avoid disrupting checkbox updates
             if (currentlyViewedProjectId) {
                 const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-                if (project && typeof refreshDetailsModal === 'function') {
-                    console.log('[BULLETPROOF] Refreshing open project modal');
-                    refreshDetailsModal(project);
-                } else if (!project) {
+                if (project) {
+                    // Just update activity feed and status, not the entire modal
+                    console.log('[BULLETPROOF] Updating project activity feed only');
+                    if (typeof renderActivityFeed === 'function') {
+                        renderActivityFeed(project.activity || []);
+                    }
+                    const statusEl = document.getElementById('details-status');
+                    if (statusEl && typeof getProjectState === 'function') {
+                        const state = getProjectState(project, currentView, currentUser);
+                        statusEl.textContent = state.statusText;
+                    }
+                } else {
                     console.log('[BULLETPROOF] Project no longer exists, closing modal');
-                    closeAllModals();
+                    if (typeof closeAllModals === 'function') {
+                        closeAllModals();
+                    }
                 }
             }
             

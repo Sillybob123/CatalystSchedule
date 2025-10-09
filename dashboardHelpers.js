@@ -25,7 +25,7 @@ async function handleSaveProposal() {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: 'updated the proposal',
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         });
         
@@ -60,7 +60,7 @@ async function handleSetDeadlines() {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: 'updated project deadlines',
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         });
         
@@ -106,7 +106,7 @@ async function handleRequestDeadlineChange() {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `requested deadline changes. Reason: ${reason.trim()}`,
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         });
         
@@ -132,7 +132,7 @@ async function handleApproveDeadlineRequest() {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: 'approved deadline change request',
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         };
         
@@ -169,7 +169,7 @@ async function handleRejectDeadlineRequest() {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: 'rejected deadline change request',
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         };
         
@@ -301,7 +301,7 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, db, userNa
             activity: firebase.firestore.FieldValue.arrayUnion({  
                 text: isCompleted ? `completed: ${taskName}` : `uncompleted: ${taskName}`,
                 authorName: userName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         };
         

@@ -50,7 +50,7 @@ async function approveProposal(projectId) {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: 'approved the proposal',
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         });
 
@@ -90,7 +90,7 @@ async function updateProposalStatus(status) {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `${status} the proposal`,
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         });
 
@@ -125,7 +125,7 @@ async function handleAddComment() {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `commented: "${comment}"`,
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         });
 
@@ -157,7 +157,7 @@ async function handleAssignEditor() {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `assigned ${editor.name} as editor`,
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         });
 
@@ -1448,7 +1448,7 @@ async function handleAddTaskComment() {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `commented: "${comment}"`,
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         });
 
@@ -1488,7 +1488,7 @@ async function handleRequestExtension() {
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `requested deadline extension to ${new Date(newDate).toLocaleDateString()}. Reason: ${reason.trim()}`,
                 authorName: currentUserName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: new Date()
             })
         });
 
@@ -1745,8 +1745,21 @@ function refreshDetailsModal(project) {
 
 function renderTimeline(project, isAuthor, isEditor, isAdmin) {
     const timelineContainer = document.getElementById('details-timeline');
+    if (!timelineContainer) {
+        console.error('[TIMELINE] Timeline container not found');
+        return;
+    }
+    
     timelineContainer.innerHTML = '';
     const timeline = project.timeline || {};
+    
+    console.log('[TIMELINE] Rendering timeline for project:', {
+        projectId: project.id,
+        isAuthor,
+        isEditor,
+        isAdmin,
+        timeline
+    });
 
     const orderedTasks = [
         "Topic Proposal Complete",
@@ -1802,21 +1815,51 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
         if (canEditTask) {
             checkbox.addEventListener('change', async (e) => {
                 const isChecked = e.target.checked;
-                console.log('[TIMELINE] Checkbox changed:', {
-                    task,
-                    isChecked,
-                    projectId: project.id,
-                    canEdit: canEditTask
-                });
+                const previousValue = !isChecked; // Store the previous value
+                
+                console.log('========================================');
+                console.log('[TIMELINE CHECKBOX] User clicked checkbox!');
+                console.log('[TIMELINE CHECKBOX] Task:', task);
+                console.log('[TIMELINE CHECKBOX] New value:', isChecked);
+                console.log('[TIMELINE CHECKBOX] Previous value:', previousValue);
+                console.log('[TIMELINE CHECKBOX] Project ID:', project.id);
+                console.log('[TIMELINE CHECKBOX] User:', currentUserName);
+                console.log('[TIMELINE CHECKBOX] Can edit:', canEditTask);
+                console.log('[TIMELINE CHECKBOX] Firebase DB available:', !!db);
+                console.log('========================================');
+                
+                // Disable checkbox while processing
+                checkbox.disabled = true;
+                const checkboxLabel = checkbox.nextElementSibling;
+                if (checkboxLabel) {
+                    checkboxLabel.style.opacity = '0.5';
+                }
                 
                 try {
+                    console.log('[TIMELINE CHECKBOX] Calling handleTaskCompletion...');
                     await handleTaskCompletion(project.id, task, isChecked, db, currentUserName);
-                    console.log('[TIMELINE] Task completion handled successfully');
+                    console.log('[TIMELINE CHECKBOX] ✅ SUCCESS! Task completion handled');
+                    
+                    // Re-enable after success
+                    checkbox.disabled = false;
+                    if (checkboxLabel) {
+                        checkboxLabel.style.opacity = '1';
+                    }
                 } catch (error) {
-                    console.error('[TIMELINE] Error updating task:', error);
+                    console.error('========================================');
+                    console.error('[TIMELINE CHECKBOX] ❌ FAILED!');
+                    console.error('[TIMELINE CHECKBOX] Error:', error);
+                    console.error('[TIMELINE CHECKBOX] Error code:', error?.code);
+                    console.error('[TIMELINE CHECKBOX] Error message:', error?.message);
+                    console.error('========================================');
+                    
                     // Revert checkbox on error
-                    e.target.checked = !isChecked;
-                    showNotification('Failed to update checklist. Please try again.', 'error');
+                    e.target.checked = previousValue;
+                    checkbox.disabled = false;
+                    if (checkboxLabel) {
+                        checkboxLabel.style.opacity = '1';
+                    }
+                    // Error notification already shown in handleTaskCompletion
                 }
             });
         }
@@ -2101,23 +2144,55 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, database, 
     }
 
     try {
+        console.log('[TASK COMPLETION] Starting update:', {
+            projectId,
+            taskName,
+            isCompleted,
+            userName
+        });
+
         const updatePath = `timeline.${taskName}`;
         const activityText = isCompleted ?
             `marked "${taskName}" as complete` :
             `marked "${taskName}" as incomplete`;
 
-        await database.collection('projects').doc(projectId).update({
-            [updatePath]: isCompleted,
-            activity: firebase.firestore.FieldValue.arrayUnion({
-                text: activityText,
-                authorName: userName,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            })
+        // Use a regular Date object instead of serverTimestamp for activity
+        const activityEntry = {
+            text: activityText,
+            authorName: userName,
+            timestamp: new Date()
+        };
+
+        console.log('[TASK COMPLETION] Updating Firestore with:', {
+            updatePath,
+            value: isCompleted,
+            activityEntry
         });
 
+        await database.collection('projects').doc(projectId).update({
+            [updatePath]: isCompleted,
+            activity: firebase.firestore.FieldValue.arrayUnion(activityEntry)
+        });
+
+        console.log('[TASK COMPLETION] Update successful');
+        showNotification(`Checklist updated successfully!`, 'success');
+
     } catch (error) {
-        console.error('[TASK COMPLETION ERROR]', error);
-        showNotification('Failed to update task. Please try again.', 'error');
+        console.error('[TASK COMPLETION ERROR] Failed to update:', error);
+        console.error('[TASK COMPLETION ERROR] Error code:', error.code);
+        console.error('[TASK COMPLETION ERROR] Error message:', error.message);
+        
+        let errorMessage = 'Failed to update checklist. ';
+        if (error.code === 'permission-denied') {
+            errorMessage += 'You do not have permission to update this task.';
+        } else if (error.code === 'not-found') {
+            errorMessage += 'Project not found.';
+        } else {
+            errorMessage += 'Please try again.';
+        }
+        
+        showNotification(errorMessage, 'error');
+        throw error; // Re-throw so checkbox can be reverted
     }
 }
 
