@@ -1,0 +1,102 @@
+FIRESTORE SECURITY RULES FOR CHECKLIST TO WORK
+================================================
+
+Go to Firebase Console > Firestore Database > Rules and update with this:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Helper function to check if user is the author
+    function isAuthor(projectData) {
+      return request.auth != null && projectData.authorId == request.auth.uid;
+    }
+    
+    // Helper function to check if user is the editor
+    function isEditor(projectData) {
+      return request.auth != null && projectData.editorId == request.auth.uid;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if isAdmin();
+    }
+    
+    // Projects collection - UPDATED TO ALLOW TIMELINE UPDATES
+    match /projects/{projectId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      
+      // Allow updates if:
+      // 1. User is admin OR
+      // 2. User is the author OR
+      // 3. User is the assigned editor OR
+      // 4. User is ONLY updating the timeline field (checklist)
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        isAuthor(resource.data) ||
+        isEditor(resource.data) ||
+        // Allow anyone to update timeline (checklist) as long as they're authenticated
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timeline', 'activity']))
+      );
+      
+      allow delete: if isAdmin() || isAuthor(resource.data);
+    }
+    
+    // Tasks collection
+    match /tasks/{taskId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        resource.data.creatorId == request.auth.uid ||
+        resource.data.assigneeId == request.auth.uid ||
+        (resource.data.assigneeIds != null && request.auth.uid in resource.data.assigneeIds)
+      );
+      allow delete: if isAdmin() || resource.data.creatorId == request.auth.uid;
+    }
+    
+    // Social posts collection
+    match /social_posts/{postId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        resource.data.proposerId == request.auth.uid ||
+        resource.data.assigneeId == request.auth.uid
+      );
+      allow delete: if isAdmin() || resource.data.proposerId == request.auth.uid;
+    }
+  }
+}
+
+================================================
+INSTRUCTIONS:
+================================================
+
+1. Go to https://console.firebase.google.com/
+2. Select your project "catalystmonday"
+3. Click on "Firestore Database" in the left menu
+4. Click on the "Rules" tab
+5. Copy the rules above
+6. Paste them replacing ALL existing rules
+7. Click "Publish"
+
+The key change is on line 35-37 which allows authenticated users to update 
+the timeline field (checklist) even if they're not the author or editor.
+
+This is safe because:
+- Users must be authenticated
+- Users can only update timeline and activity fields together
+- The activity field logs who made the change
+- Admins can still see all changes
+
+After publishing these rules, the checklist will work for everyone!

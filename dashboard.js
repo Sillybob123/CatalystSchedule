@@ -1767,6 +1767,7 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
         const authorTasks = ["Interview Scheduled", "Interview Complete", "Article Writing Complete", "Suggestions Reviewed"];
         const editorTasks = ["Review In Progress", "Review Complete"];
 
+        // Allow admins, authors for their tasks, and editors for their tasks
         if (isAdmin) {
             canEditTask = true;
         } else if (isAuthor && authorTasks.includes(task)) {
@@ -1775,20 +1776,48 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
             canEditTask = true;
         }
 
-        if (task === "Topic Proposal Complete") canEditTask = false;
+        // Topic Proposal Complete should never be editable (set by system)
+        if (task === "Topic Proposal Complete") {
+            canEditTask = false;
+        }
 
         const completed = timeline[task] || false;
         const taskEl = document.createElement('div');
         taskEl.className = 'task';
         const taskId = `task-${project.id}-${task.replace(/\s+/g, '-')}`;
-        taskEl.innerHTML = `
-            <input type="checkbox" id="${taskId}" ${completed ? 'checked' : ''} ${!canEditTask ? 'disabled' : ''}>
-            <label for="${taskId}">${task}</label>
-        `;
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = taskId;
+        checkbox.checked = completed;
+        checkbox.disabled = !canEditTask;
+        
+        const label = document.createElement('label');
+        label.htmlFor = taskId;
+        label.textContent = task;
+        
+        taskEl.appendChild(checkbox);
+        taskEl.appendChild(label);
 
         if (canEditTask) {
-            taskEl.querySelector('input').addEventListener('change', async (e) => {
-                await handleTaskCompletion(project.id, task, e.target.checked, db, currentUserName);
+            checkbox.addEventListener('change', async (e) => {
+                const isChecked = e.target.checked;
+                console.log('[TIMELINE] Checkbox changed:', {
+                    task,
+                    isChecked,
+                    projectId: project.id,
+                    canEdit: canEditTask
+                });
+                
+                try {
+                    await handleTaskCompletion(project.id, task, isChecked, db, currentUserName);
+                    console.log('[TIMELINE] Task completion handled successfully');
+                } catch (error) {
+                    console.error('[TIMELINE] Error updating task:', error);
+                    // Revert checkbox on error
+                    e.target.checked = !isChecked;
+                    showNotification('Failed to update checklist. Please try again.', 'error');
+                }
             });
         }
 

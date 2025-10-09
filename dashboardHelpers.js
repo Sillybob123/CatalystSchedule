@@ -279,4 +279,58 @@ function generateStatusReport() {
     reportModal.style.display = 'flex';
 }
 
+/**
+ * Handle task completion checkbox changes in project timeline
+ * @param {string} projectId - The project ID
+ * @param {string} taskName - The name of the task
+ * @param {boolean} isCompleted - Whether the task is completed
+ * @param {object} db - Firestore database instance
+ * @param {string} userName - Current user's name
+ */
+async function handleTaskCompletion(projectId, taskName, isCompleted, db, userName) {
+    console.log('[TASK COMPLETION] Updating task:', {
+        projectId,
+        taskName,
+        isCompleted,
+        userName
+    });
+    
+    try {
+        const updateData = {
+            [`timeline.${taskName}`]: isCompleted,
+            activity: firebase.firestore.FieldValue.arrayUnion({  
+                text: isCompleted ? `completed: ${taskName}` : `uncompleted: ${taskName}`,
+                authorName: userName,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+        };
+        
+        console.log('[TASK COMPLETION] Update data:', updateData);
+        
+        await db.collection('projects').doc(projectId).update(updateData);
+        
+        showNotification(
+            isCompleted ? `Task "${taskName}" marked as complete!` : `Task "${taskName}" unmarked.`,
+            'success'
+        );
+        
+        console.log('[TASK COMPLETION] Task updated successfully');
+    } catch (error) {
+        console.error('[TASK COMPLETION ERROR] Failed to update task:', error);
+        console.error('[TASK COMPLETION ERROR] Error code:', error.code);
+        console.error('[TASK COMPLETION ERROR] Error message:', error.message);
+        
+        // Provide user-friendly error message
+        let errorMessage = 'Failed to update checklist. ';
+        if (error.code === 'permission-denied') {
+            errorMessage += 'Please update Firestore security rules to allow timeline updates. See FIRESTORE_SECURITY_RULES.txt file.';
+        } else {
+            errorMessage += 'Please try again or contact support.';
+        }
+        
+        showNotification(errorMessage, 'error');
+        throw error; // Re-throw to allow caller to handle
+    }
+}
+
 console.log('[HELPERS] Dashboard helper functions loaded');

@@ -238,21 +238,17 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, db, curren
                 break;
         }
     }
+
+    const activity = {
+        text: `${isCompleted ? 'completed' : 'un-completed'} the task: "${taskName}"`,
+        authorName: currentUserName,
+        timestamp: new Date()
+    };
+
+    updates.activity = firebase.firestore.FieldValue.arrayUnion(activity);
     
     try {
         await db.collection('projects').doc(projectId).update(updates);
-        
-        // Add activity log
-        const activity = {
-            text: `${isCompleted ? 'completed' : 'un-completed'} the task: "${taskName}"`,
-            authorName: currentUserName,
-            timestamp: new Date()
-        };
-        
-        await db.collection('projects').doc(projectId).update({
-            activity: window.firebase.firestore.FieldValue.arrayUnion(activity)
-        });
-        
         console.log(`[TASK UPDATE] Successfully updated ${taskName} for project ${projectId}`);
         
     } catch (error) {
