@@ -2,23 +2,29 @@
 
 /* Fix board and columns to extend full height */
 .board-view {
-  height: calc(100vh - 200px) !important; /* Full height minus header and padding */
-  min-height: 600px;
+  height: calc(100vh - 180px) !important;
+  min-height: 500px;
+  width: 100%;
+  overflow: hidden;
 }
 
 .tasks-view {
-  height: calc(100vh - 200px) !important;
-  min-height: 600px;
+  height: calc(100vh - 180px) !important;
+  min-height: 500px;
+  width: 100%;
+  overflow: hidden;
 }
 
-/* Make kanban board fill height */
+/* Make kanban board fill height - ALWAYS 4 COLUMNS SIDE BY SIDE */
 .kanban-board,
 #tasks-board {
   height: 100% !important;
   display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
-  gap: var(--space-4) !important;
+  grid-template-columns: repeat(4, 1fr) !important; /* Always exactly 4 equal columns */
+  gap: 16px !important;
   align-items: stretch !important;
+  width: 100% !important;
+  overflow: hidden !important;
 }
 
 /* Columns extend to full height */
@@ -26,19 +32,21 @@
   display: flex !important;
   flex-direction: column !important;
   height: 100% !important;
-  min-height: 0 !important; /* Allow proper flex shrinking */
-  padding: var(--space-4) !important;
+  min-height: 0 !important;
+  min-width: 0 !important; /* Allow shrinking on small screens */
+  padding: 16px !important;
   background: var(--surface-color);
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
+  overflow: hidden !important;
 }
 
 /* Column header stays at top */
 .column-header {
   flex-shrink: 0 !important;
-  margin-bottom: var(--space-4) !important;
-  padding-bottom: var(--space-3) !important;
+  margin-bottom: 12px !important;
+  padding-bottom: 8px !important;
   border-bottom: 2px solid var(--muted-border);
 }
 
@@ -46,24 +54,24 @@
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  font-size: 15px !important; /* Slightly smaller */
+  font-size: 13px !important; /* Smaller */
   font-weight: 600 !important;
   color: var(--text-color);
 }
 
 .column-title-text {
-  font-size: 15px !important;
+  font-size: 13px !important;
   font-weight: 600 !important;
 }
 
 .task-count {
   background: var(--primary-light);
   color: var(--primary-color);
-  font-size: 11px !important; /* Smaller */
+  font-size: 10px !important; /* Smaller */
   font-weight: 700;
-  padding: 2px 8px !important; /* More compact */
-  border-radius: 12px;
-  min-width: 20px;
+  padding: 2px 6px !important; /* More compact */
+  border-radius: 10px;
+  min-width: 18px;
   text-align: center;
 }
 
@@ -98,21 +106,21 @@
 .kanban-cards {
   display: flex !important;
   flex-direction: column !important;
-  gap: var(--space-3) !important; /* Slightly tighter spacing */
+  gap: 10px !important; /* Tighter spacing */
 }
 
 /* === COMPACT CARD STYLING === */
 .kanban-card {
   background: var(--surface-color);
-  border-radius: var(--radius) !important; /* Slightly smaller radius */
-  padding: var(--space-4) !important; /* More compact padding */
-  box-shadow: var(--shadow-xs) !important; /* Lighter shadow */
+  border-radius: var(--radius) !important;
+  padding: 10px 12px !important; /* Very compact padding */
+  box-shadow: var(--shadow-xs) !important;
   border: 1px solid var(--border-color);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  flex-shrink: 0 !important; /* Prevent cards from shrinking */
+  flex-shrink: 0 !important;
 }
 
 .kanban-card:hover {
@@ -123,10 +131,10 @@
 
 /* Card title - smaller and tighter */
 .card-title {
-  font-size: 14px !important; /* Reduced from 16px */
+  font-size: 12px !important; /* Very small */
   font-weight: 600 !important;
   color: var(--text-color);
-  margin: 0 0 var(--space-2) 0 !important; /* Tighter margin */
+  margin: 0 0 6px 0 !important; /* Tighter margin */
   line-height: 1.3 !important; /* Tighter line height */
   display: -webkit-box;
   -webkit-line-clamp: 2; /* Limit to 2 lines */
@@ -139,37 +147,37 @@
 .card-meta {
   display: flex !important;
   align-items: center !important;
-  gap: var(--space-2) !important; /* Tighter gap */
-  margin-bottom: var(--space-3) !important; /* Tighter margin */
+  gap: 6px !important; /* Tighter gap */
+  margin-bottom: 8px !important; /* Tighter margin */
   flex-wrap: wrap;
 }
 
 .card-type {
   background: var(--primary-light);
   color: var(--primary-color);
-  font-size: 10px !important; /* Smaller */
+  font-size: 9px !important; /* Very small */
   font-weight: 600 !important;
-  padding: 2px 8px !important; /* More compact */
-  border-radius: 12px;
+  padding: 2px 6px !important; /* Very compact */
+  border-radius: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 .card-status {
-  font-size: 11px !important; /* Smaller */
+  font-size: 9px !important; /* Very small */
   font-weight: 500 !important;
   color: var(--text-secondary);
   background: rgba(0, 0, 0, 0.04);
-  padding: 2px 8px !important; /* More compact */
-  border-radius: 12px;
+  padding: 2px 6px !important; /* Very compact */
+  border-radius: 10px;
 }
 
 /* Progress bar - thinner */
 .progress-bar-container {
   background: rgba(0, 0, 0, 0.05);
-  border-radius: 10px;
-  height: 4px !important; /* Thinner */
-  margin-bottom: var(--space-3) !important;
+  border-radius: 8px;
+  height: 3px !important; /* Very thin */
+  margin-bottom: 8px !important;
   overflow: hidden;
 }
 
@@ -185,21 +193,21 @@
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  margin-top: var(--space-3) !important; /* Tighter */
-  padding-top: var(--space-2) !important; /* Tighter */
+  margin-top: 8px !important; /* Tighter */
+  padding-top: 6px !important; /* Tighter */
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .card-author {
   display: flex !important;
   align-items: center !important;
-  gap: var(--space-2) !important;
+  gap: 6px !important;
 }
 
 .card-author .user-avatar {
-  width: 24px !important; /* Smaller */
-  height: 24px !important; /* Smaller */
-  font-size: 11px !important; /* Smaller */
+  width: 20px !important; /* Very small */
+  height: 20px !important; /* Very small */
+  font-size: 10px !important; /* Very small */
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -210,22 +218,22 @@
 }
 
 .card-author span {
-  font-size: 12px !important; /* Smaller */
+  font-size: 11px !important; /* Very small */
   font-weight: 500 !important;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 140px;
 }
 
 .card-deadline {
-  font-size: 11px !important; /* Smaller */
+  font-size: 10px !important; /* Very small */
   font-weight: 600 !important;
   color: var(--text-muted);
-  padding: 2px 6px !important; /* More compact */
+  padding: 2px 5px !important; /* Very compact */
   background: rgba(0, 0, 0, 0.04);
-  border-radius: 6px;
+  border-radius: 5px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -242,31 +250,31 @@
 
 /* Priority indicator - smaller */
 .priority-indicator {
-  font-size: 9px !important; /* Smaller */
+  font-size: 8px !important; /* Very small */
   font-weight: 600 !important;
-  padding: 2px 6px !important; /* More compact */
-  border-radius: 6px;
-  margin-top: var(--space-2) !important;
+  padding: 2px 5px !important; /* Very compact */
+  border-radius: 5px;
+  margin-top: 6px !important;
   text-align: center;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 /* Priority badges - smaller */
 .priority-badge {
-  font-size: 10px !important; /* Smaller */
+  font-size: 9px !important; /* Very small */
   font-weight: 600 !important;
-  padding: 2px 6px !important; /* More compact */
-  border-radius: 10px;
+  padding: 2px 5px !important; /* Very compact */
+  border-radius: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 /* Status badges - smaller */
 .status-badge {
-  font-size: 10px !important; /* Smaller */
+  font-size: 9px !important; /* Very small */
   font-weight: 500 !important;
-  padding: 2px 8px !important; /* More compact */
-  border-radius: 10px;
+  padding: 2px 6px !important; /* Very compact */
+  border-radius: 8px;
   text-transform: capitalize;
 }
 
@@ -284,12 +292,12 @@
 
 /* Card content preview - smaller and limited */
 .card-content-preview {
-  font-size: 12px !important; /* Smaller */
+  font-size: 11px !important; /* Very small */
   color: var(--text-secondary);
-  line-height: 1.4 !important;
-  margin-bottom: var(--space-2) !important;
+  line-height: 1.3 !important;
+  margin-bottom: 6px !important;
   display: -webkit-box;
-  -webkit-line-clamp: 2; /* Limit to 2 lines */
+  -webkit-line-clamp: 1; /* Limit to 1 line */
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -355,58 +363,100 @@
   margin-bottom: 4px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 1200px) {
+/* Responsive adjustments - MAINTAIN 4 COLUMNS */
+@media (max-width: 1400px) {
   .board-view,
   .tasks-view {
-    height: calc(100vh - 180px) !important;
+    height: calc(100vh - 160px) !important;
   }
   
-  .kanban-board,
-  #tasks-board {
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+  .kanban-column {
+    padding: 12px !important;
   }
   
   .card-title {
-    font-size: 13px !important;
+    font-size: 11px !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .board-view,
+  .tasks-view {
+    height: calc(100vh - 160px) !important;
+  }
+  
+  .kanban-column {
+    padding: 10px !important;
+  }
+  
+  .column-title {
+    font-size: 12px !important;
+  }
+  
+  .card-title {
+    font-size: 11px !important;
+  }
+  
+  .card-author span {
+    max-width: 100px;
   }
 }
 
 @media (max-width: 1024px) {
-  .board-view,
-  .tasks-view {
-    height: auto !important;
-    min-height: 500px;
-  }
-  
+  /* Still keep 4 columns but more compact */
   .kanban-board,
   #tasks-board {
-    display: flex !important;
-    overflow-x: auto !important;
-    gap: var(--space-4) !important;
-    padding-bottom: var(--space-4);
-    height: auto !important;
+    gap: 12px !important;
   }
   
   .kanban-column {
-    min-width: 280px !important;
-    max-width: 320px !important;
-    flex-shrink: 0 !important;
-    height: 600px !important;
+    padding: 8px !important;
   }
-}
-
-@media (max-width: 768px) {
-  .kanban-column {
-    min-width: 260px !important;
-    max-width: 280px !important;
+  
+  .column-title {
+    font-size: 11px !important;
   }
   
   .card-title {
-    font-size: 13px !important;
+    font-size: 10px !important;
   }
   
   .card-author span {
     max-width: 80px;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Very compact but still 4 columns */
+  .kanban-board,
+  #tasks-board {
+    gap: 8px !important;
+  }
+  
+  .kanban-column {
+    padding: 6px !important;
+  }
+  
+  .column-title {
+    font-size: 10px !important;
+  }
+  
+  .card-title {
+    font-size: 9px !important;
+  }
+  
+  .card-type,
+  .card-status {
+    font-size: 8px !important;
+    padding: 1px 4px !important;
+  }
+  
+  .card-author span {
+    max-width: 60px;
+    font-size: 9px !important;
+  }
+  
+  .card-deadline {
+    font-size: 8px !important;
   }
 }
