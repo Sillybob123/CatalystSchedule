@@ -71,6 +71,9 @@ html {
   font-size: 14px;
   scroll-behavior: smooth;
   height: 100%;
+  zoom: 0.8;
+  -moz-transform: scale(0.8);
+  -moz-transform-origin: 0 0;
 }
 
 body {
@@ -163,19 +166,21 @@ body {
 
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--space-4);
-  padding: var(--space-2);
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-6);
+  padding: var(--space-4);
   height: auto;
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 160px);
   overflow-x: hidden;
   overflow-y: auto;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 @media (min-width: 1400px) {
   .kanban-board {
     grid-template-columns: repeat(4, 1fr);
-    max-width: 1600px;
+    max-width: 1800px;
     margin: 0 auto;
   }
 }
@@ -199,9 +204,9 @@ body {
   box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 220px);
-  min-height: 500px;
-  max-height: calc(100vh - 220px);
+  height: calc(100vh - 160px);
+  min-height: 650px;
+  max-height: calc(100vh - 160px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

@@ -1333,14 +1333,45 @@ async function updateTaskStatus(newStatus) {
     const isAssignee = isUserAssignedToTask(task, currentUser.uid);
     const isCreator = currentUser.uid === task.creatorId;
 
+    console.log('[TASK STATUS] Permission check:', {
+        taskId: currentlyViewedTaskId,
+        newStatus,
+        currentUserRole,
+        currentUserId: currentUser.uid,
+        currentUserName,
+        isAdmin,
+        isAssignee,
+        isCreator,
+        taskStatus: task.status,
+        taskCreatorId: task.creatorId,
+        taskAssigneeId: task.assigneeId,
+        taskAssigneeIds: task.assigneeIds
+    });
+
+    // Verify admin status from database
+    try {
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        const userData = userDoc.data();
+        console.log('[TASK STATUS] User document from database:', userData);
+        console.log('[TASK STATUS] Database role:', userData?.role);
+        
+        if (userData?.role !== 'admin' && !isAdmin) {
+            console.error('[TASK STATUS] Role mismatch! Local:', currentUserRole, 'Database:', userData?.role);
+        }
+    } catch (err) {
+        console.error('[TASK STATUS] Could not verify user role:', err);
+    }
+
     // Admin can approve/reject, assignee can mark complete
     if (newStatus === 'approved' || newStatus === 'rejected') {
         if (!isAdmin) {
+            console.error('[TASK STATUS] Permission denied: User is not admin');
             showNotification('Only admins can approve or reject tasks.', 'error');
             return;
         }
     } else if (newStatus === 'completed') {
         if (!isAssignee && !isAdmin) {
+            console.error('[TASK STATUS] Permission denied: User is not assignee or admin');
             showNotification('Only assigned team members can mark tasks as complete.', 'error');
             return;
         }
@@ -1348,24 +1379,30 @@ async function updateTaskStatus(newStatus) {
 
     try {
         console.log('[TASK STATUS] Updating status to:', newStatus);
+        console.log('[TASK STATUS] Current user:', currentUser.uid);
+        console.log('[TASK STATUS] Task document ID:', currentlyViewedTaskId);
+        
         const updates = {
             status: newStatus,
-            updatedAt: new Date()
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
         if (newStatus === 'completed') {
-            updates.completedAt = new Date();
+            updates.completedAt = firebase.firestore.FieldValue.serverTimestamp();
         }
 
         const activityEntry = {
             text: `marked task as ${newStatus.replace('_', ' ')}`,
             authorName: currentUserName,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            timestamp: new Date()
         };
+
+        console.log('[TASK STATUS] About to update with:', updates);
+        console.log('[TASK STATUS] Activity entry:', activityEntry);
 
         await db.collection('tasks').doc(currentlyViewedTaskId).update({
             ...updates,
-            activity: window.firebase.firestore.FieldValue.arrayUnion(activityEntry)
+            activity: firebase.firestore.FieldValue.arrayUnion(activityEntry)
         });
 
         showNotification(`Task ${newStatus.replace('_', ' ')} successfully!`, 'success');
@@ -1373,15 +1410,23 @@ async function updateTaskStatus(newStatus) {
 
     } catch (error) {
         console.error(`[TASK STATUS ERROR] Failed to update task status:`, error);
+        console.error('[TASK STATUS ERROR] Error code:', error.code);
+        console.error('[TASK STATUS ERROR] Error message:', error.message);
+        console.error('[TASK STATUS ERROR] Error stack:', error.stack);
+        
         let errorMessage = 'Failed to update task. ';
         if (error.code === 'permission-denied') {
-            errorMessage += 'You do not have permission to update this task.';
+            errorMessage += 'Permission denied. Please verify: 1) Your user role is "admin" in Firestore, 2) Security rules allow admin updates, 3) You are logged in correctly.';
+            console.error('[FIRESTORE RULES] Permission denied! Check:');
+            console.error('1. Is your role in Firestore set to "admin"?');
+            console.error('2. Are the security rules published?');
+            console.error('3. Try logging out and back in.');
         } else if (error.code === 'not-found') {
-            errorMessage += 'Task not found.';
+            errorMessage += 'Task not found in database.';
         } else if (error.code === 'unavailable') {
             errorMessage += 'Service temporarily unavailable. Please try again.';
         } else {
-            errorMessage += 'Please try again or contact support if the problem persists.';
+            errorMessage += `Error: ${error.message || 'Unknown error'}`;
         }
 
         showNotification(errorMessage, 'error');
