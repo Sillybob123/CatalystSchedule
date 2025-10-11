@@ -150,18 +150,30 @@ async function handleAssignEditor() {
     const editor = allEditors.find(e => e.id === editorId);
     if (!editor) return;
 
+    // Get current project to check if we're reassigning
+    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    const isReassignment = project && project.editorId;
+    const previousEditorName = project ? project.editorName : null;
+
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             editorId: editorId,
             editorName: editor.name,
             activity: firebase.firestore.FieldValue.arrayUnion({
-                text: `assigned ${editor.name} as editor`,
+                text: isReassignment 
+                    ? `reassigned editor from ${previousEditorName} to ${editor.name}`
+                    : `assigned ${editor.name} as editor`,
                 authorName: currentUserName,
                 timestamp: new Date()
             })
         });
 
-        showNotification(`Editor ${editor.name} assigned successfully!`, 'success');
+        showNotification(
+            isReassignment 
+                ? `Editor reassigned to ${editor.name} successfully!` 
+                : `Editor ${editor.name} assigned successfully!`, 
+            'success'
+        );
     } catch (error) {
         console.error('[ERROR] Failed to assign editor:', error);
         showNotification('Failed to assign editor. Please try again.', 'error');
@@ -1716,10 +1728,32 @@ function refreshDetailsModal(project) {
         approvalSection.style.display = isAdmin && project.proposalStatus === 'pending' ? 'block' : 'none';
     }
 
-    const needsEditor = project.timeline && project.timeline["Article Writing Complete"] && !project.editorId;
+    // Allow admins to assign/reassign editors at any time
     const assignSection = document.getElementById('assign-editor-section');
     if (assignSection) {
-        assignSection.style.display = isAdmin && needsEditor ? 'flex' : 'none';
+        assignSection.style.display = isAdmin ? 'flex' : 'none';
+        
+        // Update button text based on whether editor is already assigned
+        const assignButton = document.getElementById('assign-editor-button');
+        if (assignButton) {
+            if (project.editorId) {
+                assignButton.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                    </svg>
+                    Reassign Editor
+                `;
+            } else {
+                assignButton.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    Assign Editor
+                `;
+            }
+        }
     }
 
     populateEditorDropdown(project.editorId);
