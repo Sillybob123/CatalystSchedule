@@ -15,16 +15,43 @@ if (DEADLINE_FIX_ALREADY_APPLIED) {
      */
 async function handleSetDeadlines() {
     console.log('[DEADLINES] Starting to set deadlines...');
+    console.log('[DEADLINES] currentlyViewedProjectId:', typeof currentlyViewedProjectId !== 'undefined' ? currentlyViewedProjectId : 'undefined');
+    console.log('[DEADLINES] window.currentlyViewedProjectId:', window.currentlyViewedProjectId);
     
-    if (!currentlyViewedProjectId) {
+    // Try to get the project ID from multiple sources
+    let projectId = null;
+    
+    // Try window scope first (most reliable)
+    if (window.currentlyViewedProjectId) {
+        projectId = window.currentlyViewedProjectId;
+        console.log('[DEADLINES] Got project ID from window.currentlyViewedProjectId:', projectId);
+    }
+    // Try current scope
+    else if (typeof currentlyViewedProjectId !== 'undefined' && currentlyViewedProjectId) {
+        projectId = currentlyViewedProjectId;
+        console.log('[DEADLINES] Got project ID from currentlyViewedProjectId:', projectId);
+    }
+    // Try to find from modal element dataset
+    else {
+        const modal = document.getElementById('details-modal');
+        if (modal && modal.dataset.projectId) {
+            projectId = modal.dataset.projectId;
+            console.log('[DEADLINES] Got project ID from modal dataset:', projectId);
+        }
+    }
+    
+    if (!projectId) {
         console.error('[DEADLINES] No project ID found');
+        console.error('[DEADLINES] Available global variables:', Object.keys(window).filter(k => k.includes('project') || k.includes('Project')));
         showNotification('No project selected. Please try again.', 'error');
         return;
     }
     
-    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
+    console.log('[DEADLINES] Using project ID:', projectId);
+    
+    const project = allProjects.find(p => p.id === projectId);
     if (!project) {
-        console.error('[DEADLINES] Project not found:', currentlyViewedProjectId);
+        console.error('[DEADLINES] Project not found:', projectId);
         showNotification('Project not found. Please refresh the page.', 'error');
         return;
     }
@@ -106,11 +133,11 @@ async function handleSetDeadlines() {
     
     try {
         console.log('[DEADLINES] Attempting to save to Firestore...');
-        console.log('[DEADLINES] Project ID:', currentlyViewedProjectId);
+        console.log('[DEADLINES] Project ID:', projectId);
         console.log('[DEADLINES] Saving deadlines:', newDeadlines);
         
         // Update Firestore
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
+        await db.collection('projects').doc(projectId).update({
             deadlines: newDeadlines,
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `updated deadlines: ${updatedFields.join(', ')}`,
@@ -123,10 +150,18 @@ async function handleSetDeadlines() {
         showNotification(`Deadlines updated successfully! Updated: ${updatedFields.join(', ')}`, 'success');
         
         // Update local project object
-        const projectIndex = allProjects.findIndex(p => p.id === currentlyViewedProjectId);
+        const projectIndex = allProjects.findIndex(p => p.id === projectId);
         if (projectIndex !== -1) {
             allProjects[projectIndex].deadlines = newDeadlines;
             console.log('[DEADLINES] Updated local project object');
+        }
+        
+        // Update the currently viewed project ID to match
+        if (!currentlyViewedProjectId) {
+            currentlyViewedProjectId = projectId;
+        }
+        if (!window.currentlyViewedProjectId) {
+            window.currentlyViewedProjectId = projectId;
         }
         
     } catch (error) {

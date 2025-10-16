@@ -61,8 +61,15 @@ window.addEventListener('load', function() {
                 }
             });
             
-            // Clear tracked IDs
+            // Clear tracked IDs in both local and window scope
+            if (typeof currentlyViewedProjectId !== 'undefined') {
+                currentlyViewedProjectId = null;
+            }
             window.currentlyViewedProjectId = null;
+
+            if (typeof currentlyViewedTaskId !== 'undefined') {
+                currentlyViewedTaskId = null;
+            }
             window.currentlyViewedTaskId = null;
             
             // Remove background blur and restore scrolling
@@ -165,6 +172,9 @@ window.addEventListener('load', function() {
             }
             
             safeOpenModal('details-modal', function() {
+                if (typeof currentlyViewedProjectId !== 'undefined') {
+                    currentlyViewedProjectId = projectId;
+                }
                 window.currentlyViewedProjectId = projectId;
                 
                 if (typeof refreshDetailsModal === 'function') {
@@ -197,6 +207,9 @@ window.addEventListener('load', function() {
             }
             
             safeOpenModal('task-details-modal', function() {
+                if (typeof currentlyViewedTaskId !== 'undefined') {
+                    currentlyViewedTaskId = taskId;
+                }
                 window.currentlyViewedTaskId = taskId;
                 
                 if (typeof refreshTaskDetailsModal === 'function') {

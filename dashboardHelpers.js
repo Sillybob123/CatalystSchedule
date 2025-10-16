@@ -39,6 +39,125 @@ async function handleSaveProposal() {
 }
 
 /**
+ * Handle setting deadlines (backup function)
+ * Primary implementation is in deadlineFixes_APPLY.js
+ */
+async function handleSetDeadlines() {
+    console.log('[DEADLINES BACKUP] Starting to set deadlines...');
+    
+    // Try to get the project ID from multiple sources
+    const projectId = currentlyViewedProjectId || window.currentlyViewedProjectId;
+    
+    if (!projectId) {
+        console.error('[DEADLINES BACKUP] No project ID found');
+        showNotification('No project selected. Please try again.', 'error');
+        return;
+    }
+    
+    const project = allProjects.find(p => p.id === projectId);
+    if (!project) {
+        console.error('[DEADLINES BACKUP] Project not found:', projectId);
+        showNotification('Project not found. Please refresh the page.', 'error');
+        return;
+    }
+    
+    console.log('[DEADLINES BACKUP] Current project:', project);
+    console.log('[DEADLINES BACKUP] Existing deadlines:', project.deadlines);
+    
+    // Get existing deadlines to merge with new ones
+    const existingDeadlines = project.deadlines || {};
+    const newDeadlines = { ...existingDeadlines };
+    
+    // List of deadline fields to check
+    const deadlineFields = [
+        { key: 'contact', label: 'Contact Professor', inputId: 'deadline-contact' },
+        { key: 'interview', label: 'Conduct Interview', inputId: 'deadline-interview' },
+        { key: 'draft', label: 'Write Draft', inputId: 'deadline-draft' },
+        { key: 'review', label: 'Editor Review', inputId: 'deadline-review' },
+        { key: 'edits', label: 'Review Edits', inputId: 'deadline-edits' }
+    ];
+    
+    let hasChanges = false;
+    let updatedFields = [];
+    
+    // Collect all deadline values from the form
+    console.log('[DEADLINES BACKUP] Reading deadline values from form...');
+    deadlineFields.forEach(field => {
+        const input = document.getElementById(field.inputId);
+        if (input) {
+            const value = input.value;
+            console.log(`[DEADLINES BACKUP] ${field.label} (${field.key}): "${value}"`);
+            
+            // Only update if value exists and has changed
+            if (value && value.trim() !== '') {
+                if (newDeadlines[field.key] !== value) {
+                    newDeadlines[field.key] = value;
+                    hasChanges = true;
+                    updatedFields.push(field.label);
+                    console.log(`[DEADLINES BACKUP] ✓ ${field.label} will be updated to: ${value}`);
+                }
+            }
+        } else {
+            console.error(`[DEADLINES BACKUP] ✗ Input field not found: ${field.inputId}`);
+        }
+    });
+    
+    console.log('[DEADLINES BACKUP] Summary:');
+    console.log('  - Has changes:', hasChanges);
+    console.log('  - Updated fields:', updatedFields);
+    console.log('  - New deadlines object:', newDeadlines);
+    
+    // Validate that at least one deadline was set
+    if (!hasChanges) {
+        showNotification('No changes detected. Please set or update at least one deadline.', 'warning');
+        console.log('[DEADLINES BACKUP] No changes to save');
+        return;
+    }
+    
+    try {
+        console.log('[DEADLINES BACKUP] Attempting to save to Firestore...');
+        console.log('[DEADLINES BACKUP] Project ID:', projectId);
+        console.log('[DEADLINES BACKUP] Saving deadlines:', newDeadlines);
+        
+        // Update Firestore
+        await db.collection('projects').doc(projectId).update({
+            deadlines: newDeadlines,
+            activity: firebase.firestore.FieldValue.arrayUnion({
+                text: `updated deadlines: ${updatedFields.join(', ')}`,
+                authorName: currentUserName,
+                timestamp: new Date()
+            })
+        });
+        
+        console.log('[DEADLINES BACKUP] ✅ Successfully saved to Firestore!');
+        showNotification(`Deadlines updated successfully! Updated: ${updatedFields.join(', ')}`, 'success');
+        
+        // Update local project object
+        const projectIndex = allProjects.findIndex(p => p.id === projectId);
+        if (projectIndex !== -1) {
+            allProjects[projectIndex].deadlines = newDeadlines;
+            console.log('[DEADLINES BACKUP] Updated local project object');
+        }
+        
+    } catch (error) {
+        console.error('[DEADLINES BACKUP] ❌ Failed to save deadlines:', error);
+        console.error('[DEADLINES BACKUP] Error code:', error.code);
+        console.error('[DEADLINES BACKUP] Error message:', error.message);
+        
+        let errorMessage = 'Failed to update deadlines. ';
+        if (error.code === 'permission-denied') {
+            errorMessage += 'Permission denied. Check that you are an admin and Firestore rules allow updates.';
+        } else if (error.code === 'not-found') {
+            errorMessage += 'Project not found in database.';
+        } else {
+            errorMessage += 'Please try again or contact support.';
+        }
+        
+        showNotification(errorMessage, 'error');
+    }
+}
+
+/**
  * Handle requesting deadline changes
  */
 async function handleRequestDeadlineChange() {

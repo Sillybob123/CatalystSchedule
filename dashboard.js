@@ -321,6 +321,14 @@ function closeAllModals() {
             modal.style.visibility = '';
             modal.style.transition = '';
             
+            // Clear dataset to avoid stale project/task IDs
+            if (modal.dataset.projectId) {
+                delete modal.dataset.projectId;
+            }
+            if (modal.dataset.taskId) {
+                delete modal.dataset.taskId;
+            }
+            
             // Remove any loading states
             modal.classList.remove('loading');
             
@@ -328,9 +336,27 @@ function closeAllModals() {
         }
     });
     
-    // Clear currently viewed IDs
-    currentlyViewedProjectId = null;
-    currentlyViewedTaskId = null;
+    // Only clear currently viewed IDs if we're actually closing all modals
+    // Don't clear if we're just transitioning between modals
+    // The setTimeout in openDetailsModal will set the new ID before this takes effect
+    setTimeout(() => {
+        // Check if any modal is actually open after a brief delay
+        const anyModalOpen = modals.some(modalId => {
+            const modal = document.getElementById(modalId);
+            return modal && modal.style.display === 'flex';
+        });
+        
+        // Only clear IDs if no modals are open
+        if (!anyModalOpen) {
+            currentlyViewedProjectId = null;
+            currentlyViewedTaskId = null;
+            window.currentlyViewedProjectId = null;
+            window.currentlyViewedTaskId = null;
+            console.log('[MODAL CLOSE] Cleared all viewed IDs');
+        } else {
+            console.log('[MODAL CLOSE] Modal still open, keeping IDs');
+        }
+    }, 50);
     
     // Remove blur from background and restore scrolling
     document.body.style.overflow = '';
@@ -802,7 +828,22 @@ function setupNavAndListeners() {
     const setDeadlinesBtn = document.getElementById('set-deadlines-button');
     const requestDeadlineChangeBtn = document.getElementById('request-deadline-change-button');
 
-    if (setDeadlinesBtn) setDeadlinesBtn.addEventListener('click', handleSetDeadlines);
+    if (setDeadlinesBtn) {
+        setDeadlinesBtn.addEventListener('click', () => {
+            // Use window.handleSetDeadlines if available (from deadlineFixes_APPLY.js)
+            // Otherwise fall back to local handleSetDeadlines (from dashboardHelpers.js)
+            if (typeof window.handleSetDeadlines === 'function') {
+                console.log('[DEADLINES] Using window.handleSetDeadlines from deadlineFixes_APPLY.js');
+                window.handleSetDeadlines();
+            } else if (typeof handleSetDeadlines === 'function') {
+                console.log('[DEADLINES] Using local handleSetDeadlines');
+                handleSetDeadlines();
+            } else {
+                console.error('[DEADLINES] handleSetDeadlines function not found!');
+                showNotification('Deadline function not loaded. Please refresh the page.', 'error');
+            }
+        });
+    }
     if (requestDeadlineChangeBtn) requestDeadlineChangeBtn.addEventListener('click', handleRequestDeadlineChange);
 
     document.querySelectorAll('.modal-overlay').forEach(modal => {
@@ -1671,13 +1712,21 @@ function openDetailsModal(projectId) {
     // Use setTimeout to ensure closing is complete before opening new modal
     // Increased timeout to 150ms for smoother transition
     setTimeout(() => {
+        // Set project ID in both local and window scope for maximum compatibility
         currentlyViewedProjectId = projectId;
+        window.currentlyViewedProjectId = projectId;
+        console.log('[MODAL OPEN] Set currentlyViewedProjectId:', projectId);
+        console.log('[MODAL OPEN] Set window.currentlyViewedProjectId:', projectId);
 
         const modal = document.getElementById('details-modal');
         if (!modal) {
             console.error('[MODAL] Modal element not found');
             return;
         }
+        
+        // Store project ID in modal dataset for reliable access
+        modal.dataset.projectId = projectId;
+        console.log('[MODAL OPEN] Stored project ID in modal dataset:', projectId);
 
         // Ensure modal is completely reset before opening
         modal.style.display = 'none';
@@ -3553,14 +3602,23 @@ async function handleSaveProposal() {
 //  Deadline Management
 // ==================
 async function handleSetDeadlines() {
-    if (!currentlyViewedProjectId) {
+    const projectId = currentlyViewedProjectId || window.currentlyViewedProjectId;
+    
+    if (!projectId) {
         showNotification('No project selected. Please try again.', 'error');
         return;
     }
 
-    const projectIndex = allProjects.findIndex(p => p.id === currentlyViewedProjectId);
+    if (!currentlyViewedProjectId && typeof currentlyViewedProjectId !== 'undefined') {
+        currentlyViewedProjectId = projectId;
+    }
+    if (!window.currentlyViewedProjectId) {
+        window.currentlyViewedProjectId = projectId;
+    }
+
+    const projectIndex = allProjects.findIndex(p => p.id === projectId);
     if (projectIndex === -1) {
-        console.error('[SET DEADLINES] Project not found:', currentlyViewedProjectId);
+        console.error('[SET DEADLINES] Project not found:', projectId);
         showNotification('Project not found. Please refresh and try again.', 'error');
         return;
     }
@@ -3630,7 +3688,7 @@ async function handleSetDeadlines() {
 
         allProjects[projectIndex] = { ...project, deadlines: updatedDeadlines };
 
-        if (currentlyViewedProjectId === project.id) {
+        if (projectId === project.id) {
             refreshDetailsModal(allProjects[projectIndex]);
             attachProjectModalListeners();
         }
