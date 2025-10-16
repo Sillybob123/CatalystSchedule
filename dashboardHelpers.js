@@ -39,40 +39,6 @@ async function handleSaveProposal() {
 }
 
 /**
- * Handle setting deadlines for a project
- */
-async function handleSetDeadlines() {
-    if (!currentlyViewedProjectId) return;
-    
-    const deadlines = {};
-    const fields = ['contact', 'interview', 'draft', 'review', 'edits'];
-    
-    fields.forEach(field => {
-        const input = document.getElementById(`deadline-${field}`);
-        if (input && input.value) {
-            deadlines[field] = input.value;
-        }
-    });
-    
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            deadlines: deadlines,
-            activity: firebase.firestore.FieldValue.arrayUnion({
-                text: 'updated project deadlines',
-                authorName: currentUserName,
-                timestamp: new Date()
-            })
-        });
-        
-        showNotification('Deadlines updated successfully!', 'success');
-        
-    } catch (error) {
-        console.error('[ERROR] Failed to set deadlines:', error);
-        showNotification('Failed to update deadlines. Please try again.', 'error');
-    }
-}
-
-/**
  * Handle requesting deadline changes
  */
 async function handleRequestDeadlineChange() {
@@ -190,10 +156,10 @@ async function handleRejectDeadlineRequest() {
 }
 
 /**
- * Generate comprehensive status report
+ * Generate comprehensive status report with detailed person information
  */
 function generateStatusReport() {
-    console.log('[REPORT] Generating status report...');
+    console.log('[REPORT] Generating enhanced status report...');
     
     const reportModal = document.getElementById('report-modal');
     const reportContent = document.getElementById('report-content');
@@ -203,9 +169,10 @@ function generateStatusReport() {
         return;
     }
     
-    let html = '<div class="report-section">';
-    html += '<h3>Overall Project Status</h3>';
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
     
+    // Calculate overall statistics
     const totalProjects = allProjects.length;
     const completedProjects = allProjects.filter(p => {
         const state = getProjectState(p, currentView, currentUser);
@@ -216,67 +183,307 @@ function generateStatusReport() {
         return state.column === 'In Progress';
     }).length;
     const pendingProjects = allProjects.filter(p => p.proposalStatus === 'pending').length;
+    const approvedProjects = allProjects.filter(p => {
+        const state = getProjectState(p, currentView, currentUser);
+        return state.column === 'Approved';
+    }).length;
     
-    html += `<p><strong>Total Projects:</strong> ${totalProjects}</p>`;
-    html += `<p><strong>Completed:</strong> ${completedProjects}</p>`;
-    html += `<p><strong>In Progress:</strong> ${inProgressProjects}</p>`;
-    html += `<p><strong>Pending Approval:</strong> ${pendingProjects}</p>`;
+    // Count overdue projects
+    const overdueProjects = allProjects.filter(p => {
+        const finalDeadline = p.deadlines?.publication || p.deadline;
+        if (!finalDeadline) return false;
+        const deadline = new Date(finalDeadline);
+        deadline.setHours(0, 0, 0, 0);
+        const state = getProjectState(p, currentView, currentUser);
+        return deadline < now && state.column !== 'Completed';
+    }).length;
+    
+    let html = '<div class="report-header">';
+    html += '<h2>📊 Comprehensive Status Report</h2>';
+    html += `<p class="report-timestamp">Generated on ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>`;
     html += '</div>';
     
+    // Overall Summary Section
+    html += '<div class="report-section report-summary">';
+    html += '<h3>📈 Overall Summary</h3>';
+    html += '<div class="stats-grid">';
+    html += `<div class="stat-card"><div class="stat-number">${totalProjects}</div><div class="stat-label">Total Projects</div></div>`;
+    html += `<div class="stat-card completed"><div class="stat-number">${completedProjects}</div><div class="stat-label">Completed</div></div>`;
+    html += `<div class="stat-card in-progress"><div class="stat-number">${inProgressProjects}</div><div class="stat-label">In Progress</div></div>`;
+    html += `<div class="stat-card pending"><div class="stat-number">${pendingProjects}</div><div class="stat-label">Pending Approval</div></div>`;
+    html += `<div class="stat-card approved"><div class="stat-number">${approvedProjects}</div><div class="stat-label">Approved</div></div>`;
+    html += `<div class="stat-card overdue"><div class="stat-number">${overdueProjects}</div><div class="stat-label">Overdue</div></div>`;
+    html += '</div>';
+    html += '</div>';
+    
+    // Task Overview Section
     html += '<div class="report-section">';
-    html += '<h3>Task Overview</h3>';
+    html += '<h3>✅ Task Status</h3>';
     const totalTasks = allTasks.length;
     const completedTasks = allTasks.filter(t => t.status === 'completed').length;
     const pendingTasks = allTasks.filter(t => t.status === 'pending').length;
     const approvedTasks = allTasks.filter(t => t.status === 'approved').length;
+    const overdueTasks = allTasks.filter(t => {
+        if (t.status === 'completed' || !t.deadline) return false;
+        const taskDeadline = new Date(t.deadline);
+        taskDeadline.setHours(0, 0, 0, 0);
+        return taskDeadline < now;
+    }).length;
     
-    html += `<p><strong>Total Tasks:</strong> ${totalTasks}</p>`;
-    html += `<p><strong>Completed:</strong> ${completedTasks}</p>`;
-    html += `<p><strong>Approved:</strong> ${approvedTasks}</p>`;
-    html += `<p><strong>Pending:</strong> ${pendingTasks}</p>`;
+    html += '<div class="stats-grid">';
+    html += `<div class="stat-card"><div class="stat-number">${totalTasks}</div><div class="stat-label">Total Tasks</div></div>`;
+    html += `<div class="stat-card completed"><div class="stat-number">${completedTasks}</div><div class="stat-label">Completed</div></div>`;
+    html += `<div class="stat-card approved"><div class="stat-number">${approvedTasks}</div><div class="stat-label">Approved</div></div>`;
+    html += `<div class="stat-card pending"><div class="stat-number">${pendingTasks}</div><div class="stat-label">Pending</div></div>`;
+    html += `<div class="stat-card overdue"><div class="stat-number">${overdueTasks}</div><div class="stat-label">Overdue</div></div>`;
+    html += '</div>';
     html += '</div>';
     
-    html += '<div class="report-section">';
-    html += '<h3>Team Workload</h3>';
+    // Detailed Team Member Reports
+    html += '<div class="report-section team-details">';
+    html += '<h3>👥 Detailed Team Member Reports</h3>';
     
-    const userWorkload = {};
+    // Build detailed workload for each user
+    const userDetails = {};
     allUsers.forEach(user => {
-        userWorkload[user.id] = {
+        userDetails[user.id] = {
             name: user.name,
-            projects: 0,
-            tasks: 0
+            role: user.role || 'writer',
+            authoredProjects: [],
+            editingProjects: [],
+            assignedTasks: [],
+            overdueProjects: [],
+            overdueTasks: [],
+            upcomingDeadlines: []
         };
     });
     
+    // Collect project details for each user
     allProjects.forEach(project => {
-        if (project.authorId && userWorkload[project.authorId]) {
-            userWorkload[project.authorId].projects++;
+        const state = getProjectState(project, currentView, currentUser);
+        const finalDeadline = project.deadlines?.publication || project.deadline;
+        const isOverdue = finalDeadline && new Date(finalDeadline) < now && state.column !== 'Completed';
+        const daysUntilDeadline = finalDeadline ? Math.ceil((new Date(finalDeadline) - now) / (1000 * 60 * 60 * 24)) : null;
+        
+        const projectInfo = {
+            title: project.title,
+            status: state.statusText,
+            deadline: finalDeadline ? new Date(finalDeadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No deadline',
+            isOverdue: isOverdue,
+            daysUntilDeadline: daysUntilDeadline,
+            progress: calculateProgress(project.timeline),
+            type: project.type
+        };
+        
+        // Add to author's list
+        if (project.authorId && userDetails[project.authorId]) {
+            userDetails[project.authorId].authoredProjects.push(projectInfo);
+            if (isOverdue) {
+                userDetails[project.authorId].overdueProjects.push(projectInfo);
+            }
+            if (daysUntilDeadline !== null && daysUntilDeadline >= 0 && daysUntilDeadline <= 7) {
+                userDetails[project.authorId].upcomingDeadlines.push(projectInfo);
+            }
         }
-        if (project.editorId && userWorkload[project.editorId]) {
-            userWorkload[project.editorId].projects++;
+        
+        // Add to editor's list
+        if (project.editorId && userDetails[project.editorId]) {
+            userDetails[project.editorId].editingProjects.push(projectInfo);
+            if (isOverdue) {
+                userDetails[project.editorId].overdueProjects.push(projectInfo);
+            }
+            if (daysUntilDeadline !== null && daysUntilDeadline >= 0 && daysUntilDeadline <= 7) {
+                userDetails[project.editorId].upcomingDeadlines.push(projectInfo);
+            }
         }
     });
     
+    // Collect task details for each user
     allTasks.forEach(task => {
-        if (task.assigneeIds && Array.isArray(task.assigneeIds)) {
-            task.assigneeIds.forEach(assigneeId => {
-                if (userWorkload[assigneeId]) {
-                    userWorkload[assigneeId].tasks++;
+        const isOverdue = task.status !== 'completed' && task.deadline && new Date(task.deadline) < now;
+        const daysUntilDeadline = task.deadline ? Math.ceil((new Date(task.deadline) - now) / (1000 * 60 * 60 * 24)) : null;
+        
+        const taskInfo = {
+            title: task.title,
+            status: (task.status || 'pending').replace('_', ' '),
+            deadline: task.deadline ? new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No deadline',
+            isOverdue: isOverdue,
+            daysUntilDeadline: daysUntilDeadline,
+            priority: task.priority || 'medium'
+        };
+        
+        // Add to all assignees
+        const assigneeIds = task.assigneeIds || (task.assigneeId ? [task.assigneeId] : []);
+        assigneeIds.forEach(assigneeId => {
+            if (userDetails[assigneeId]) {
+                userDetails[assigneeId].assignedTasks.push(taskInfo);
+                if (isOverdue) {
+                    userDetails[assigneeId].overdueTasks.push(taskInfo);
                 }
-            });
-        } else if (task.assigneeId && userWorkload[task.assigneeId]) {
-            userWorkload[task.assigneeId].tasks++;
+                if (daysUntilDeadline !== null && daysUntilDeadline >= 0 && daysUntilDeadline <= 7) {
+                    userDetails[assigneeId].upcomingDeadlines.push(taskInfo);
+                }
+            }
+        });
+    });
+    
+    // Render detailed report for each user
+    Object.values(userDetails).forEach(user => {
+        const totalWorkItems = user.authoredProjects.length + user.editingProjects.length + user.assignedTasks.length;
+        const totalOverdue = user.overdueProjects.length + user.overdueTasks.length;
+        
+        // Skip users with no work items
+        if (totalWorkItems === 0) return;
+        
+        html += '<div class="user-report-card">';
+        html += `<div class="user-report-header">`;
+        html += `<div class="user-info">`;
+        html += `<div class="user-avatar" style="background-color: ${stringToColor(user.name)}">${user.name.charAt(0).toUpperCase()}</div>`;
+        html += `<div>`;
+        html += `<h4>${escapeHtml(user.name)}</h4>`;
+        html += `<p class="user-role">${escapeHtml(user.role.toUpperCase())}</p>`;
+        html += `</div>`;
+        html += `</div>`;
+        html += `<div class="user-workload-summary">`;
+        html += `<div class="workload-stat"><strong>${totalWorkItems}</strong> Total Items</div>`;
+        if (totalOverdue > 0) {
+            html += `<div class="workload-stat overdue"><strong>${totalOverdue}</strong> Overdue ⚠️</div>`;
+        } else {
+            html += `<div class="workload-stat on-track"><strong>✓</strong> On Track</div>`;
         }
+        html += `</div>`;
+        html += `</div>`;
+        
+        // Overdue items (if any)
+        if (totalOverdue > 0) {
+            html += '<div class="overdue-section">';
+            html += '<h5 style="color: #ef4444; margin-bottom: 8px;">⚠️ OVERDUE ITEMS</h5>';
+            
+            user.overdueProjects.forEach(proj => {
+                const daysOverdue = Math.abs(proj.daysUntilDeadline);
+                html += '<div class="work-item overdue-item">';
+                html += `<div class="item-title">📝 ${escapeHtml(proj.title)}</div>`;
+                html += `<div class="item-meta">`;
+                html += `<span class="item-status">${escapeHtml(proj.status)}</span>`;
+                html += `<span class="item-deadline overdue">${proj.deadline} (${daysOverdue} days overdue)</span>`;
+                html += `<span class="item-progress">${proj.progress}% complete</span>`;
+                html += `</div>`;
+                html += '</div>';
+            });
+            
+            user.overdueTasks.forEach(task => {
+                const daysOverdue = Math.abs(task.daysUntilDeadline);
+                html += '<div class="work-item overdue-item">';
+                html += `<div class="item-title">📋 ${escapeHtml(task.title)}</div>`;
+                html += `<div class="item-meta">`;
+                html += `<span class="item-status">${escapeHtml(task.status)}</span>`;
+                html += `<span class="item-priority priority-${task.priority}">${task.priority.toUpperCase()}</span>`;
+                html += `<span class="item-deadline overdue">${task.deadline} (${daysOverdue} days overdue)</span>`;
+                html += `</div>`;
+                html += '</div>';
+            });
+            
+            html += '</div>';
+        }
+        
+        // Upcoming deadlines (within 7 days)
+        const upcomingNonOverdue = user.upcomingDeadlines.filter(item => !item.isOverdue);
+        if (upcomingNonOverdue.length > 0) {
+            html += '<div class="upcoming-section">';
+            html += '<h5 style="color: #f59e0b; margin-bottom: 8px;">⏰ UPCOMING (Next 7 Days)</h5>';
+            
+            upcomingNonOverdue.forEach(item => {
+                html += '<div class="work-item upcoming-item">';
+                html += `<div class="item-title">${item.type ? '📝' : '📋'} ${escapeHtml(item.title)}</div>`;
+                html += `<div class="item-meta">`;
+                html += `<span class="item-status">${escapeHtml(item.status)}</span>`;
+                html += `<span class="item-deadline due-soon">${item.deadline} (${item.daysUntilDeadline} days)</span>`;
+                if (item.progress !== undefined) {
+                    html += `<span class="item-progress">${item.progress}% complete</span>`;
+                }
+                html += `</div>`;
+                html += '</div>';
+            });
+            
+            html += '</div>';
+        }
+        
+        // All projects as author
+        if (user.authoredProjects.length > 0) {
+            html += '<div class="work-section">';
+            html += `<h5>📝 Authored Projects (${user.authoredProjects.length})</h5>`;
+            user.authoredProjects.forEach(proj => {
+                if (proj.isOverdue) return; // Already shown in overdue section
+                html += '<div class="work-item">';
+                html += `<div class="item-title">${escapeHtml(proj.title)}</div>`;
+                html += `<div class="item-meta">`;
+                html += `<span class="item-status">${escapeHtml(proj.status)}</span>`;
+                html += `<span class="item-type">${proj.type}</span>`;
+                if (proj.daysUntilDeadline !== null && proj.daysUntilDeadline >= 0) {
+                    html += `<span class="item-deadline">${proj.deadline} (${proj.daysUntilDeadline} days)</span>`;
+                } else {
+                    html += `<span class="item-deadline">${proj.deadline}</span>`;
+                }
+                html += `<span class="item-progress">${proj.progress}% complete</span>`;
+                html += `</div>`;
+                html += '</div>';
+            });
+            html += '</div>';
+        }
+        
+        // All projects as editor
+        if (user.editingProjects.length > 0) {
+            html += '<div class="work-section">';
+            html += `<h5>✏️ Editing Projects (${user.editingProjects.length})</h5>`;
+            user.editingProjects.forEach(proj => {
+                if (proj.isOverdue) return; // Already shown in overdue section
+                html += '<div class="work-item">';
+                html += `<div class="item-title">${escapeHtml(proj.title)}</div>`;
+                html += `<div class="item-meta">`;
+                html += `<span class="item-status">${escapeHtml(proj.status)}</span>`;
+                html += `<span class="item-type">${proj.type}</span>`;
+                if (proj.daysUntilDeadline !== null && proj.daysUntilDeadline >= 0) {
+                    html += `<span class="item-deadline">${proj.deadline} (${proj.daysUntilDeadline} days)</span>`;
+                } else {
+                    html += `<span class="item-deadline">${proj.deadline}</span>`;
+                }
+                html += `<span class="item-progress">${proj.progress}% complete</span>`;
+                html += `</div>`;
+                html += '</div>';
+            });
+            html += '</div>';
+        }
+        
+        // All assigned tasks
+        if (user.assignedTasks.length > 0) {
+            html += '<div class="work-section">';
+            html += `<h5>📋 Assigned Tasks (${user.assignedTasks.length})</h5>`;
+            user.assignedTasks.forEach(task => {
+                if (task.isOverdue) return; // Already shown in overdue section
+                html += '<div class="work-item">';
+                html += `<div class="item-title">${escapeHtml(task.title)}</div>`;
+                html += `<div class="item-meta">`;
+                html += `<span class="item-status">${escapeHtml(task.status)}</span>`;
+                html += `<span class="item-priority priority-${task.priority}">${task.priority.toUpperCase()}</span>`;
+                if (task.daysUntilDeadline !== null && task.daysUntilDeadline >= 0) {
+                    html += `<span class="item-deadline">${task.deadline} (${task.daysUntilDeadline} days)</span>`;
+                } else {
+                    html += `<span class="item-deadline">${task.deadline}</span>`;
+                }
+                html += `</div>`;
+                html += '</div>';
+            });
+            html += '</div>';
+        }
+        
+        html += '</div>'; // Close user-report-card
     });
     
-    Object.values(userWorkload).forEach(user => {
-        html += `<p><strong>${user.name}:</strong> ${user.projects} projects, ${user.tasks} tasks</p>`;
-    });
-    
-    html += '</div>';
+    html += '</div>'; // Close team-details section
     
     reportContent.innerHTML = html;
     reportModal.style.display = 'flex';
+    console.log('[REPORT] Enhanced status report generated successfully');
 }
 
 /**

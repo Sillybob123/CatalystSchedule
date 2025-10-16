@@ -19,6 +19,9 @@
   padding: var(--space-6);
   backdrop-filter: blur(16px);
   animation: modalFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Remove animation-fill-mode to allow proper reset */
+  /* animation-fill-mode: forwards; */
+  will-change: opacity;
 }
 
 #details-modal .modal-content,
@@ -34,7 +37,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Remove forwards to allow animation reset */
 }
 
 /* === DETAILS CONTAINER === */
@@ -711,4 +715,42 @@
   color: #92400e;
   font-size: 13px;
   margin: var(--space-2) 0;
+}
+
+/* =====================================================
+   MODAL ANIMATIONS
+   Smooth fade-in and slide-in effects for modals
+   ===================================================== */
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    visibility: hidden;
+  }
+  to {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Reset animation on display change */
+#details-modal[style*="display: none"] .modal-content,
+#task-details-modal[style*="display: none"] .modal-content {
+  animation: none !important;
+}
+
+#details-modal[style*="display: flex"] .modal-content,
+#task-details-modal[style*="display: flex"] .modal-content {
+  animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

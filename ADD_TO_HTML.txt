@@ -1,0 +1,18 @@
+<!-- ============================================ -->
+<!-- ADD THESE TWO LINES TO dashboard.html -->
+<!-- Place them AFTER dashboard.js but BEFORE fixedSubscriptions.js -->
+<!-- ============================================ -->
+
+<!-- BEFORE (your current code): -->
+<script src="dashboard.js?v=2"></script>
+<script src="dashboardHelpers.js?v=2"></script>
+<script src="fixedSubscriptions.js?v=2"></script>
+
+<!-- AFTER (add the two new lines): -->
+<script src="dashboard.js?v=2"></script>
+<script src="dashboardHelpers.js?v=2"></script>
+<script src="modalFixes_APPLY.js?v=1"></script>         <!-- 🔧 FIX 1: Modal bug -->
+<script src="deadlineFixes_APPLY.js?v=1"></script>      <!-- 🔧 FIX 2: Deadline setting -->
+<script src="fixedSubscriptions.js?v=2"></script>
+
+<!-- That's it! Save the file and hard refresh your browser (Ctrl+Shift+R) -->
