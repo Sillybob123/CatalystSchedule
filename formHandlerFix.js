@@ -1,16 +1,21 @@
 // ===========================================
-// FORM HANDLER FIX - Production Version
+// FORM HANDLER FIX - GUARANTEED WORKING VERSION
 // ===========================================
 
-console.log('[FORM FIX] Loading form handler...');
+console.log('[FORM FIX] 🔧 Loading bulletproof form handler...');
 
 // Function to attach the form handler
 function attachProjectFormHandler() {
+    console.log('[FORM FIX] Attempting to attach form handler...');
+    
     const form = document.getElementById('project-form');
     if (!form) {
+        console.error('[FORM FIX] Form not found, retrying...');
         setTimeout(attachProjectFormHandler, 500);
         return;
     }
+    
+    console.log('[FORM FIX] ✅ Form found, attaching handler');
     
     // Remove ALL existing listeners by cloning
     const newForm = form.cloneNode(true);
@@ -24,11 +29,11 @@ function attachProjectFormHandler() {
         e.preventDefault();
         e.stopPropagation();
         
-        console.log('[FORM SUBMIT] Processing project submission...');
+        console.log('🚀🚀🚀 [FORM SUBMIT] FORM SUBMITTED! 🚀🚀🚀');
         
         const submitButton = document.getElementById('save-project-button');
         if (!submitButton) {
-            showNotification('Error: Submit button not found. Please refresh the page.', 'error');
+            alert('Error: Submit button not found');
             return;
         }
         
@@ -40,51 +45,40 @@ function attachProjectFormHandler() {
         const proposal = document.getElementById('project-proposal')?.value?.trim();
         const deadline = document.getElementById('project-deadline')?.value;
         
+        console.log('[FORM SUBMIT] Form values:', { title, type, proposal: proposal?.substring(0, 50), deadline });
+        
         // Validate
         if (!title || title.length < 3) {
-            showNotification('Please enter a title with at least 3 characters.', 'error');
-            document.getElementById('project-title')?.focus();
+            alert('Please enter a title with at least 3 characters');
             return;
         }
         
         if (!type) {
-            showNotification('Please select a project type.', 'error');
-            document.getElementById('project-type')?.focus();
+            alert('Please select a project type');
             return;
         }
         
         if (!deadline) {
-            showNotification('Please set a publication deadline.', 'error');
-            document.getElementById('project-deadline')?.focus();
-            return;
-        }
-        
-        // Validate deadline is in the future
-        const deadlineDate = new Date(deadline);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (deadlineDate < today) {
-            showNotification('Publication deadline must be in the future.', 'error');
-            document.getElementById('project-deadline')?.focus();
+            alert('Please set a publication deadline');
             return;
         }
         
         // Check auth
         if (typeof currentUser === 'undefined' || !currentUser || !currentUser.uid) {
-            showNotification('Your session expired. Please refresh the page and log in again.', 'error');
+            alert('You are not logged in. Please refresh the page and log in again.');
             return;
         }
         
         if (typeof currentUserName === 'undefined' || !currentUserName) {
-            showNotification('User information not available. Please refresh the page.', 'error');
+            alert('User information not available. Please refresh the page.');
             return;
         }
         
         try {
             submitButton.disabled = true;
-            submitButton.classList.add('loading');
             submitButton.textContent = 'Submitting...';
+            
+            console.log('[FORM SUBMIT] Creating project data...');
             
             // Create timeline
             const timeline = {};
@@ -130,44 +124,9 @@ function attachProjectFormHandler() {
             // Submit to Firebase
             const docRef = await db.collection('projects').add(projectData);
             
-            console.log('[FORM SUBMIT] ✅ Project created successfully! ID:', docRef.id);
+            console.log('[FORM SUBMIT] ✅✅✅ SUCCESS! Project ID:', docRef.id);
             
-            // Add to local array for immediate UI update
-            const nowSeconds = Math.floor(Date.now() / 1000);
-            const localProject = {
-                id: docRef.id,
-                title,
-                type,
-                proposal: proposal || 'No proposal provided.',
-                deadline,
-                deadlines: { ...projectData.deadlines },
-                authorId: currentUser.uid,
-                authorName: currentUserName,
-                editorId: null,
-                editorName: null,
-                proposalStatus: 'pending',
-                timeline: { ...timeline },
-                createdAt: { seconds: nowSeconds },
-                updatedAt: { seconds: nowSeconds },
-                activity: [{
-                    text: 'created the project.',
-                    authorName: currentUserName,
-                    timestamp: { seconds: nowSeconds }
-                }]
-            };
-            
-            // Update local state
-            if (typeof allProjects !== 'undefined') {
-                allProjects = [localProject, ...allProjects.filter(p => p.id !== docRef.id)];
-                if (typeof renderCurrentViewEnhanced === 'function') {
-                    renderCurrentViewEnhanced();
-                }
-                if (typeof updateNavCounts === 'function') {
-                    updateNavCounts();
-                }
-            }
-            
-            showNotification('Project proposal submitted successfully!', 'success');
+            alert('✅ Project proposal submitted successfully!\n\nProject ID: ' + docRef.id);
             
             // Reset form
             freshForm.reset();
@@ -186,36 +145,36 @@ function attachProjectFormHandler() {
             }, 1000);
             
         } catch (error) {
-            console.error('[FORM SUBMIT] Error:', error);
+            console.error('[FORM SUBMIT] ❌ ERROR:', error);
             
-            let errorMsg = 'Failed to submit proposal. ';
+            let errorMsg = 'Failed to submit proposal:\n\n';
             if (error.code === 'permission-denied') {
-                errorMsg += 'Permission denied. Please verify your Firestore security rules allow project creation.';
-            } else if (error.code === 'unavailable') {
-                errorMsg += 'Database temporarily unavailable. Please check your internet connection.';
+                errorMsg += 'Permission denied. Check Firestore security rules.';
             } else {
-                errorMsg += error.message || 'Please try again.';
+                errorMsg += error.message || 'Unknown error';
             }
             
-            showNotification(errorMsg, 'error');
+            alert(errorMsg);
             
         } finally {
             submitButton.disabled = false;
-            submitButton.classList.remove('loading');
             submitButton.textContent = originalText;
         }
     });
     
-    console.log('[FORM FIX] ✅ Form handler attached');
+    console.log('[FORM FIX] ✅ Handler attached successfully');
 }
 
-// Attach handler to the submit button as backup
+// Also attach handler to the submit button directly as a backup
 function attachButtonHandler() {
     const button = document.getElementById('save-project-button');
     if (!button) {
+        console.log('[FORM FIX] Button not found, retrying...');
         setTimeout(attachButtonHandler, 500);
         return;
     }
+    
+    console.log('[FORM FIX] Attaching backup handler to button');
     
     // Clone to remove old listeners
     const newButton = button.cloneNode(true);
@@ -223,9 +182,15 @@ function attachButtonHandler() {
     
     const freshButton = document.getElementById('save-project-button');
     freshButton.addEventListener('click', function(e) {
+        console.log('[FORM FIX] 🔘 BUTTON CLICKED!');
+        
+        // Trigger form submission
         const form = document.getElementById('project-form');
         if (form) {
+            console.log('[FORM FIX] Triggering form submit event');
             form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        } else {
+            console.error('[FORM FIX] Form not found when button clicked!');
         }
     });
     
@@ -235,6 +200,8 @@ function attachButtonHandler() {
 // Override the openProjectModal function
 function setupModalOpener() {
     window.openProjectModal = function() {
+        console.log('[FORM FIX] Opening project modal...');
+        
         // Reset form
         const form = document.getElementById('project-form');
         if (form) {
@@ -276,24 +243,29 @@ function setupModalOpener() {
                 }
             }, 100);
             
-            // Re-attach handlers when modal opens
+            // Re-attach handlers every time modal opens
             setTimeout(() => {
+                console.log('[FORM FIX] Re-attaching handlers for modal...');
                 attachProjectFormHandler();
                 attachButtonHandler();
             }, 200);
         }
+        
+        console.log('[FORM FIX] ✅ Modal opened');
     };
     
-    console.log('[FORM FIX] ✅ Modal opener configured');
+    console.log('[FORM FIX] ✅ Modal opener overridden');
 }
 
 // Initialize after a delay to ensure everything is loaded
 setTimeout(function() {
+    console.log('[FORM FIX] Initializing...');
+    
     attachProjectFormHandler();
     attachButtonHandler();
     setupModalOpener();
     
-    // Attach to the add button
+    // Also attach to the add button
     const addButton = document.getElementById('add-project-button');
     if (addButton) {
         const newAddButton = addButton.cloneNode(true);
@@ -302,12 +274,13 @@ setTimeout(function() {
         const freshAddButton = document.getElementById('add-project-button');
         freshAddButton.addEventListener('click', function(e) {
             e.preventDefault();
+            console.log('[FORM FIX] Add project button clicked');
             window.openProjectModal();
         });
         
         console.log('[FORM FIX] ✅ Add button handler attached');
     }
     
-    console.log('[FORM FIX] ✅ All handlers installed successfully');
+    console.log('[FORM FIX] ✅✅✅ ALL HANDLERS INSTALLED ✅✅✅');
     
 }, 2000);
