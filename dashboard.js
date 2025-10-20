@@ -25,6 +25,30 @@ try {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+/**
+ * Ensure realtime subscriptions are initialized after all scripts load.
+ * Retries a few times because fixedSubscriptions.js loads after dashboard.js.
+ */
+function ensureSubscriptionsInitialized(attempt = 0) {
+    const MAX_ATTEMPTS = 20;
+
+    if (typeof window.initializeSubscriptions === 'function') {
+        console.log('[INIT] Initializing realtime subscriptions');
+        window.initializeSubscriptions();
+        return;
+    }
+
+    if (attempt < MAX_ATTEMPTS) {
+        const nextAttempt = attempt + 1;
+        console.warn(`[INIT] Subscriptions not ready (attempt ${nextAttempt}/${MAX_ATTEMPTS}), retrying...`);
+        setTimeout(() => ensureSubscriptionsInitialized(nextAttempt), 300);
+        return;
+    }
+
+    console.error('[INIT] Failed to initialize subscriptions after multiple attempts');
+    showNotification('Live updates failed to start. Please refresh the page.', 'error');
+}
+
 // ==================
 //  Missing Helper Functions
 // ==================
@@ -738,11 +762,7 @@ auth.onAuthStateChanged(async (user) => {
         setupUI();
         setupNavAndListeners();
 
-        if (typeof window.initializeSubscriptions === 'function') {
-            window.initializeSubscriptions();
-        } else {
-            console.error('[INIT] Subscription initializer not found! Check if fixedSubscriptions.js loaded.');
-        }
+        ensureSubscriptionsInitialized();
 
         document.getElementById('loader').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
@@ -999,6 +1019,12 @@ async function handleTaskFormSubmit(e) {
     const submitButton = document.getElementById('save-task-button');
     const originalText = submitButton.textContent;
 
+    if (!currentUser || !currentUser.uid) {
+        console.error('[TASK SUBMIT] No authenticated user available');
+        showNotification('Your session expired. Please sign in again before creating tasks.', 'error');
+        return;
+    }
+
     try {
         const title = document.getElementById('task-title').value.trim();
         const deadline = document.getElementById('task-deadline').value;
@@ -1031,6 +1057,7 @@ async function handleTaskFormSubmit(e) {
 
         const assigneeIds = selectedAssignees.map(u => u.id);
         const assigneeNames = selectedAssignees.map(u => u.name);
+        const creatorName = currentUserName || currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Unknown User');
 
         const taskData = {
             title: title,
@@ -1042,19 +1069,50 @@ async function handleTaskFormSubmit(e) {
             deadline: deadline,
             priority: priority,
             creatorId: currentUser.uid,
-            creatorName: currentUserName,
+            creatorName: creatorName,
             status: 'pending',
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             activity: [{
                 text: assigneeIds.length === 1 ?
                     `created this task and assigned it to ${assigneeNames[0]}` :
                     `created this task and assigned it to ${assigneeNames.join(', ')}`,
-                authorName: currentUserName,
+                authorName: creatorName,
                 timestamp: new Date()
             }]
         };
 
         const docRef = await db.collection('tasks').add(taskData);
+        console.log('[TASK SUBMIT] ✅ Task created with ID:', docRef.id);
+
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        const localTask = {
+            id: docRef.id,
+            title,
+            description: description || null,
+            assigneeIds,
+            assigneeNames,
+            assigneeId: assigneeIds[0],
+            assigneeName: assigneeNames[0],
+            deadline,
+            priority,
+            creatorId: currentUser.uid,
+            creatorName,
+            status: 'pending',
+            createdAt: { seconds: nowSeconds },
+            updatedAt: { seconds: nowSeconds },
+            activity: [{
+                text: assigneeIds.length === 1 ?
+                    `created this task and assigned it to ${assigneeNames[0]}` :
+                    `created this task and assigned it to ${assigneeNames.join(', ')}`,
+                authorName: creatorName,
+                timestamp: { seconds: nowSeconds }
+            }]
+        };
+
+        allTasks = [localTask, ...allTasks.filter(t => t.id !== docRef.id)];
+        renderCurrentViewEnhanced();
+        updateNavCounts();
 
         showNotification(`Task assigned to ${assigneeNames.join(', ')} successfully!`, 'success');
 
@@ -2173,16 +2231,83 @@ function renderActivityFeed(activity) {
 
 async function handleProjectFormSubmit(e) {
     e.preventDefault();
+    console.log('[PROJECT SUBMIT] Form submission started');
 
     const submitButton = document.getElementById('save-project-button');
+    if (!submitButton) {
+        console.error('[PROJECT SUBMIT] Submit button not found!');
+        showNotification('Form error. Please refresh and try again.', 'error');
+        return;
+    }
+
     const originalText = submitButton.textContent;
+
+    // Validate required fields before processing
+    const titleInput = document.getElementById('project-title');
+    const typeInput = document.getElementById('project-type');
+    const proposalInput = document.getElementById('project-proposal');
+    const deadlineInput = document.getElementById('project-deadline');
+
+    if (!titleInput || !typeInput || !proposalInput || !deadlineInput) {
+        console.error('[PROJECT SUBMIT] Required form fields missing!');
+        showNotification('Form error. Please refresh the page.', 'error');
+        return;
+    }
+
+    const title = titleInput.value.trim();
+    const type = typeInput.value;
+    const proposal = proposalInput.value.trim();
+    const deadline = deadlineInput.value;
+
+    console.log('[PROJECT SUBMIT] Form values:', { title, type, proposal: proposal.substring(0, 50), deadline });
+
+    // Validation
+    if (!title || title.length < 3) {
+        showNotification('Please enter a title with at least 3 characters.', 'error');
+        titleInput.focus();
+        return;
+    }
+
+    if (!type) {
+        showNotification('Please select a project type.', 'error');
+        typeInput.focus();
+        return;
+    }
+
+    if (!deadline) {
+        showNotification('Please set a publication deadline.', 'error');
+        deadlineInput.focus();
+        return;
+    }
+
+    // Validate deadline is in the future
+    const deadlineDate = new Date(deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (deadlineDate < today) {
+        showNotification('Publication deadline must be in the future.', 'error');
+        deadlineInput.focus();
+        return;
+    }
+
+    if (!currentUser || !currentUser.uid) {
+        console.error('[PROJECT SUBMIT] No authenticated user available');
+        showNotification('Your session expired. Please sign in again before submitting a proposal.', 'error');
+        return;
+    }
+
+    const authorId = currentUser.uid;
+    const authorName = currentUserName || currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Unknown User');
+    const normalizedProposal = proposal || 'No proposal provided.';
 
     try {
         submitButton.disabled = true;
         submitButton.classList.add('loading');
         submitButton.textContent = 'Submitting...';
+        console.log('[PROJECT SUBMIT] Button disabled, preparing data...');
 
-        const type = document.getElementById('project-type').value;
+        // Create timeline based on project type
         const timeline = {};
         const tasks = type === "Interview"
             ? ["Topic Proposal Complete", "Interview Scheduled", "Interview Complete",
@@ -2191,50 +2316,122 @@ async function handleProjectFormSubmit(e) {
                "Review In Progress", "Review Complete", "Suggestions Reviewed"];
 
         tasks.forEach(task => timeline[task] = false);
+        console.log('[PROJECT SUBMIT] Timeline created:', timeline);
 
+        // Prepare project data
         const projectData = {
-            title: document.getElementById('project-title').value,
+            title: title,
             type: type,
-            proposal: document.getElementById('project-proposal').value,
-            deadline: document.getElementById('project-deadline').value,
+            proposal: normalizedProposal,
+            deadline: deadline,
             deadlines: {
-                publication: document.getElementById('project-deadline').value,
+                publication: deadline,
                 contact: '',
                 interview: '',
                 draft: '',
                 review: '',
                 edits: ''
             },
-            authorId: currentUser.uid,
-            authorName: currentUserName,
+            authorId: authorId,
+            authorName: authorName,
             editorId: null,
             editorName: null,
             proposalStatus: 'pending',
             timeline: timeline,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             activity: [{
                 text: 'created the project.',
-                authorName: currentUserName,
+                authorName: authorName,
                 timestamp: new Date()
             }]
         };
 
+        console.log('[PROJECT SUBMIT] Project data prepared:', {
+            title: projectData.title,
+            type: projectData.type,
+            authorId: projectData.authorId,
+            authorName: projectData.authorName,
+            proposalStatus: projectData.proposalStatus
+        });
+
+        // Check Firebase connection
+        if (!db) {
+            throw new Error('Database connection not available');
+        }
+
+        console.log('[PROJECT SUBMIT] Adding document to Firestore...');
         const docRef = await db.collection('projects').add(projectData);
+        console.log('[PROJECT SUBMIT] ✅ Document added successfully! ID:', docRef.id);
+
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        const localProject = {
+            id: docRef.id,
+            title,
+            type,
+            proposal: normalizedProposal,
+            deadline,
+            deadlines: { ...projectData.deadlines },
+            authorId,
+            authorName,
+            editorId: null,
+            editorName: null,
+            proposalStatus: 'pending',
+            timeline: { ...timeline },
+            createdAt: { seconds: nowSeconds },
+            updatedAt: { seconds: nowSeconds },
+            activity: [{
+                text: 'created the project.',
+                authorName,
+                timestamp: { seconds: nowSeconds }
+            }]
+        };
+
+        allProjects = [localProject, ...allProjects.filter(p => p.id !== docRef.id)];
+        console.log('[PROJECT SUBMIT] Local project inserted for immediate UI update');
+        updateNavCounts();
+        renderCurrentViewEnhanced();
 
         showNotification('Project proposal submitted successfully!', 'success');
 
+        // Reset form
+        document.getElementById('project-form').reset();
+        console.log('[PROJECT SUBMIT] Form reset');
+
+        // Close modal after short delay
         setTimeout(() => {
+            console.log('[PROJECT SUBMIT] Closing modal...');
             closeAllModals();
         }, 1000);
 
     } catch (error) {
-        console.error("[PROJECT ERROR] Failed to create project:", error);
-        showNotification(`Failed to create project: ${error.message}`, 'error');
+        console.error('========================================');
+        console.error('[PROJECT SUBMIT ERROR] Failed to create project');
+        console.error('[PROJECT SUBMIT ERROR] Error:', error);
+        console.error('[PROJECT SUBMIT ERROR] Error code:', error.code);
+        console.error('[PROJECT SUBMIT ERROR] Error message:', error.message);
+        console.error('[PROJECT SUBMIT ERROR] Error stack:', error.stack);
+        console.error('========================================');
+        
+        let errorMessage = 'Failed to create project. ';
+        
+        if (error.code === 'permission-denied') {
+            errorMessage += 'Permission denied. Please check: 1) You are logged in, 2) Firestore security rules allow write access, 3) Your account has the correct permissions.';
+        } else if (error.code === 'unavailable') {
+            errorMessage += 'Database temporarily unavailable. Please check your internet connection and try again.';
+        } else if (error.message) {
+            errorMessage += error.message;
+        } else {
+            errorMessage += 'Please try again or contact support.';
+        }
+        
+        showNotification(errorMessage, 'error');
 
     } finally {
         submitButton.disabled = false;
         submitButton.classList.remove('loading');
         submitButton.textContent = originalText;
+        console.log('[PROJECT SUBMIT] Button re-enabled');
     }
 }
 
