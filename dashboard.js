@@ -16,6 +16,7 @@ const firebaseConfig = {
 try {
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
+        console.log('[FIREBASE] Firebase initialized successfully');
     }
 } catch (initError) {
     console.error("[FIREBASE] Firebase initialization failed:", initError);
@@ -24,6 +25,16 @@ try {
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+// Enable offline persistence for better reliability
+db.enablePersistence({ synchronizeTabs: true })
+    .catch(function(err) {
+        if (err.code === 'failed-precondition') {
+            console.warn('[FIREBASE] Persistence failed: Multiple tabs open');
+        } else if (err.code === 'unimplemented') {
+            console.warn('[FIREBASE] Persistence not available in this browser');
+        }
+    });
 
 /**
  * Ensure realtime subscriptions are initialized after all scripts load.
@@ -109,7 +120,7 @@ async function updateProposalStatus(status) {
 
     try {
         console.log('[UPDATE STATUS] Updating proposal status to:', status);
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
+        await db.collection('projects').doc(projectId).update({
             proposalStatus: status,
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `${status} the proposal`,
@@ -145,7 +156,7 @@ async function handleAddComment() {
     }
 
     try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
+        await db.collection('projects').doc(projectId).update({
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `commented: "${comment}"`,
                 authorName: currentUserName,
@@ -180,7 +191,7 @@ async function handleAssignEditor() {
     const previousEditorName = project ? project.editorName : null;
 
     try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
+        await db.collection('projects').doc(projectId).update({
             editorId: editorId,
             editorName: editor.name,
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -264,50 +275,6 @@ async function handleDeleteProject() {
     }
 }
 
-
-function enableProposalEditing() {
-    const proposalElement = document.getElementById('details-proposal');
-    const editBtn = document.getElementById('edit-proposal-button');
-    const saveBtn = document.getElementById('save-proposal-button');
-    const cancelBtn = document.getElementById('cancel-proposal-button');
-
-    if (!proposalElement) return;
-
-    proposalElement.contentEditable = 'true';
-    proposalElement.style.border = '1px solid #3b82f6';
-    proposalElement.style.padding = '8px';
-    proposalElement.style.borderRadius = '4px';
-    proposalElement.focus();
-
-    if (editBtn) editBtn.style.display = 'none';
-    if (saveBtn) saveBtn.style.display = 'inline-block';
-    if (cancelBtn) cancelBtn.style.display = 'inline-block';
-}
-
-function disableProposalEditing() {
-    const proposalElement = document.getElementById('details-proposal');
-    const editBtn = document.getElementById('edit-proposal-button');
-    const saveBtn = document.getElementById('save-proposal-button');
-    const cancelBtn = document.getElementById('cancel-proposal-button');
-
-    if (!proposalElement) return;
-
-    proposalElement.contentEditable = 'false';
-    proposalElement.style.border = 'none';
-    proposalElement.style.padding = '0';
-
-    if (editBtn) editBtn.style.display = 'inline-block';
-    if (saveBtn) saveBtn.style.display = 'none';
-    if (cancelBtn) cancelBtn.style.display = 'none';
-
-    // Reload original content
-    if (currentlyViewedProjectId) {
-        const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-        if (project) {
-            proposalElement.textContent = project.proposal || 'No proposal provided.';
-        }
-    }
-}
 
 // ---- App State ----
 let currentUser = null, currentUserName = null, currentUserRole = null;
@@ -823,7 +790,20 @@ function setupNavAndListeners() {
         });
     });
 
-    document.getElementById('add-project-button').addEventListener('click', openProjectModal);
+    const addProjectBtn = document.getElementById('add-project-button');
+    if (addProjectBtn) {
+        // Clone to remove any existing listeners
+        const newBtn = addProjectBtn.cloneNode(true);
+        addProjectBtn.parentNode.replaceChild(newBtn, addProjectBtn);
+        // Attach fresh listener
+        document.getElementById('add-project-button').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[BUTTON CLICK] Add project button clicked');
+            openProjectModal();
+        });
+        console.log('[SETUP] Add project button listener attached');
+    }
     document.getElementById('add-task-button').addEventListener('click', openTaskModal);
 
     const statusReportBtn = document.getElementById('status-report-button');
@@ -843,7 +823,9 @@ function setupNavAndListeners() {
 
     if (editProposalBtn) editProposalBtn.addEventListener('click', enableProposalEditing);
     if (saveProposalBtn) saveProposalBtn.addEventListener('click', handleSaveProposal);
-    if (cancelProposalBtn) cancelProposalBtn.addEventListener('click', disableProposalEditing);
+    if (cancelProposalBtn) {
+        cancelProposalBtn.addEventListener('click', () => disableProposalEditing({ revertToOriginal: true }));
+    }
 
     const setDeadlinesBtn = document.getElementById('set-deadlines-button');
     const requestDeadlineChangeBtn = document.getElementById('request-deadline-change-button');
@@ -894,13 +876,37 @@ function setupNavAndListeners() {
     const taskForm = document.getElementById('task-form');
 
     if (projectForm) {
-        projectForm.addEventListener('submit', handleProjectFormSubmit);
+        const newProjectForm = projectForm.cloneNode(true);
+        projectForm.parentNode.replaceChild(newProjectForm, projectForm);
+
+        const freshProjectForm = document.getElementById('project-form');
+        if (freshProjectForm) {
+            freshProjectForm.addEventListener('submit', handleProjectFormSubmit);
+            freshProjectForm.dataset.submitHandler = 'attached';
+            console.log('[SETUP] Project form submit handler attached');
+        } else {
+            console.error('[SETUP] Fresh project form reference missing after clone');
+        }
+
+        const saveProjectBtn = document.getElementById('save-project-button');
+        if (saveProjectBtn) {
+            saveProjectBtn.addEventListener('click', (event) => handleProjectFormSubmit(event));
+            saveProjectBtn.dataset.clickHandler = 'attached';
+            console.log('[SETUP] Project save button click handler attached');
+        } else {
+            console.error('[SETUP] Save project button not found after cloning form');
+        }
     } else {
         console.error('[SETUP] Project form not found!');
     }
 
     if (taskForm) {
-        taskForm.addEventListener('submit', handleTaskFormSubmit);
+        // Clone form to remove all existing listeners
+        const newTaskForm = taskForm.cloneNode(true);
+        taskForm.parentNode.replaceChild(newTaskForm, taskForm);
+        // Attach handler to fresh form
+        document.getElementById('task-form').addEventListener('submit', handleTaskFormSubmit);
+        console.log('[SETUP] Task form handler attached');
     } else {
         console.error('[SETUP] Task form not found!');
     }
@@ -1743,15 +1749,64 @@ async function handleDeleteTask() {
 //  Projects
 // ==================
 function openProjectModal() {
-    document.getElementById('project-form').reset();
-    document.getElementById('modal-title').textContent = 'Propose New Article';
-    const projectTypeSelect = document.getElementById('project-type');
-    if (currentView === 'interviews') {
-        projectTypeSelect.value = 'Interview';
-    } else if (currentView === 'opeds') {
-        projectTypeSelect.value = 'Op-Ed';
+    console.log('[OPEN MODAL] Opening project modal...');
+    
+    // Reset form
+    const form = document.getElementById('project-form');
+    if (form) {
+        form.reset();
+        console.log('[OPEN MODAL] Form reset');
+    } else {
+        console.error('[OPEN MODAL] Form not found!');
     }
-    document.getElementById('project-modal').style.display = 'flex';
+    
+    // Set modal title
+    const modalTitle = document.getElementById('modal-title');
+    if (modalTitle) {
+        modalTitle.textContent = 'Propose New Article';
+    }
+    
+    // Set default project type based on current view
+    const projectTypeSelect = document.getElementById('project-type');
+    if (projectTypeSelect) {
+        if (currentView === 'interviews' || currentView === 'dashboard') {
+            projectTypeSelect.value = 'Interview';
+        } else if (currentView === 'opeds') {
+            projectTypeSelect.value = 'Op-Ed';
+        }
+    }
+    
+    // Show modal
+    const modal = document.getElementById('project-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        console.log('[OPEN MODAL] Modal display set to flex');
+        
+        // Apply blur and disable scrolling
+        document.body.style.overflow = 'hidden';
+        const appContainer = document.getElementById('app-container');
+        if (appContainer) {
+            appContainer.style.filter = 'blur(4px)';
+            appContainer.style.transition = 'filter 0.3s ease';
+        }
+        
+        // Focus on title field after a short delay
+        setTimeout(() => {
+            const titleInput = document.getElementById('project-title');
+            if (titleInput) {
+                titleInput.focus();
+                console.log('[OPEN MODAL] Title input focused');
+            }
+        }, 100);
+        
+        console.log('[OPEN MODAL] ✅ Modal opened successfully');
+    } else {
+        console.error('[OPEN MODAL] Modal element not found!');
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.openProjectModal = openProjectModal;
 }
 
 function openDetailsModal(projectId) {
@@ -2230,13 +2285,31 @@ function renderActivityFeed(activity) {
 }
 
 async function handleProjectFormSubmit(e) {
-    e.preventDefault();
-    console.log('[PROJECT SUBMIT] Form submission started');
+    if (e) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    
+    console.log('========================================');
+    console.log('[PROJECT SUBMIT] 🚀 FORM SUBMISSION STARTED');
+    if (e) {
+        console.log('[PROJECT SUBMIT] Event:', e);
+        console.log('[PROJECT SUBMIT] Event type:', e.type);
+    } else {
+        console.log('[PROJECT SUBMIT] Event: none (manual invoke)');
+    }
+    console.log('[PROJECT SUBMIT] Timestamp:', new Date().toISOString());
+    console.log('========================================');
 
     const submitButton = document.getElementById('save-project-button');
     if (!submitButton) {
         console.error('[PROJECT SUBMIT] Submit button not found!');
         showNotification('Form error. Please refresh and try again.', 'error');
+        return;
+    }
+
+    if (submitButton.dataset.submitting === 'true') {
+        console.warn('[PROJECT SUBMIT] Duplicate submission prevented');
         return;
     }
 
@@ -2305,6 +2378,7 @@ async function handleProjectFormSubmit(e) {
         submitButton.disabled = true;
         submitButton.classList.add('loading');
         submitButton.textContent = 'Submitting...';
+        submitButton.dataset.submitting = 'true';
         console.log('[PROJECT SUBMIT] Button disabled, preparing data...');
 
         // Create timeline based on project type
@@ -2431,8 +2505,13 @@ async function handleProjectFormSubmit(e) {
         submitButton.disabled = false;
         submitButton.classList.remove('loading');
         submitButton.textContent = originalText;
+        delete submitButton.dataset.submitting;
         console.log('[PROJECT SUBMIT] Button re-enabled');
     }
+}
+
+if (typeof window !== 'undefined') {
+    window.handleProjectFormSubmit = handleProjectFormSubmit;
 }
 
 
@@ -3223,7 +3302,11 @@ function closeAllModals() {
 
     currentlyViewedProjectId = null;
     currentlyViewedTaskId = null;
-    disableProposalEditing();
+    if (typeof window !== 'undefined') {
+        window.currentlyViewedProjectId = null;
+        window.currentlyViewedTaskId = null;
+    }
+    disableProposalEditing({ revertToOriginal: true });
 
     document.body.style.overflow = '';
     const appContainer = document.getElementById('app-container');
@@ -3719,7 +3802,7 @@ function enableProposalEditing() {
 
     if (!proposalElement) return;
 
-    const currentText = proposalElement.textContent;
+    const currentText = proposalElement.textContent || '';
     proposalElement.setAttribute('data-original-text', currentText);
     proposalElement.contentEditable = 'true';
     proposalElement.style.border = '2px solid #667eea';
@@ -3733,7 +3816,7 @@ function enableProposalEditing() {
     if (cancelBtn) cancelBtn.style.display = 'inline-block';
 }
 
-function disableProposalEditing() {
+function disableProposalEditing({ revertToOriginal = false } = {}) {
     const proposalElement = document.getElementById('details-proposal');
     const editBtn = document.getElementById('edit-proposal-button');
     const saveBtn = document.getElementById('save-proposal-button');
@@ -3742,22 +3825,27 @@ function disableProposalEditing() {
     if (!proposalElement) return;
 
     proposalElement.contentEditable = 'false';
-    proposalElement.style.border = 'none';
-    proposalElement.style.padding = '0';
+    proposalElement.style.border = '';
+    proposalElement.style.padding = '';
+    proposalElement.style.borderRadius = '';
+    proposalElement.style.minHeight = '';
 
-    const originalText = proposalElement.getAttribute('data-original-text');
-    if (originalText) {
+    const hasOriginal = proposalElement.hasAttribute('data-original-text');
+    const originalText = hasOriginal ? proposalElement.getAttribute('data-original-text') : null;
+
+    if (revertToOriginal && originalText !== null) {
         proposalElement.textContent = originalText;
+    }
+
+    if (hasOriginal) {
         proposalElement.removeAttribute('data-original-text');
     }
 
-    if (!currentlyViewedProjectId) return;
-    const project = allProjects.find(p => p.id === currentlyViewedProjectId);
-    if (!project) return;
-
-    const isAuthor = currentUser.uid === project.authorId;
+    const projectId = currentlyViewedProjectId || window.currentlyViewedProjectId || null;
+    const project = projectId ? allProjects.find(p => p.id === projectId) : null;
+    const isAuthor = !!(project && currentUser && currentUser.uid === project.authorId);
     const isAdmin = currentUserRole === 'admin';
-    const canEditProposal = isAuthor || isAdmin;
+    const canEditProposal = !!project && (isAuthor || isAdmin);
 
     if (editBtn) editBtn.style.display = canEditProposal ? 'inline-block' : 'none';
     if (saveBtn) saveBtn.style.display = 'none';
@@ -3765,34 +3853,65 @@ function disableProposalEditing() {
 }
 
 async function handleSaveProposal() {
-    if (!currentlyViewedProjectId) return;
-
     const proposalElement = document.getElementById('details-proposal');
     if (!proposalElement) return;
 
-    const newProposal = proposalElement.textContent.trim();
+    const projectId = currentlyViewedProjectId ||
+        window.currentlyViewedProjectId ||
+        document.getElementById('details-modal')?.dataset?.projectId ||
+        null;
+
+    if (!projectId) {
+        console.error('[SAVE PROPOSAL] No project ID available');
+        showNotification('Error: No project selected.', 'error');
+        return;
+    }
+
+    if (!currentlyViewedProjectId) {
+        currentlyViewedProjectId = projectId;
+    }
+    if (typeof window !== 'undefined') {
+        window.currentlyViewedProjectId = projectId;
+    }
+
+    const newProposal = (proposalElement.textContent || '').trim();
     if (!newProposal) {
         showNotification('Proposal cannot be empty.', 'error');
         return;
     }
 
+    proposalElement.textContent = newProposal;
+
     try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
+        if (!db) {
+            throw new Error('Database connection not available');
+        }
+
+        await db.collection('projects').doc(projectId).update({
             proposal: newProposal,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: 'updated the proposal',
-                authorName: currentUserName,
+                authorName: currentUserName || 'Unknown User',
                 timestamp: new Date()
             })
         });
 
         showNotification('Proposal updated successfully!', 'success');
+        const project = allProjects.find(p => p.id === projectId);
+        if (project) {
+            project.proposal = newProposal;
+        }
         disableProposalEditing();
 
     } catch (error) {
         console.error('[SAVE PROPOSAL ERROR]', error);
         showNotification('Failed to save proposal. Please try again.', 'error');
     }
+}
+
+if (typeof window !== 'undefined') {
+    window.handleSaveProposal = handleSaveProposal;
 }
 
 // ==================

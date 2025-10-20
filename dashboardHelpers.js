@@ -4,41 +4,6 @@
 // ===============================
 
 /**
- * Handle saving edited proposal text
- */
-async function handleSaveProposal() {
-    if (!currentlyViewedProjectId) return;
-    
-    const proposalElement = document.getElementById('details-proposal');
-    if (!proposalElement) return;
-    
-    const newProposal = proposalElement.textContent.trim();
-    
-    if (!newProposal) {
-        showNotification('Proposal cannot be empty.', 'error');
-        return;
-    }
-    
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            proposal: newProposal,
-            activity: firebase.firestore.FieldValue.arrayUnion({
-                text: 'updated the proposal',
-                authorName: currentUserName,
-                timestamp: new Date()
-            })
-        });
-        
-        showNotification('Proposal updated successfully!', 'success');
-        disableProposalEditing();
-        
-    } catch (error) {
-        console.error('[ERROR] Failed to save proposal:', error);
-        showNotification('Failed to save proposal. Please try again.', 'error');
-    }
-}
-
-/**
  * Handle setting deadlines (backup function)
  * Primary implementation is in deadlineFixes_APPLY.js
  */
