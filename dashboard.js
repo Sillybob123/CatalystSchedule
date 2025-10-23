@@ -817,6 +817,11 @@ function setupNavAndListeners() {
     document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
     document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
 
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        const newModal = modal.cloneNode(true);
+        modal.parentNode.replaceChild(newModal, modal);
+    });
+
     const editProposalBtn = document.getElementById('edit-proposal-button');
     const saveProposalBtn = document.getElementById('save-proposal-button');
     const cancelProposalBtn = document.getElementById('cancel-proposal-button');
@@ -847,11 +852,6 @@ function setupNavAndListeners() {
         });
     }
     if (requestDeadlineChangeBtn) requestDeadlineChangeBtn.addEventListener('click', handleRequestDeadlineChange);
-
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-        const newModal = modal.cloneNode(true);
-        modal.parentNode.replaceChild(newModal, modal);
-    });
 
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', e => {
@@ -3794,22 +3794,55 @@ async function handleAssignEditor() {
 // ==================
 //  Proposal Editing
 // ==================
+const PROPOSAL_PLACEHOLDER_TEXT = 'No proposal provided.';
+
 function enableProposalEditing() {
-    const proposalElement = document.getElementById('details-proposal');
+    const displayElement = document.getElementById('details-proposal');
     const editBtn = document.getElementById('edit-proposal-button');
     const saveBtn = document.getElementById('save-proposal-button');
     const cancelBtn = document.getElementById('cancel-proposal-button');
 
-    if (!proposalElement) return;
+    if (!displayElement) {
+        console.error('[PROPOSAL EDIT] Display element not found');
+        return;
+    }
 
-    const currentText = proposalElement.textContent || '';
-    proposalElement.setAttribute('data-original-text', currentText);
-    proposalElement.contentEditable = 'true';
-    proposalElement.style.border = '2px solid #667eea';
-    proposalElement.style.padding = '12px';
-    proposalElement.style.borderRadius = '8px';
-    proposalElement.style.minHeight = '100px';
-    proposalElement.focus();
+    // Prevent duplicate textareas if button is clicked multiple times
+    const existingTextarea = document.getElementById('proposal-edit-textarea');
+    if (existingTextarea) {
+        existingTextarea.focus();
+        existingTextarea.setSelectionRange(existingTextarea.value.length, existingTextarea.value.length);
+        return;
+    }
+
+    let originalText = (displayElement.textContent || '').trim();
+    if (originalText === PROPOSAL_PLACEHOLDER_TEXT) {
+        originalText = '';
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.id = 'proposal-edit-textarea';
+    textarea.className = 'edit-proposal-textarea';
+    textarea.value = originalText;
+    textarea.dataset.originalText = originalText;
+    textarea.setAttribute('aria-label', 'Edit proposal text');
+
+    textarea.addEventListener('input', () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+    });
+
+    const parent = displayElement.parentNode;
+    if (parent) {
+        parent.replaceChild(textarea, displayElement);
+    }
+
+    // Trigger autoresize once content is in place
+    requestAnimationFrame(() => {
+        textarea.dispatchEvent(new Event('input'));
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    });
 
     if (editBtn) editBtn.style.display = 'none';
     if (saveBtn) saveBtn.style.display = 'inline-block';
@@ -3817,29 +3850,30 @@ function enableProposalEditing() {
 }
 
 function disableProposalEditing({ revertToOriginal = false } = {}) {
-    const proposalElement = document.getElementById('details-proposal');
+    const textarea = document.getElementById('proposal-edit-textarea');
+    let proposalElement = document.getElementById('details-proposal');
     const editBtn = document.getElementById('edit-proposal-button');
     const saveBtn = document.getElementById('save-proposal-button');
     const cancelBtn = document.getElementById('cancel-proposal-button');
 
+    if (textarea) {
+        const originalText = textarea.dataset.originalText || '';
+        const finalText = revertToOriginal ? originalText : textarea.value.trim();
+        const sanitizedFinal = finalText || '';
+
+        const paragraph = document.createElement('p');
+        paragraph.id = 'details-proposal';
+        paragraph.textContent = sanitizedFinal || PROPOSAL_PLACEHOLDER_TEXT;
+        paragraph.setAttribute('data-original-text', revertToOriginal ? originalText : sanitizedFinal);
+
+        textarea.parentNode.replaceChild(paragraph, textarea);
+        proposalElement = paragraph;
+    } else if (proposalElement && revertToOriginal && proposalElement.hasAttribute('data-original-text')) {
+        const originalText = proposalElement.getAttribute('data-original-text');
+        proposalElement.textContent = originalText || PROPOSAL_PLACEHOLDER_TEXT;
+    }
+
     if (!proposalElement) return;
-
-    proposalElement.contentEditable = 'false';
-    proposalElement.style.border = '';
-    proposalElement.style.padding = '';
-    proposalElement.style.borderRadius = '';
-    proposalElement.style.minHeight = '';
-
-    const hasOriginal = proposalElement.hasAttribute('data-original-text');
-    const originalText = hasOriginal ? proposalElement.getAttribute('data-original-text') : null;
-
-    if (revertToOriginal && originalText !== null) {
-        proposalElement.textContent = originalText;
-    }
-
-    if (hasOriginal) {
-        proposalElement.removeAttribute('data-original-text');
-    }
 
     const projectId = currentlyViewedProjectId || window.currentlyViewedProjectId || null;
     const project = projectId ? allProjects.find(p => p.id === projectId) : null;
@@ -3853,8 +3887,12 @@ function disableProposalEditing({ revertToOriginal = false } = {}) {
 }
 
 async function handleSaveProposal() {
-    const proposalElement = document.getElementById('details-proposal');
-    if (!proposalElement) return;
+    const textarea = document.getElementById('proposal-edit-textarea');
+    if (!textarea) {
+        console.error('[SAVE PROPOSAL] Edit textarea not found');
+        showNotification('Please click Edit before saving.', 'error');
+        return;
+    }
 
     const projectId = currentlyViewedProjectId ||
         window.currentlyViewedProjectId ||
@@ -3874,13 +3912,31 @@ async function handleSaveProposal() {
         window.currentlyViewedProjectId = projectId;
     }
 
-    const newProposal = (proposalElement.textContent || '').trim();
+    const newProposal = textarea.value.trim();
+    const originalText = textarea.dataset.originalText || '';
+
     if (!newProposal) {
         showNotification('Proposal cannot be empty.', 'error');
+        textarea.focus();
         return;
     }
 
-    proposalElement.textContent = newProposal;
+    if (newProposal === originalText) {
+        showNotification('No changes to save.', 'info');
+        disableProposalEditing();
+        return;
+    }
+
+    const saveBtn = document.getElementById('save-proposal-button');
+    const originalButtonText = saveBtn ? saveBtn.textContent : null;
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        saveBtn.classList.add('loading');
+    }
+
+    textarea.disabled = true;
 
     try {
         if (!db) {
@@ -3897,6 +3953,15 @@ async function handleSaveProposal() {
             })
         });
 
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalButtonText;
+            saveBtn.classList.remove('loading');
+        }
+
+        textarea.disabled = false;
+        textarea.dataset.originalText = newProposal;
+
         showNotification('Proposal updated successfully!', 'success');
         const project = allProjects.find(p => p.id === projectId);
         if (project) {
@@ -3907,6 +3972,13 @@ async function handleSaveProposal() {
     } catch (error) {
         console.error('[SAVE PROPOSAL ERROR]', error);
         showNotification('Failed to save proposal. Please try again.', 'error');
+
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalButtonText;
+            saveBtn.classList.remove('loading');
+        }
+        textarea.disabled = false;
     }
 }
 
