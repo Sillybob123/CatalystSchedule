@@ -1,9 +1,10 @@
 // ===============================
-// MODAL FIX V4 - Complete Animation State Reset
+// MODAL FIX V5 - Complete Animation State Reset + Edit Mode Cleanup
 // Fixes modal transition bugs when switching between modals
+// VERSION 5 - UPDATED: Added automatic edit mode cancellation on modal close
 // ===============================
 
-console.log('[MODAL FIX V4] Loading enhanced transition reset fix...');
+console.log('[MODAL FIX V5] Loading enhanced transition reset fix...');
 
 // Wait for page to fully load
 window.addEventListener('load', function() {

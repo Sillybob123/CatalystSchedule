@@ -1,8 +1,9 @@
 // ===============================
 // Proposal Edit Functionality - WORKING VERSION
+// VERSION 3 - UPDATED: Added modal refresh after save
 // ===============================
 
-console.log('[PROPOSAL EDIT] Loading...');
+console.log('[PROPOSAL EDIT] Loading v3...');
 
 let originalProposalText = '';
 

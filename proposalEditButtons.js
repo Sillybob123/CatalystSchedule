@@ -1,8 +1,9 @@
 // ===============================
 // Proposal Edit Button Listeners - CRITICAL FIX
+// VERSION 2 - UPDATED: Exported attachEditListeners to window
 // ===============================
 
-console.log('[EDIT BUTTONS] Script loading...');
+console.log('[EDIT BUTTONS] Script loading v2...');
 
 function attachEditListeners() {
     console.log('[EDIT BUTTONS] Attaching listeners...');

@@ -3705,6 +3705,7 @@ function generateStatusReport() {
 // ==================
 //  Project Actions
 // ==================
+// VERSION 5 - UPDATED: Approve button now refreshes modal after approval
 async function approveProposal(projectId) {
     if (!projectId) {
         showNotification('No project selected. Please try again.', 'error');
