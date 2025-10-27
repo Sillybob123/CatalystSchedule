@@ -45,7 +45,16 @@ window.addEventListener('load', function() {
          */
         window.closeAllModals = function() {
             console.log('[MODAL FIX V4] Closing all modals with complete reset...');
-            
+
+            // Cancel any active proposal editing
+            const editTextarea = document.getElementById('proposal-edit-textarea');
+            if (editTextarea) {
+                console.log('[MODAL FIX V4] Canceling active proposal edit...');
+                if (typeof window.disableProposalEditing === 'function') {
+                    window.disableProposalEditing({ revertToOriginal: true });
+                }
+            }
+
             const modalIds = [
                 'project-modal',
                 'task-modal',
@@ -53,14 +62,14 @@ window.addEventListener('load', function() {
                 'task-details-modal',
                 'report-modal'
             ];
-            
+
             modalIds.forEach(function(modalId) {
                 const modal = document.getElementById(modalId);
                 if (modal) {
                     completeModalReset(modal);
                 }
             });
-            
+
             // Clear tracked IDs in both local and window scope
             if (typeof currentlyViewedProjectId !== 'undefined') {
                 currentlyViewedProjectId = null;
@@ -71,17 +80,17 @@ window.addEventListener('load', function() {
                 currentlyViewedTaskId = null;
             }
             window.currentlyViewedTaskId = null;
-            
+
             // Remove background blur and restore scrolling
             document.body.style.overflow = '';
             document.body.style.filter = '';
-            
+
             const appContainer = document.getElementById('app-container');
             if (appContainer) {
                 appContainer.style.filter = '';
                 appContainer.style.transition = '';
             }
-            
+
             console.log('[MODAL FIX V4] All modals closed and states reset');
         };
         
@@ -176,7 +185,14 @@ window.addEventListener('load', function() {
                     currentlyViewedProjectId = projectId;
                 }
                 window.currentlyViewedProjectId = projectId;
-                
+
+                // Ensure edit mode is disabled before showing new proposal
+                const editTextarea = document.getElementById('proposal-edit-textarea');
+                if (editTextarea && typeof window.disableProposalEditing === 'function') {
+                    console.log('[MODAL FIX V4] Cleaning up leftover edit state...');
+                    window.disableProposalEditing({ revertToOriginal: true });
+                }
+
                 if (typeof refreshDetailsModal === 'function') {
                     refreshDetailsModal(project);
                 }

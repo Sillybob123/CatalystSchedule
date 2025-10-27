@@ -1953,6 +1953,11 @@ function attachProjectModalListeners() {
         });
         console.log('[LISTENERS] Request deadline change listener attached');
     }
+
+    // Attach edit button listeners for proposal editing
+    if (typeof window.attachEditListeners === 'function') {
+        window.attachEditListeners();
+    }
 }
 
 function refreshDetailsModal(project) {
@@ -1987,8 +1992,28 @@ function refreshDetailsModal(project) {
         document.getElementById('details-publication-deadline').textContent = 'Not set';
     }
 
-    const proposalElement = document.getElementById('details-proposal');
-    proposalElement.textContent = project.proposal || 'No proposal provided.';
+    // Ensure proposal element is in paragraph mode (not textarea)
+    let proposalElement = document.getElementById('details-proposal');
+    const textareaElement = document.getElementById('proposal-edit-textarea');
+
+    // If in edit mode, convert back to paragraph first
+    if (textareaElement) {
+        const paragraph = document.createElement('p');
+        paragraph.id = 'details-proposal';
+        paragraph.textContent = project.proposal || 'No proposal provided.';
+        textareaElement.replaceWith(paragraph);
+        proposalElement = paragraph;
+
+        // Hide save/cancel buttons, show edit button
+        const saveBtn = document.getElementById('save-proposal-button');
+        const cancelBtn = document.getElementById('cancel-proposal-button');
+        const editBtn = document.getElementById('edit-proposal-button');
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        if (editBtn) editBtn.style.display = 'inline-block';
+    } else if (proposalElement) {
+        proposalElement.textContent = project.proposal || 'No proposal provided.';
+    }
 
     const canEditProposal = isAuthor || isAdmin;
     const editBtn = document.getElementById('edit-proposal-button');
@@ -3698,6 +3723,20 @@ async function approveProposal(projectId) {
         });
 
         showNotification('Proposal approved successfully!', 'success');
+
+        // Refresh the modal to show updated status
+        const project = allProjects.find(p => p.id === projectId);
+        if (project) {
+            project.proposalStatus = 'approved';
+            project.timeline = project.timeline || {};
+            project.timeline['Topic Proposal Complete'] = true;
+            if (typeof refreshDetailsModal === 'function') {
+                refreshDetailsModal(project);
+            }
+            if (typeof attachProjectModalListeners === 'function') {
+                attachProjectModalListeners();
+            }
+        }
 
     } catch (error) {
         console.error('[APPROVE ERROR]', error);

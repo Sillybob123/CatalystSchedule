@@ -73,4 +73,7 @@ window.addEventListener('load', function() {
     setTimeout(attachEditListeners, 3000);
 });
 
+// Export to window so it can be called after modal refresh
+window.attachEditListeners = attachEditListeners;
+
 console.log('[EDIT BUTTONS] Script loaded');

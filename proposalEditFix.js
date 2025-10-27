@@ -131,9 +131,14 @@ async function handleSaveProposal() {
         if (projectIndex !== -1) {
             allProjects[projectIndex].proposal = newProposal;
         }
-        
+
         alert('Proposal updated successfully!');
         disableProposalEditing();
+
+        // Refresh the modal to show updated content
+        if (projectIndex !== -1 && typeof refreshDetailsModal === 'function') {
+            refreshDetailsModal(allProjects[projectIndex]);
+        }
         
     } catch (error) {
         console.error('[SAVE] Error:', error);
