@@ -119,8 +119,8 @@ async function updateProposalStatus(status) {
     }
 
     try {
-        console.log('[UPDATE STATUS] Updating proposal status to:', status);
-        await db.collection('projects').doc(projectId).update({
+        console.log('[UPDATE STATUS] Updating proposal status to:', status, 'for project:', currentlyViewedProjectId);
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
             proposalStatus: status,
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `${status} the proposal`,
@@ -156,7 +156,7 @@ async function handleAddComment() {
     }
 
     try {
-        await db.collection('projects').doc(projectId).update({
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `commented: "${comment}"`,
                 authorName: currentUserName,
@@ -191,7 +191,7 @@ async function handleAssignEditor() {
     const previousEditorName = project ? project.editorName : null;
 
     try {
-        await db.collection('projects').doc(projectId).update({
+        await db.collection('projects').doc(currentlyViewedProjectId).update({
             editorId: editorId,
             editorName: editor.name,
             activity: firebase.firestore.FieldValue.arrayUnion({
@@ -282,6 +282,9 @@ let allProjects = [], allEditors = [], allTasks = [], allUsers = [];
 let currentlyViewedProjectId = null, currentlyViewedTaskId = null;
 let currentView = 'interviews';
 let calendarDate = new Date();
+const pendingEditorAlertedProjects = new Set();
+let taskFormSubmitListenerAttached = false;
+let modalCloseDelegationAttached = false;
 
 // ==================
 //  Modal Management
@@ -374,6 +377,38 @@ function stringToColor(str) {
     }
     const hue = hash % 360;
     return `hsl(${hue}, 65%, 50%)`;
+}
+
+function getUserDisplayName(user) {
+    if (!user) return 'Team Member';
+
+    if (typeof user === 'string' && user.trim()) {
+        return user.trim();
+    }
+
+    const nameCandidates = [
+        user.name,
+        user.displayName,
+        user.authorName,
+        user.editorName
+    ].filter(candidate => typeof candidate === 'string' && candidate.trim());
+
+    if (nameCandidates.length > 0) {
+        return nameCandidates[0].trim();
+    }
+
+    if (user.email && typeof user.email === 'string') {
+        const localPart = user.email.split('@')[0];
+        if (localPart) {
+            return localPart;
+        }
+    }
+
+    if (user.id) {
+        return `Member ${String(user.id).slice(0, 4)}`;
+    }
+
+    return 'Team Member';
 }
 
 function escapeHtml(text) {
@@ -640,17 +675,21 @@ function renderSelectedAssignees() {
         return;
     }
 
-    container.innerHTML = selectedAssignees.map(user => `
-        <div class="assignee-tag" data-user-id="${user.id}">
-            <div class="assignee-avatar" style="background-color: ${stringToColor(user.name)}">
-                ${user.name.charAt(0).toUpperCase()}
+    container.innerHTML = selectedAssignees.map(user => {
+        const displayName = getUserDisplayName(user);
+        const initials = displayName.charAt(0).toUpperCase();
+        return `
+            <div class="assignee-tag" data-user-id="${user.id}">
+                <div class="assignee-avatar" style="background-color: ${stringToColor(displayName)}">
+                    ${initials}
+                </div>
+                <span>${escapeHtml(displayName)}</span>
+                <div class="remove-assignee" onclick="removeAssignee('${user.id}')" title="Remove ${escapeHtml(displayName)}">
+                    ×
+                </div>
             </div>
-            <span>${escapeHtml(user.name)}</span>
-            <div class="remove-assignee" onclick="removeAssignee('${user.id}')" title="Remove ${escapeHtml(user.name)}">
-                ×
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function renderDropdownOptions() {
@@ -658,23 +697,26 @@ function renderDropdownOptions() {
     if (!dropdown) return;
 
     if (filteredUsers.length === 0) {
-        dropdown.innerHTML = '<div class="no-results">No team members found</div>';
+        dropdown.innerHTML = '<div class="no-results">No team members found. Please ask an admin to add users.</div>';
         return;
     }
 
     dropdown.innerHTML = filteredUsers.map(user => {
         const isSelected = selectedAssignees.some(selected => selected.id === user.id);
+        const displayName = getUserDisplayName(user);
+        const initials = displayName.charAt(0).toUpperCase();
+        const roleLabel = user.role || 'member';
         return `
             <div class="assignee-item ${isSelected ? 'selected' : ''}"
                  onclick="toggleAssignee('${user.id}')"
                  data-user-id="${user.id}"
                  tabindex="0">
-                <div class="user-avatar" style="background-color: ${stringToColor(user.name)}">
-                    ${user.name.charAt(0).toUpperCase()}
+                <div class="user-avatar" style="background-color: ${stringToColor(displayName)}">
+                    ${initials}
                 </div>
                 <div class="assignee-info">
-                    <div class="assignee-name">${escapeHtml(user.name)}</div>
-                    <div class="assignee-role">${escapeHtml(user.role || 'member')}</div>
+                    <div class="assignee-name">${escapeHtml(displayName)}</div>
+                    <div class="assignee-role">${escapeHtml(roleLabel)}</div>
                 </div>
                 <div class="assignee-status">available</div>
             </div>
@@ -740,10 +782,31 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
+function normalizeUserRecord(doc) {
+    if (!doc) return null;
+
+    const rawData = typeof doc.data === 'function' ? doc.data() : doc;
+    const normalizedData = { ...rawData };
+    const normalizedName = getUserDisplayName({ ...normalizedData, id: doc.id });
+
+    return {
+        id: doc.id,
+        ...normalizedData,
+        name: normalizedName,
+        role: normalizedData.role || 'member',
+        email: normalizedData.email || ''
+    };
+}
+
 async function fetchEditors() {
     try {
-        const editorsSnapshot = await db.collection('users').where('role', 'in', ['admin', 'editor']).get();
-        allEditors = editorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const editorsSnapshot = await db.collection('users')
+            .where('role', 'in', ['admin', 'editor'])
+            .get();
+
+        allEditors = editorsSnapshot.docs
+            .map(doc => normalizeUserRecord(doc))
+            .filter(Boolean);
     } catch (error) {
         console.error("Error fetching editors:", error);
         allEditors = [];
@@ -753,7 +816,22 @@ async function fetchEditors() {
 async function fetchAllUsers() {
     try {
         const usersSnapshot = await db.collection('users').get();
-        allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        allUsers = usersSnapshot.docs
+            .map(doc => normalizeUserRecord(doc))
+            .filter(Boolean);
+
+        if (currentUser && !allUsers.some(user => user.id === currentUser.uid)) {
+            const fallbackUser = normalizeUserRecord({
+                id: currentUser.uid,
+                name: currentUserName || currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Me'),
+                email: currentUser.email || '',
+                role: currentUserRole || 'writer'
+            });
+
+            if (fallbackUser) {
+                allUsers.push(fallbackUser);
+            }
+        }
     } catch (error) {
         console.error("Error fetching users:", error);
         allUsers = [];
@@ -899,17 +977,13 @@ function setupNavAndListeners() {
     } else {
         console.error('[SETUP] Project form not found!');
     }
-
-    if (taskForm) {
-        // Clone form to remove all existing listeners
-        const newTaskForm = taskForm.cloneNode(true);
-        taskForm.parentNode.replaceChild(newTaskForm, taskForm);
-        // Attach handler to fresh form
-        document.getElementById('task-form').addEventListener('submit', handleTaskFormSubmit);
-        console.log('[SETUP] Task form handler attached');
-    } else {
+    
+    if (!taskForm) {
         console.error('[SETUP] Task form not found!');
     }
+
+    ensureTaskFormSubmitListener();
+    ensureGlobalModalCloseHandler();
 
     setupCalendarListeners();
     setupCalendarKeyboardNavigation();
@@ -983,9 +1057,27 @@ function renderCurrentViewEnhanced() {
 //  Data Handling
 // ==================
 function updateNavCounts() {
-    const myAssignmentsProjects = allProjects.filter(p => {
-        return p.authorId === currentUser.uid || p.editorId === currentUser.uid;
-    }).length;
+    if (!currentUser || !currentUser.uid) {
+        return;
+    }
+
+    const projectMap = new Map();
+
+    allProjects.forEach(project => {
+        if (project.authorId === currentUser.uid || project.editorId === currentUser.uid) {
+            projectMap.set(project.id, project);
+        }
+    });
+
+    if (currentUserRole === 'admin') {
+        allProjects.forEach(project => {
+            if (isAwaitingEditorAssignment(project)) {
+                projectMap.set(project.id, project);
+            }
+        });
+    }
+
+    const myAssignmentsProjects = projectMap.size;
 
     const myAssignmentsTasks = allTasks.filter(t => {
         return t.creatorId === currentUser.uid || isUserAssignedToTask(t, currentUser.uid);
@@ -1062,16 +1154,18 @@ async function handleTaskFormSubmit(e) {
         const priority = document.getElementById('task-priority').value || 'medium';
 
         const assigneeIds = selectedAssignees.map(u => u.id);
-        const assigneeNames = selectedAssignees.map(u => u.name);
+        const assigneeNames = selectedAssignees.map(u => getUserDisplayName(u));
         const creatorName = currentUserName || currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Unknown User');
+        const primaryAssigneeId = assigneeIds[0] || null;
+        const primaryAssigneeName = assigneeNames[0] || 'Assigned Member';
 
         const taskData = {
             title: title,
             description: description || null,
             assigneeIds: assigneeIds,
             assigneeNames: assigneeNames,
-            assigneeId: assigneeIds[0],
-            assigneeName: assigneeNames[0],
+            assigneeId: primaryAssigneeId,
+            assigneeName: primaryAssigneeName,
             deadline: deadline,
             priority: priority,
             creatorId: currentUser.uid,
@@ -1098,8 +1192,8 @@ async function handleTaskFormSubmit(e) {
             description: description || null,
             assigneeIds,
             assigneeNames,
-            assigneeId: assigneeIds[0],
-            assigneeName: assigneeNames[0],
+            assigneeId: primaryAssigneeId,
+            assigneeName: primaryAssigneeName,
             deadline,
             priority,
             creatorId: currentUser.uid,
@@ -1981,7 +2075,7 @@ function refreshDetailsModal(project) {
     authorEl.textContent = project.authorName;
     editorEl.textContent = project.editorName || 'Not Assigned';
 
-    const state = getProjectState(project, currentView, currentUser);
+    const state = resolveProjectState(project, currentView, currentUser);
     statusEl.textContent = state.statusText;
 
     const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
@@ -2540,167 +2634,140 @@ if (typeof window !== 'undefined') {
 }
 
 
-// ==================
-//  Kanban & Timeline Helpers
-// ==================
-
-function getColumnsForView(view) {
-    switch (view) {
-        case 'my-assignments':
-            return ['Pending', 'In Progress', 'Completed'];
-        default:
-            return ['Pending Approval', 'Approved', 'In Progress', 'Completed'];
-    }
-}
-
-function getProjectState(project, view, user) {
-    const timeline = project.timeline || {};
-    const isAuthor = user && user.uid === project.authorId;
-    const isEditor = user && user.uid === project.editorId;
-
-    const allTasksComplete = Object.values(timeline).every(task => task === true);
-    if (allTasksComplete && timeline["Suggestions Reviewed"]) {
-        return { column: 'Completed', statusText: 'Completed', color: 'success' };
-    }
-
-    if (project.proposalStatus === 'rejected') {
-        return { column: 'Pending Approval', statusText: 'Proposal Rejected', color: 'danger' };
-    }
-
-    if (project.proposalStatus === 'pending') {
-        return { column: 'Pending Approval', statusText: 'Awaiting Approval', color: 'warning' };
-    }
-
-    if (timeline["Suggestions Reviewed"]) {
-        return { column: 'Completed', statusText: 'Review Complete', color: 'success' };
-    }
-
-    if (timeline["Review Complete"]) {
-        if (isAuthor) {
-            return { column: 'In Progress', statusText: 'Awaiting Your Review', color: 'info' };
-        }
-        return { column: 'In Progress', statusText: 'Author Reviewing Edits', color: 'info' };
-    }
-
-    if (timeline["Review In Progress"]) {
-        if (isEditor) {
-            return { column: 'In Progress', statusText: 'You Are Reviewing', color: 'info' };
-        }
-        return { column: 'In Progress', statusText: 'Editor Reviewing', color: 'info' };
-    }
-
-    if (timeline["Article Writing Complete"]) {
-        if (!project.editorId) {
-            return { column: 'Approved', statusText: 'Awaiting Editor Assignment', color: 'warning' };
-        }
-        if (isEditor) {
-            return { column: 'In Progress', statusText: 'Ready for Your Review', color: 'info' };
-        }
-        return { column: 'Approved', statusText: 'Ready for Review', color: 'primary' };
-    }
-
-    if (timeline["Interview Complete"] || (project.type === 'Op-Ed' && timeline["Topic Proposal Complete"])) {
-        if (isAuthor) {
-            return { column: 'In Progress', statusText: 'Writing Article', color: 'info' };
-        }
-        return { column: 'In Progress', statusText: 'Author Writing', color: 'info' };
-    }
-
-    if (timeline["Interview Scheduled"]) {
-        if (isAuthor) {
-            return { column: 'In Progress', statusText: 'Interview Scheduled', color: 'info' };
-        }
-        return { column: 'In Progress', statusText: 'Interview Pending', color: 'info' };
-    }
-
-    if (timeline["Topic Proposal Complete"] || project.proposalStatus === 'approved') {
-        if (project.type === 'Op-Ed') {
-            if (isAuthor) {
-                return { column: 'Approved', statusText: 'Ready to Write', color: 'primary' };
-            }
-            return { column: 'Approved', statusText: 'Approved - Writing', color: 'primary' };
-        } else {
-            if (isAuthor) {
-                return { column: 'Approved', statusText: 'Schedule Interview', color: 'primary' };
-            }
-            return { column: 'Approved', statusText: 'Approved - Interview Pending', color: 'primary' };
-        }
-    }
-
-    return { column: 'Pending Approval', statusText: 'Awaiting Approval', color: 'warning' };
-}
-
-async function handleTaskCompletion(projectId, taskName, isCompleted, database, userName) {
-    if (!projectId || !database || !userName) {
-        console.error('[TASK COMPLETION] Missing required parameters');
-        return;
-    }
-
-    try {
-        console.log('[TASK COMPLETION] Starting update:', {
-            projectId,
-            taskName,
-            isCompleted,
-            userName
-        });
-
-        const updatePath = `timeline.${taskName}`;
-        const activityText = isCompleted ?
-            `marked "${taskName}" as complete` :
-            `marked "${taskName}" as incomplete`;
-
-        // Use a regular Date object instead of serverTimestamp for activity
-        const activityEntry = {
-            text: activityText,
-            authorName: userName,
-            timestamp: new Date()
-        };
-
-        console.log('[TASK COMPLETION] Updating Firestore with:', {
-            updatePath,
-            value: isCompleted,
-            activityEntry
-        });
-
-        await database.collection('projects').doc(projectId).update({
-            [updatePath]: isCompleted,
-            activity: firebase.firestore.FieldValue.arrayUnion(activityEntry)
-        });
-
-        console.log('[TASK COMPLETION] Update successful');
-        showNotification(`Checklist updated successfully!`, 'success');
-
-    } catch (error) {
-        console.error('[TASK COMPLETION ERROR] Failed to update:', error);
-        console.error('[TASK COMPLETION ERROR] Error code:', error.code);
-        console.error('[TASK COMPLETION ERROR] Error message:', error.message);
-        
-        let errorMessage = 'Failed to update checklist. ';
-        if (error.code === 'permission-denied') {
-            errorMessage += 'You do not have permission to update this task.';
-        } else if (error.code === 'not-found') {
-            errorMessage += 'Project not found.';
-        } else {
-            errorMessage += 'Please try again.';
-        }
-        
-        showNotification(errorMessage, 'error');
-        throw error; // Re-throw so checkbox can be reverted
-    }
-}
 
 // ==================
 //  Kanban Board
 // ==================
+function isAwaitingEditorAssignment(project) {
+    if (!project) return false;
+    const timeline = project.timeline || {};
+
+    return project.proposalStatus === 'approved' &&
+        timeline["Article Writing Complete"] === true &&
+        !timeline["Suggestions Reviewed"] &&
+        !project.editorId;
+}
+
+function resolveColumnsForView(view) {
+    if (typeof getColumnsForView === 'function') {
+        const columns = getColumnsForView(view);
+        if (Array.isArray(columns) && columns.length > 0) {
+            return columns;
+        }
+    }
+
+    if (view === 'my-assignments') {
+        return ['To Do', 'In Progress', 'In Review', 'Done'];
+    }
+
+    return ['Topic Proposal', 'Interview Stage', 'Writing Stage', 'In Review', 'Reviewing Suggestions', 'Completed'];
+}
+
+function resolveProjectState(project, view, user) {
+    const awaitingEditor = isAwaitingEditorAssignment(project);
+
+    if (typeof getProjectState === 'function') {
+        const state = getProjectState(project, view, user);
+        if (view === 'my-assignments' && currentUserRole === 'admin' && awaitingEditor) {
+            return {
+                ...state,
+                column: 'In Progress',
+                color: 'yellow',
+                statusText: 'Awaiting Editor Assignment'
+            };
+        }
+        return state;
+    }
+
+    if (view === 'my-assignments' && currentUserRole === 'admin' && awaitingEditor) {
+        return {
+            column: 'In Progress',
+            color: 'yellow',
+            statusText: 'Awaiting Editor Assignment'
+        };
+    }
+
+    return {
+        column: 'Topic Proposal',
+        color: 'default',
+        statusText: 'Pending'
+    };
+}
+
+function handlePendingEditorAlerts() {
+    if (currentUserRole !== 'admin' || !currentUser) {
+        pendingEditorAlertedProjects.clear();
+        return;
+    }
+
+    const pendingProjects = allProjects.filter(isAwaitingEditorAssignment);
+    const pendingIds = new Set(pendingProjects.map(project => project.id));
+
+    pendingProjects.forEach(project => {
+        if (!pendingEditorAlertedProjects.has(project.id)) {
+            showNotification(`"${project.title}" is awaiting an editor assignment.`, 'warning');
+            pendingEditorAlertedProjects.add(project.id);
+        }
+    });
+
+    Array.from(pendingEditorAlertedProjects).forEach(projectId => {
+        if (!pendingIds.has(projectId)) {
+            pendingEditorAlertedProjects.delete(projectId);
+        }
+    });
+}
+
+function ensureTaskFormSubmitListener() {
+    if (taskFormSubmitListenerAttached) {
+        return;
+    }
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (form && form.id === 'task-form') {
+            event.preventDefault();
+            handleTaskFormSubmit(event);
+        }
+    }, true);
+
+    taskFormSubmitListenerAttached = true;
+    console.log('[SETUP] Delegated task form handler attached');
+}
+
+function ensureGlobalModalCloseHandler() {
+    if (modalCloseDelegationAttached) {
+        return;
+    }
+
+    document.addEventListener('click', (event) => {
+        const closeBtn = event.target.closest('.close-button');
+        if (closeBtn) {
+            event.preventDefault();
+            event.stopPropagation();
+            closeAllModals();
+            return;
+        }
+
+        const target = event.target;
+        if (target && target.classList && target.classList.contains('modal-overlay')) {
+            event.preventDefault();
+            closeAllModals();
+        }
+    });
+
+    modalCloseDelegationAttached = true;
+    console.log('[SETUP] Global modal close delegation attached');
+}
+
 function renderKanbanBoard(projects) {
     const board = document.getElementById('kanban-board');
     board.innerHTML = '';
 
-    const columns = getColumnsForView(currentView);
+    const columns = resolveColumnsForView(currentView);
 
     columns.forEach(columnTitle => {
         const columnProjects = projects.filter(project => {
-            const state = getProjectState(project, currentView, currentUser);
+            const state = resolveProjectState(project, currentView, currentUser);
             return state.column === columnTitle;
         });
 
@@ -2736,9 +2803,30 @@ function filterProjects() {
         case 'opeds':
             return allProjects.filter(p => p.type === 'Op-Ed');
         case 'my-assignments':
-            const myProjects = allProjects.filter(p => p.authorId === currentUser.uid || p.editorId === currentUser.uid);
-            const myTasks = allTasks.filter(t => isUserAssignedToTask(t, currentUser.uid)).map(t => ({...t, isTask: true}));
-            return [...myProjects, ...myTasks];
+            const userId = currentUser ? currentUser.uid : null;
+            const myProjects = userId
+                ? allProjects.filter(p => p.authorId === userId || p.editorId === userId)
+                : [];
+
+            let adminQueue = [];
+            if (currentUserRole === 'admin') {
+                adminQueue = allProjects.filter(isAwaitingEditorAssignment);
+            }
+
+            const projectMap = new Map();
+            [...myProjects, ...adminQueue].forEach(project => {
+                if (project && project.id) {
+                    projectMap.set(project.id, project);
+                }
+            });
+
+            const myTasks = userId
+                ? allTasks
+                    .filter(t => t.creatorId === userId || isUserAssignedToTask(t, userId))
+                    .map(t => ({ ...t, isTask: true }))
+                : [];
+
+            return [...projectMap.values(), ...myTasks];
         default:
             return allProjects;
     }
@@ -2749,7 +2837,7 @@ function createProjectCard(project) {
         return createTaskCardForAssignments(project);
     }
 
-    const state = getProjectState(project, currentView, currentUser);
+    const state = resolveProjectState(project, currentView, currentUser);
     const card = document.createElement('div');
 
     // Add column-based class for color coding
@@ -3158,7 +3246,7 @@ function updateCalendarStats() {
                         thisWeekCount++;
                     }
 
-                    const state = getProjectState(project, currentView, currentUser);
+                    const state = resolveProjectState(project, currentView, currentUser);
                     if (deadline < now && state.column !== 'Completed' && !state.statusText.includes('Completed')) {
                         overdueCount++;
                     }
@@ -3379,7 +3467,7 @@ function generateStatusReport() {
     });
 
     allProjects.forEach(project => {
-        const state = getProjectState(project, currentView, currentUser);
+        const state = resolveProjectState(project, currentView, currentUser);
         const finalDeadline = project.deadlines ? project.deadlines.publication : project.deadline;
 
         let status = 'on-track';
@@ -3700,135 +3788,6 @@ function generateStatusReport() {
 
     reportContent.innerHTML = reportHTML;
     reportModal.style.display = 'flex';
-}
-
-// ==================
-//  Project Actions
-// ==================
-// VERSION 5 - UPDATED: Approve button now refreshes modal after approval
-async function approveProposal(projectId) {
-    if (!projectId) {
-        showNotification('No project selected. Please try again.', 'error');
-        return;
-    }
-
-    try {
-        await db.collection('projects').doc(projectId).update({
-            proposalStatus: 'approved',
-            'timeline.Topic Proposal Complete': true,
-            activity: firebase.firestore.FieldValue.arrayUnion({
-                text: 'approved the proposal',
-                authorName: currentUserName,
-                timestamp: new Date()
-            })
-        });
-
-        showNotification('Proposal approved successfully!', 'success');
-
-        // Refresh the modal to show updated status
-        const project = allProjects.find(p => p.id === projectId);
-        if (project) {
-            project.proposalStatus = 'approved';
-            project.timeline = project.timeline || {};
-            project.timeline['Topic Proposal Complete'] = true;
-            if (typeof refreshDetailsModal === 'function') {
-                refreshDetailsModal(project);
-            }
-            if (typeof attachProjectModalListeners === 'function') {
-                attachProjectModalListeners();
-            }
-        }
-
-    } catch (error) {
-        console.error('[APPROVE ERROR]', error);
-        showNotification('Failed to approve proposal. Please try again.', 'error');
-    }
-}
-
-async function updateProposalStatus(newStatus) {
-    if (!currentlyViewedProjectId) {
-        showNotification('No project selected. Please try again.', 'error');
-        return;
-    }
-
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            proposalStatus: newStatus,
-            activity: firebase.firestore.FieldValue.arrayUnion({
-                text: `marked proposal as ${newStatus}`,
-                authorName: currentUserName,
-                timestamp: new Date()
-            })
-        });
-
-        showNotification(`Proposal ${newStatus} successfully!`, 'success');
-
-    } catch (error) {
-        console.error('[STATUS UPDATE ERROR]', error);
-        showNotification('Failed to update status. Please try again.', 'error');
-    }
-}
-
-async function handleAddComment() {
-    const commentInput = document.getElementById('comment-input');
-    if (!commentInput || !currentlyViewedProjectId) return;
-
-    const comment = commentInput.value.trim();
-    if (!comment) {
-        showNotification('Please enter a comment.', 'error');
-        return;
-    }
-
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            activity: firebase.firestore.FieldValue.arrayUnion({
-                text: `commented: "${comment}"`,
-                authorName: currentUserName,
-                timestamp: new Date()
-            })
-        });
-
-        commentInput.value = '';
-        showNotification('Comment added successfully!', 'success');
-
-    } catch (error) {
-        console.error('[COMMENT ERROR]', error);
-        showNotification('Failed to add comment. Please try again.', 'error');
-    }
-}
-
-async function handleAssignEditor() {
-    if (!currentlyViewedProjectId) return;
-
-    const editorDropdown = document.getElementById('editor-dropdown');
-    if (!editorDropdown) return;
-
-    const editorId = editorDropdown.value;
-    if (!editorId) {
-        showNotification('Please select an editor.', 'error');
-        return;
-    }
-
-    const editor = allEditors.find(e => e.id === editorId);
-    if (!editor) return;
-
-    try {
-        await db.collection('projects').doc(currentlyViewedProjectId).update({
-            editorId: editorId,
-            editorName: editor.name,
-            activity: firebase.firestore.FieldValue.arrayUnion({
-                text: `assigned ${editor.name} as editor`,
-                authorName: currentUserName,
-                timestamp: new Date()
-            })
-        });
-
-        showNotification(`${editor.name} assigned as editor!`, 'success');
-
-    } catch (error) {
-        console.error('[ASSIGN EDITOR ERROR]', error);
-        showNotification('Failed to assign editor. Please try again.', 'error');
-    }
 }
 
 // ==================

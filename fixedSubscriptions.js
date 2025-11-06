@@ -56,6 +56,10 @@ function setupBulletproofSubscriptions() {
             }
             updateNavCounts();
             
+            if (typeof handlePendingEditorAlerts === 'function') {
+                handlePendingEditorAlerts();
+            }
+            
             // Update modal if open - but DON'T re-render timeline to avoid disrupting checkbox updates
             if (currentlyViewedProjectId) {
                 const project = allProjects.find(p => p.id === currentlyViewedProjectId);
