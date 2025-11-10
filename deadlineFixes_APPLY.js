@@ -91,11 +91,11 @@ async function handleSetDeadlines() {
                     newDeadlines[field.key] = value;
                     hasChanges = true;
                     updatedFields.push(field.label);
-                    console.log(`[DEADLINES] ✓ ${field.label} will be updated to: ${value}`);
+                    console.log(`[DEADLINES] ${field.label} will be updated to: ${value}`);
                 }
             }
         } else {
-            console.error(`[DEADLINES] ✗ Input field not found: ${field.inputId}`);
+            console.error(`[DEADLINES] Input field not found: ${field.inputId}`);
         }
     });
     
@@ -146,7 +146,7 @@ async function handleSetDeadlines() {
             })
         });
         
-        console.log('[DEADLINES] ✅ Successfully saved to Firestore!');
+        console.log('[DEADLINES] Successfully saved to Firestore');
         showNotification(`Deadlines updated successfully! Updated: ${updatedFields.join(', ')}`, 'success');
         
         // Update local project object
@@ -165,7 +165,7 @@ async function handleSetDeadlines() {
         }
         
     } catch (error) {
-        console.error('[DEADLINES] ❌ Failed to save deadlines:', error);
+        console.error('[DEADLINES] Failed to save deadlines:', error);
         console.error('[DEADLINES] Error code:', error.code);
         console.error('[DEADLINES] Error message:', error.message);
         console.error('[DEADLINES] Error stack:', error.stack);
@@ -233,7 +233,7 @@ function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
         `;
         deadlinesList.appendChild(deadlineItem);
         
-        console.log(`[RENDER DEADLINES] ✓ Created input field: deadline-${field.key}`);
+        console.log(`[RENDER DEADLINES] Created input field: deadline-${field.key}`);
     });
     
     // Show/hide the "Set Remaining Deadlines" button
@@ -254,7 +254,7 @@ function renderDeadlines(project, isAuthor, isEditor, isAdmin) {
         console.log('[RENDER DEADLINES] Request button visibility:', (isAuthor || isEditor) && !isPending ? 'visible' : 'hidden');
     }
     
-    console.log('[RENDER DEADLINES] ✅ Finished rendering deadlines');
+    console.log('[RENDER DEADLINES] Finished rendering deadlines');
 }
 
     window.handleSetDeadlines = handleSetDeadlines;

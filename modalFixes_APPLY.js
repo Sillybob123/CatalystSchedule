@@ -288,7 +288,7 @@ window.addEventListener('load', function() {
             
         }, 500);
         
-        console.log('[MODAL FIX V4] ✅ Enhanced modal fix fully applied');
+        console.log('[MODAL FIX V4] Enhanced modal fix fully applied');
         
     }, 2000); // Wait for page to fully initialize
 });

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Writing Workflow - Catalyst Tracker</title>
+    <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png">
+    <link rel="stylesheet" href="base.css" />
+    <link rel="stylesheet" href="components.css" />
+    <link rel="stylesheet" href="workflow.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="loader" class="loader-container">
+      <div class="loader" role="status" aria-label="Loading"></div>
+      <p style="margin-top: 20px; color: #64748b;">Loading Writing Workflow...</p>
+    </div>
+
+    <div id="app-container" class="app-container" style="display: none">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <img src="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png" alt="Catalyst Logo" class="logo-img">
+          <h2>Catalyst Tracker</h2>
+        </div>
+
+        <nav class="sidebar-nav" aria-label="Primary">
+          <p class="nav-heading">Views</p>
+          <a href="dashboard.html?view=dashboard" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span>Dashboard</span>
+          </a>
+          <a href="dashboard.html?view=tasks" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            <span>Tasks</span>
+          </a>
+          <a href="dashboard.html?view=my-assignments" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle stroke="currentColor" stroke-width="2" cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span>My Assignments</span>
+          </a>
+          <a href="dashboard.html?view=calendar" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <rect stroke="currentColor" stroke-width="2" x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"></line>
+              <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"></line>
+              <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"></line>
+            </svg>
+            <span>Calendar</span>
+          </a>
+          <a href="social.html" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+            <span>Social Media</span>
+          </a>
+
+          <p class="nav-heading">Workflows</p>
+          <a href="dashboard.html?view=interviews" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+            </svg>
+            <span>Catalyst in the Capital</span>
+          </a>
+          <a href="dashboard.html?view=opeds" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <span>Op-Eds</span>
+          </a>
+
+          <p class="nav-heading">Guides</p>
+          <a href="writing-workflow.html" class="nav-item active" aria-current="page">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5V4.5A2.5 2.5 0 0 1 6.5 2z" />
+              <path d="M8 6h8" />
+              <path d="M8 10h8" />
+              <path d="M8 14h6" />
+            </svg>
+            <span>Writing Workflow</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-profile">
+            <div class="user-avatar" id="user-avatar" aria-hidden="true">U</div>
+            <div class="user-details">
+              <span id="user-name">Loading...</span>
+              <span id="user-role">writer</span>
+            </div>
+          </div>
+          <button id="logout-button" class="logout-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+            </svg>
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="main-header">
+          <h1>Writing Workflow</h1>
+          <div></div>
+        </header>
+
+        <section class="workflow-intro">
+          <div class="intro-card">
+            <div class="intro-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <div class="intro-content">
+              <h2>Monthly Cadence</h2>
+              <p>We operate on a month-by-month cycle to simplify planning and start dates. For the current rollout, assume the cycle start date is <strong>November 5</strong>.</p>
+              <ul class="intro-points">
+                <li><strong>First meeting of the month:</strong> Pitch ideas and begin drafting projects.</li>
+                <li><strong>Second meeting mid‑month:</strong> Cross‑team discussion to shape stories.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="workflow-timeline">
+          <div class="phase">
+            <div class="phase-badge">Phase 1 • Ideation & Prep</div>
+            <div class="steps">
+              <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-body">
+                  <h3>Pitch in Catalyst Tracker</h3>
+                  <p>A Catalyst writer submits an idea to the Catalyst Tracker. The pitch is reviewed and approved by <strong>Yair</strong> and <strong>Aidan</strong>.</p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-body">
+                  <h3>Contact Interviews (CC Editors)</h3>
+                  <p>Writer reaches out to <strong>two potential interviewees</strong> for the article and CCs <strong>Yair</strong> and <strong>Aidan</strong> on the outreach.</p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-body">
+                  <h3>Outline & Interview Prep</h3>
+                  <p>Writer drafts the outline and prepares interview questions. Submit both the draft and questions for review by a <strong>discipline writer</strong>.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="milestone">
+            <div class="milestone-content">
+              <div class="milestone-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <h4>Second Meeting (Mid‑Month)</h4>
+                <p>Happens between these states. Writers meet within their groups to discuss and refine story direction.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="phase">
+            <div class="phase-badge">Phase 2 • Interview & Editing</div>
+            <div class="steps">
+              <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-body">
+                  <h3>Interview & Draft</h3>
+                  <p>Interview is completed. Writer incorporates initial edits and shapes the story into a presentable draft.</p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-body">
+                  <h3>Editor Review</h3>
+                  <p><strong>Yair</strong> or <strong>Aidan</strong> reviews the draft and returns feedback to the writer.</p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-body">
+                  <h3>Copy Edit & Assets</h3>
+                  <p>Copy editors finalize the piece: photos, citations, punctuation, grammar, and clarity. Prepare for publication.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="workflow.js"></script>
+  </body>
+  
+</html>

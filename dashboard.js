@@ -281,6 +281,23 @@ let currentUser = null, currentUserName = null, currentUserRole = null;
 let allProjects = [], allEditors = [], allTasks = [], allUsers = [];
 let currentlyViewedProjectId = null, currentlyViewedTaskId = null;
 let currentView = 'interviews';
+// Allow deep-linking to views via query parameter
+try {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = (params.get('view') || '').toLowerCase();
+    const viewMap = {
+        'dashboard': 'interviews',
+        'interviews': 'interviews',
+        'opeds': 'opeds',
+        'tasks': 'tasks',
+        'my-assignments': 'my-assignments',
+        'my': 'my-assignments',
+        'calendar': 'calendar'
+    };
+    if (viewParam && viewMap[viewParam]) {
+        currentView = viewMap[viewParam];
+    }
+} catch (e) { console.warn('[VIEW PARAM] Unable to parse view param:', e); }
 let calendarDate = new Date();
 const pendingEditorAlertedProjects = new Set();
 let taskFormSubmitListenerAttached = false;
@@ -491,10 +508,10 @@ function createNotificationContainer() {
 
 function getNotificationIcon(type) {
     const icons = {
-        success: '✓',
-        error: '✕',
-        warning: '⚠',
-        info: 'ℹ'
+        success: 'OK',
+        error: 'X',
+        warning: '!',
+        info: 'i'
     };
     return icons[type] || icons.info;
 }
@@ -1183,7 +1200,7 @@ async function handleTaskFormSubmit(e) {
         };
 
         const docRef = await db.collection('tasks').add(taskData);
-        console.log('[TASK SUBMIT] ✅ Task created with ID:', docRef.id);
+        console.log('[TASK SUBMIT] Task created with ID:', docRef.id);
 
         const nowSeconds = Math.floor(Date.now() / 1000);
         const localTask = {
@@ -1237,11 +1254,11 @@ function renderTasksBoard(tasks) {
     const board = document.getElementById('tasks-board');
     board.innerHTML = '';
 
-    const columns = [
-        { id: 'pending', title: 'Pending Approval', icon: '⏳', color: '#f59e0b' },
-        { id: 'approved', title: 'Approved', icon: '✅', color: '#10b981' },
-        { id: 'in_progress', title: 'In Progress', icon: '🔄', color: '#3b82f6' },
-        { id: 'completed', title: 'Completed', icon: '🎉', color: '#8b5cf6' }
+const columns = [
+        { id: 'pending', title: 'Pending Approval', icon: '', color: '#f59e0b' },
+        { id: 'approved', title: 'Approved', icon: '', color: '#10b981' },
+        { id: 'in_progress', title: 'In Progress', icon: '', color: '#3b82f6' },
+        { id: 'completed', title: 'Completed', icon: '', color: '#8b5cf6' }
     ];
 
     columns.forEach((column) => {
@@ -1255,7 +1272,6 @@ function renderTasksBoard(tasks) {
             <div class="column-header">
                 <div class="column-title">
                     <div class="column-title-main">
-                        <span class="column-icon">${column.icon}</span>
                         <span class="column-title-text">${column.title}</span>
                     </div>
                     <span class="task-count">${columnTasks.length}</span>
@@ -1272,7 +1288,6 @@ function renderTasksBoard(tasks) {
             const emptyState = document.createElement('div');
             emptyState.className = 'empty-column';
             emptyState.innerHTML = `
-                <div class="empty-column-icon">${column.icon}</div>
                 <div class="empty-column-text">No ${column.title.toLowerCase()}</div>
                 <div class="empty-column-subtext">Tasks will appear here when they reach this stage</div>
             `;
@@ -1893,7 +1908,7 @@ function openProjectModal() {
             }
         }, 100);
         
-        console.log('[OPEN MODAL] ✅ Modal opened successfully');
+        console.log('[OPEN MODAL] Modal opened successfully');
     } else {
         console.error('[OPEN MODAL] Modal element not found!');
     }
@@ -2262,7 +2277,7 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
                 try {
                     console.log('[TIMELINE CHECKBOX] Calling handleTaskCompletion...');
                     await handleTaskCompletion(project.id, task, isChecked, db, currentUserName);
-                    console.log('[TIMELINE CHECKBOX] ✅ SUCCESS! Task completion handled');
+                    console.log('[TIMELINE CHECKBOX] SUCCESS! Task completion handled');
                     
                     // Re-enable after success
                     checkbox.disabled = false;
@@ -2271,7 +2286,7 @@ function renderTimeline(project, isAuthor, isEditor, isAdmin) {
                     }
                 } catch (error) {
                     console.error('========================================');
-                    console.error('[TIMELINE CHECKBOX] ❌ FAILED!');
+                    console.error('[TIMELINE CHECKBOX] FAILED!');
                     console.error('[TIMELINE CHECKBOX] Error:', error);
                     console.error('[TIMELINE CHECKBOX] Error code:', error?.code);
                     console.error('[TIMELINE CHECKBOX] Error message:', error?.message);
@@ -2410,7 +2425,7 @@ async function handleProjectFormSubmit(e) {
     }
     
     console.log('========================================');
-    console.log('[PROJECT SUBMIT] 🚀 FORM SUBMISSION STARTED');
+    console.log('[PROJECT SUBMIT] FORM SUBMISSION STARTED');
     if (e) {
         console.log('[PROJECT SUBMIT] Event:', e);
         console.log('[PROJECT SUBMIT] Event type:', e.type);
@@ -2555,7 +2570,7 @@ async function handleProjectFormSubmit(e) {
 
         console.log('[PROJECT SUBMIT] Adding document to Firestore...');
         const docRef = await db.collection('projects').add(projectData);
-        console.log('[PROJECT SUBMIT] ✅ Document added successfully! ID:', docRef.id);
+        console.log('[PROJECT SUBMIT] Document added successfully. ID:', docRef.id);
 
         const nowSeconds = Math.floor(Date.now() / 1000);
         const localProject = {
@@ -2765,6 +2780,19 @@ function renderKanbanBoard(projects) {
 
     const columns = resolveColumnsForView(currentView);
 
+    const meta = {
+        'Pitch': { icon: '', sub: 'Submit idea, await approval' },
+        'Outreach & Prep': { icon: '', sub: 'Contact interviews, outline, prep' },
+        'Interview': { icon: '', sub: 'Interview scheduled/in progress' },
+        'Writing Stage': { icon: '', sub: 'Write and shape story' },
+        'Drafting': { icon: '', sub: 'Write and shape story' },
+        'In Review': { icon: '', sub: 'Editor review in progress' },
+        'Editor Review': { icon: '', sub: 'Editor review in progress' },
+        'Reviewing Suggestions': { icon: '', sub: 'Photos, citations, punctuation' },
+        'Copy Edit': { icon: '', sub: 'Photos, citations, punctuation' },
+        'Completed': { icon: '', sub: 'Done' }
+    };
+
     columns.forEach(columnTitle => {
         const columnProjects = projects.filter(project => {
             const state = resolveProjectState(project, currentView, currentUser);
@@ -2774,12 +2802,16 @@ function renderKanbanBoard(projects) {
         const columnEl = document.createElement('div');
         columnEl.className = 'kanban-column';
 
+        const { icon, sub } = meta[columnTitle] || { icon: '', sub: '' };
         columnEl.innerHTML = `
             <div class="column-header">
                 <div class="column-title">
-                    <span class="column-title-text">${columnTitle}</span>
+                    <div class="column-title-main">
+                      <span class="column-title-text">${columnTitle}</span>
+                    </div>
                     <span class="task-count">${columnProjects.length}</span>
                 </div>
+                ${sub ? `<div class=\"column-subtitle\">${sub}</div>` : ''}
             </div>
             <div class="column-content">
                 <div class="kanban-cards"></div>
@@ -2933,7 +2965,7 @@ function createTaskCardForAssignments(task) {
     }
 
     card.innerHTML = `
-        <h4 class="card-title">📋 ${escapeHtml(task.title)}</h4>
+        <h4 class="card-title">${escapeHtml(task.title)}</h4>
         <div class="card-meta">
             <span class="card-type" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white;">TASK</span>
             <span class="card-status">${(task.status || 'pending').replace('_', ' ')}</span>
@@ -3073,7 +3105,7 @@ function createCalendarEvent(item, date) {
 
     if (item.isTask) {
         eventEl.className = 'calendar-event task-event';
-        eventEl.textContent = `📋 ${item.title}`;
+        eventEl.textContent = `${item.title}`;
         eventEl.title = `Task: ${item.title} - Due ${date.toLocaleDateString()}`;
         eventEl.style.background = 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
     } else {
@@ -3569,7 +3601,7 @@ function generateStatusReport() {
 
     let reportHTML = `
         <div class="report-header">
-            <h2>📊 Comprehensive Team Status Report</h2>
+            <h2>Team Status Report</h2>
             <p class="report-date">Generated: ${new Date().toLocaleString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
@@ -3581,25 +3613,25 @@ function generateStatusReport() {
         </div>
 
         <div class="report-section executive-summary">
-            <h2>🎯 Executive Summary</h2>
+            <h2>Executive Summary</h2>
             <div class="summary-grid">
                 <div class="summary-item total">
-                    <div class="summary-icon">👥</div>
+                    <div class="summary-icon"></div>
                     <div class="summary-value">${activeUsers}</div>
                     <div class="summary-label">Active Team Members</div>
                 </div>
                 <div class="summary-item ${totalOverdue > 0 ? 'overdue' : ''}">
-                    <div class="summary-icon">⚠️</div>
+                    <div class="summary-icon"></div>
                     <div class="summary-value">${totalOverdue}</div>
                     <div class="summary-label">Overdue Items</div>
                 </div>
                 <div class="summary-item on-track">
-                    <div class="summary-icon">🎯</div>
+                    <div class="summary-icon"></div>
                     <div class="summary-value">${totalOnTrack}</div>
                     <div class="summary-label">On Track</div>
                 </div>
                 <div class="summary-item completed">
-                    <div class="summary-icon">✅</div>
+                    <div class="summary-icon"></div>
                     <div class="summary-value">${totalCompleted}</div>
                     <div class="summary-label">Completed</div>
                 </div>
@@ -3617,7 +3649,7 @@ function generateStatusReport() {
     if (sortedUsers.length > 0) {
         reportHTML += `
             <div class="report-section team-details">
-                <h2>👥 Team Member Breakdown</h2>
+                <h2>Team Member Breakdown</h2>
         `;
 
         sortedUsers.forEach(user => {
@@ -3645,17 +3677,14 @@ function generateStatusReport() {
 
                     <div class="user-stats">
                         <div class="stat-item ${user.overdue > 0 ? 'overdue' : ''}">
-                            <span class="stat-icon">⚠️</span>
                             <span class="stat-value">${user.overdue}</span>
                             <span class="stat-label">Overdue</span>
                         </div>
                         <div class="stat-item on-track">
-                            <span class="stat-icon">🎯</span>
                             <span class="stat-value">${user.onTrack}</span>
                             <span class="stat-label">On Track</span>
                         </div>
                         <div class="stat-item completed">
-                            <span class="stat-icon">✅</span>
                             <span class="stat-value">${user.completed}</span>
                             <span class="stat-label">Done</span>
                         </div>
@@ -3665,7 +3694,7 @@ function generateStatusReport() {
             if (user.projects.length > 0) {
                 reportHTML += `
                     <div class="user-work-section">
-                        <h4>📝 Projects (${user.projects.length})</h4>
+                        <h4>Projects (${user.projects.length})</h4>
                         <div class="work-items">
                 `;
 
@@ -3699,7 +3728,7 @@ function generateStatusReport() {
             if (user.tasks.length > 0) {
                 reportHTML += `
                     <div class="user-work-section">
-                        <h4>📋 Tasks (${user.tasks.length})</h4>
+                        <h4>Tasks (${user.tasks.length})</h4>
                         <div class="work-items">
                 `;
 
@@ -3738,7 +3767,7 @@ function generateStatusReport() {
 
     reportHTML += `
         <div class="report-section recommendations">
-            <h2>💡 Recommendations</h2>
+            <h2>Recommendations</h2>
             <div class="recommendation-list">
     `;
 
@@ -3748,7 +3777,7 @@ function generateStatusReport() {
     if (overdueUsers.length > 0) {
         reportHTML += `
             <div class="recommendation-item urgent">
-                <span class="recommendation-icon">🚨</span>
+                <span class="recommendation-icon"></span>
                 <div>
                     <h4>Immediate Attention Required</h4>
                     <p>${overdueUsers.map(u => u.name).join(', ')} ${overdueUsers.length === 1 ? 'has' : 'have'} overdue items that need immediate attention.</p>
@@ -3760,7 +3789,7 @@ function generateStatusReport() {
     if (highWorkloadUsers.length > 0) {
         reportHTML += `
             <div class="recommendation-item warning">
-                <span class="recommendation-icon">⚖️</span>
+                <span class="recommendation-icon"></span>
                 <div>
                     <h4>High Workload Alert</h4>
                     <p>${highWorkloadUsers.map(u => u.name).join(', ')} ${highWorkloadUsers.length === 1 ? 'has' : 'have'} a high number of assignments. Consider redistributing workload.</p>
@@ -3772,7 +3801,7 @@ function generateStatusReport() {
     if (overdueUsers.length === 0 && totalOnTrack > totalCompleted) {
         reportHTML += `
             <div class="recommendation-item success">
-                <span class="recommendation-icon">🎉</span>
+                <span class="recommendation-icon"></span>
                 <div>
                     <h4>Team On Track</h4>
                     <p>No overdue items! The team is making good progress. Keep up the great work!</p>

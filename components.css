@@ -362,6 +362,22 @@
   color: var(--text-color);
 }
 
+.column-title-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.column-icon {
+  font-size: 18px;
+}
+
+.column-subtitle {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .task-count {
   background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
   color: white;

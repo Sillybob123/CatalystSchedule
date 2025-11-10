@@ -59,7 +59,7 @@ async function handleSetDeadlines() {
                     newDeadlines[field.key] = value;
                     hasChanges = true;
                     updatedFields.push(field.label);
-                    console.log(`[DEADLINES BACKUP] ✓ ${field.label} will be updated to: ${value}`);
+                    console.log(`[DEADLINES BACKUP] ${field.label} will be updated to: ${value}`);
                 }
             }
         } else {
@@ -94,7 +94,7 @@ async function handleSetDeadlines() {
             })
         });
         
-        console.log('[DEADLINES BACKUP] ✅ Successfully saved to Firestore!');
+        console.log('[DEADLINES BACKUP] Successfully saved to Firestore');
         showNotification(`Deadlines updated successfully! Updated: ${updatedFields.join(', ')}`, 'success');
         
         // Update local project object
@@ -105,7 +105,7 @@ async function handleSetDeadlines() {
         }
         
     } catch (error) {
-        console.error('[DEADLINES BACKUP] ❌ Failed to save deadlines:', error);
+        console.error('[DEADLINES BACKUP] Failed to save deadlines:', error);
         console.error('[DEADLINES BACKUP] Error code:', error.code);
         console.error('[DEADLINES BACKUP] Error message:', error.message);
         
@@ -283,7 +283,7 @@ function generateStatusReport() {
     }).length;
     
     let html = '<div class="report-header">';
-    html += '<h2>📊 Comprehensive Status Report</h2>';
+    html += '<h2>Comprehensive Status Report</h2>';
     html += `<p class="report-timestamp">Generated on ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>`;
     html += '</div>';
     
@@ -302,7 +302,7 @@ function generateStatusReport() {
     
     // Task Overview Section
     html += '<div class="report-section">';
-    html += '<h3>✅ Task Status</h3>';
+    html += '<h3>Task Status</h3>';
     const totalTasks = allTasks.length;
     const completedTasks = allTasks.filter(t => t.status === 'completed').length;
     const pendingTasks = allTasks.filter(t => t.status === 'pending').length;
@@ -325,7 +325,7 @@ function generateStatusReport() {
     
     // Detailed Team Member Reports
     html += '<div class="report-section team-details">';
-    html += '<h3>👥 Detailed Team Member Reports</h3>';
+    html += '<h3>Detailed Team Member Reports</h3>';
     
     // Build detailed workload for each user
     const userDetails = {};
@@ -431,9 +431,9 @@ function generateStatusReport() {
         html += `<div class="user-workload-summary">`;
         html += `<div class="workload-stat"><strong>${totalWorkItems}</strong> Total Items</div>`;
         if (totalOverdue > 0) {
-            html += `<div class="workload-stat overdue"><strong>${totalOverdue}</strong> Overdue ⚠️</div>`;
+            html += `<div class="workload-stat overdue"><strong>${totalOverdue}</strong> Overdue</div>`;
         } else {
-            html += `<div class="workload-stat on-track"><strong>✓</strong> On Track</div>`;
+            html += `<div class="workload-stat on-track"><strong>On Track</strong></div>`;
         }
         html += `</div>`;
         html += `</div>`;
@@ -441,12 +441,12 @@ function generateStatusReport() {
         // Overdue items (if any)
         if (totalOverdue > 0) {
             html += '<div class="overdue-section">';
-            html += '<h5 style="color: #ef4444; margin-bottom: 8px;">⚠️ OVERDUE ITEMS</h5>';
+            html += '<h5 style="color: #ef4444; margin-bottom: 8px;">OVERDUE ITEMS</h5>';
             
             user.overdueProjects.forEach(proj => {
                 const daysOverdue = Math.abs(proj.daysUntilDeadline);
                 html += '<div class="work-item overdue-item">';
-                html += `<div class="item-title">📝 ${escapeHtml(proj.title)}</div>`;
+                html += `<div class="item-title">${escapeHtml(proj.title)}</div>`;
                 html += `<div class="item-meta">`;
                 html += `<span class="item-status">${escapeHtml(proj.status)}</span>`;
                 html += `<span class="item-deadline overdue">${proj.deadline} (${daysOverdue} days overdue)</span>`;
@@ -458,7 +458,7 @@ function generateStatusReport() {
             user.overdueTasks.forEach(task => {
                 const daysOverdue = Math.abs(task.daysUntilDeadline);
                 html += '<div class="work-item overdue-item">';
-                html += `<div class="item-title">📋 ${escapeHtml(task.title)}</div>`;
+                html += `<div class="item-title">${escapeHtml(task.title)}</div>`;
                 html += `<div class="item-meta">`;
                 html += `<span class="item-status">${escapeHtml(task.status)}</span>`;
                 html += `<span class="item-priority priority-${task.priority}">${task.priority.toUpperCase()}</span>`;
@@ -478,7 +478,7 @@ function generateStatusReport() {
             
             upcomingNonOverdue.forEach(item => {
                 html += '<div class="work-item upcoming-item">';
-                html += `<div class="item-title">${item.type ? '📝' : '📋'} ${escapeHtml(item.title)}</div>`;
+                html += `<div class="item-title">${escapeHtml(item.title)}</div>`;
                 html += `<div class="item-meta">`;
                 html += `<span class="item-status">${escapeHtml(item.status)}</span>`;
                 html += `<span class="item-deadline due-soon">${item.deadline} (${item.daysUntilDeadline} days)</span>`;
@@ -495,7 +495,7 @@ function generateStatusReport() {
         // All projects as author
         if (user.authoredProjects.length > 0) {
             html += '<div class="work-section">';
-            html += `<h5>📝 Authored Projects (${user.authoredProjects.length})</h5>`;
+            html += `<h5>Authored Projects (${user.authoredProjects.length})</h5>`;
             user.authoredProjects.forEach(proj => {
                 if (proj.isOverdue) return; // Already shown in overdue section
                 html += '<div class="work-item">';
@@ -518,7 +518,7 @@ function generateStatusReport() {
         // All projects as editor
         if (user.editingProjects.length > 0) {
             html += '<div class="work-section">';
-            html += `<h5>✏️ Editing Projects (${user.editingProjects.length})</h5>`;
+            html += `<h5>Editing Projects (${user.editingProjects.length})</h5>`;
             user.editingProjects.forEach(proj => {
                 if (proj.isOverdue) return; // Already shown in overdue section
                 html += '<div class="work-item">';
@@ -541,7 +541,7 @@ function generateStatusReport() {
         // All assigned tasks
         if (user.assignedTasks.length > 0) {
             html += '<div class="work-section">';
-            html += `<h5>📋 Assigned Tasks (${user.assignedTasks.length})</h5>`;
+            html += `<h5>Assigned Tasks (${user.assignedTasks.length})</h5>`;
             user.assignedTasks.forEach(task => {
                 if (task.isOverdue) return; // Already shown in overdue section
                 html += '<div class="work-item">';
