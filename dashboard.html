@@ -20,6 +20,12 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <!-- Preload critical scripts for faster loading -->
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" as="script">
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" as="script">
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js" as="script">
+    <link rel="preconnect" href="https://firestore.googleapis.com">
+    <link rel="preconnect" href="https://www.gstatic.com">
   </head>
   <body>
     <div id="loader" class="loader-container">
@@ -32,6 +38,12 @@
         <div class="sidebar-header">
           <img src="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png" alt="Catalyst Logo" class="logo-img">
           <h2>Catalyst Tracker</h2>
+        </div>
+
+        <div class="sidebar-card meeting-card subtle top" aria-live="polite">
+          <p class="meeting-eyebrow">Next Meeting</p>
+          <h3 id="meeting-summary" class="meeting-title">No meeting scheduled</h3>
+          <div class="countdown-display" id="meeting-countdown">-- : -- : --</div>
         </div>
 
         <nav class="sidebar-nav" aria-label="Primary">
@@ -153,6 +165,69 @@
           </a>
         </nav>
 
+        <button class="zoom-settings-toggle owner-only" id="open-zoom-settings" data-owner-display="flex" aria-expanded="false" style="display: none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6m8.66-14.66l-4.24 4.24m-4.24 4.24l-4.24 4.24m16.48 0l-4.24-4.24m-4.24-4.24l-4.24-4.24"></path>
+          </svg>
+          <span>Zoom Settings</span>
+        </button>
+        <div class="owner-only zoom-settings-panel" id="zoom-settings-panel" data-owner-display="block" style="display: none;" aria-hidden="true">
+          <div class="settings-section">
+            <h4 class="settings-section-title">Zoom Link</h4>
+            <div class="current-link-display">
+              <a
+                id="zoom-link-display"
+                class="link-preview"
+                href="https://gwu-edu.zoom.us/j/97392237308"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-zoom-link
+              >
+                https://gwu-edu.zoom.us/j/97392237308
+              </a>
+            </div>
+            <form id="zoom-link-form" class="settings-form">
+              <div class="input-group">
+                <input type="url" id="zoom-link-input" placeholder="Enter new Zoom link" required />
+                <button type="submit" class="save-btn">Update</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="settings-divider"></div>
+
+          <div class="settings-section">
+            <h4 class="settings-section-title">Schedule Meeting</h4>
+            <form id="meeting-form" class="settings-form">
+              <div class="form-row">
+                <div class="input-field">
+                  <label>Date</label>
+                  <input type="date" id="meeting-date-input" required />
+                </div>
+                <div class="input-field">
+                  <label>Time</label>
+                  <input type="time" id="meeting-time-input" required />
+                </div>
+              </div>
+              <div class="input-field">
+                <label>Timezone</label>
+                <select id="meeting-timezone-input">
+                  <option value="America/New_York">Eastern Time (ET)</option>
+                  <option value="America/Chicago">Central Time (CT)</option>
+                  <option value="America/Denver">Mountain Time (MT)</option>
+                  <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                  <option value="UTC">UTC</option>
+                </select>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="save-btn primary">Save Meeting</button>
+                <button type="button" class="clear-btn" id="clear-meeting-button">Clear</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
         <div class="sidebar-footer">
           <div class="user-profile">
             <div class="user-avatar" id="user-avatar" aria-hidden="true">U</div>
@@ -196,7 +271,6 @@
             </button>
           </div>
         </header>
-
         <div id="board-view">
           <div id="kanban-board" class="kanban-board" aria-live="polite">
             <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
@@ -641,22 +715,22 @@
     }, 3000);
     </script>
 
-    <script src="directFormFix.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
+    <script defer src="directFormFix.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
     <!-- Core application scripts -->
-    <script src="timestampHelper.js?v=3"></script>
-    <script src="stateManager.js?v=3"></script>
-    <script src="dashboard.js?v=5"></script>
-    <script src="dashboardHelpers.js?v=3"></script>
-    <script src="proposalEditFix.js?v=3"></script>
-    <script src="proposalEditButtons.js?v=2"></script>
-    <script src="modalFixes_APPLY.js?v=5"></script>
-    <script src="deadlineFixes_APPLY.js?v=2"></script>
-    <script src="fixedSubscriptions.js?v=3"></script>
-    <script src="startupVerification.js?v=3"></script>
+    <script defer src="timestampHelper.js?v=3"></script>
+    <script defer src="stateManager.js?v=3"></script>
+    <script defer src="dashboard.js?v=6"></script>
+    <script defer src="dashboardHelpers.js?v=3"></script>
+    <script defer src="proposalEditFix.js?v=3"></script>
+    <script defer src="proposalEditButtons.js?v=2"></script>
+    <script defer src="modalFixes_APPLY.js?v=5"></script>
+    <script defer src="deadlineFixes_APPLY.js?v=2"></script>
+    <script defer src="fixedSubscriptions.js?v=3"></script>
+    <script defer src="startupVerification.js?v=3"></script>
     <!-- Critical Firebase and form submission fixes -->
   </body>
 </html>

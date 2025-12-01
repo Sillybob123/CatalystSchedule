@@ -25,7 +25,11 @@ try {
 
 const auth = firebase.auth();
 const db = firebase.firestore();
-const ZOOM_MEETING_URL = 'https://gwu-edu.zoom.us/j/97392237308';
+const DEFAULT_ZOOM_MEETING_URL = 'https://gwu-edu.zoom.us/j/97392237308';
+let zoomMeetingUrl = DEFAULT_ZOOM_MEETING_URL;
+let zoomElements = [];
+let meetingSettingsUnsubscribe = null;
+const meetingSettingsDocRef = db.collection('settings').doc('meeting');
 
 // ---- App State ----
 let currentUser = null, currentUserName = null, currentUserRole = null;
@@ -78,6 +82,7 @@ auth.onAuthStateChanged(async (user) => {
         setupUI();
         setupListeners();
         initializeZoomCTA();
+        subscribeToMeetingSettings();
         
         // Subscribe to posts
         subscribeToPosts();
@@ -262,21 +267,19 @@ function setupFormEnhancements() {
 }
 
 function initializeZoomCTA() {
-    const zoomElements = Array.from(document.querySelectorAll('[data-zoom-link]'));
+    zoomElements = Array.from(document.querySelectorAll('[data-zoom-link]'));
     if (!zoomElements.length) return;
 
     zoomElements.forEach(el => {
-        if (el.tagName.toLowerCase() === 'a') {
-            el.setAttribute('href', ZOOM_MEETING_URL);
-            el.setAttribute('target', '_blank');
-            el.setAttribute('rel', 'noopener noreferrer');
-        } else {
+        if (el.tagName.toLowerCase() !== 'a') {
             el.addEventListener('click', event => {
                 event.preventDefault();
-                window.open(ZOOM_MEETING_URL, '_blank', 'noopener,noreferrer');
+                window.open(zoomMeetingUrl, '_blank', 'noopener,noreferrer');
             });
         }
     });
+
+    applyZoomLinkToElements();
 
     const updateZoomState = () => {
         const live = isWithinZoomWindow();
@@ -290,6 +293,62 @@ function initializeZoomCTA() {
     updateZoomState();
     // Update every 30 seconds to keep in sync with the meeting window
     setInterval(updateZoomState, 30000);
+}
+
+function applyZoomLinkToElements() {
+    if (!zoomElements.length) {
+        zoomElements = Array.from(document.querySelectorAll('[data-zoom-link]'));
+    }
+
+    zoomElements.forEach(el => {
+        if (el.tagName.toLowerCase() === 'a') {
+            el.setAttribute('href', zoomMeetingUrl);
+            el.setAttribute('target', '_blank');
+            el.setAttribute('rel', 'noopener noreferrer');
+        }
+    });
+
+    const zoomLinkDisplay = document.getElementById('zoom-link-display');
+    if (zoomLinkDisplay) {
+        zoomLinkDisplay.textContent = zoomMeetingUrl;
+        zoomLinkDisplay.setAttribute('href', zoomMeetingUrl);
+    }
+}
+
+function setZoomMeetingUrl(newUrl) {
+    zoomMeetingUrl = (newUrl && typeof newUrl === 'string') ? newUrl : DEFAULT_ZOOM_MEETING_URL;
+    applyZoomLinkToElements();
+}
+
+function sanitizeZoomLink(rawLink) {
+    if (!rawLink || typeof rawLink !== 'string') return '';
+    try {
+        const candidate = rawLink.trim();
+        const parsed = new URL(candidate);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return '';
+        return parsed.toString();
+    } catch (error) {
+        return '';
+    }
+}
+
+function subscribeToMeetingSettings() {
+    try {
+        if (meetingSettingsUnsubscribe) {
+            meetingSettingsUnsubscribe();
+            meetingSettingsUnsubscribe = null;
+        }
+
+        meetingSettingsUnsubscribe = meetingSettingsDocRef.onSnapshot(snapshot => {
+            const data = snapshot.exists ? snapshot.data() : {};
+            const zoomLink = sanitizeZoomLink(data.zoomLink) || DEFAULT_ZOOM_MEETING_URL;
+            setZoomMeetingUrl(zoomLink);
+        }, error => {
+            console.error('[MEETING] Failed to load shared Zoom link:', error);
+        });
+    } catch (error) {
+        console.error('[MEETING] Error initializing shared meeting settings:', error);
+    }
 }
 
 function isWithinZoomWindow() {

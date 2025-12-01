@@ -25,7 +25,17 @@ try {
 
 const auth = firebase.auth();
 const db = firebase.firestore();
-const ZOOM_MEETING_URL = 'https://gwu-edu.zoom.us/j/97392237308';
+const DEFAULT_ZOOM_MEETING_URL = 'https://gwu-edu.zoom.us/j/97392237308';
+const DEFAULT_MEETING_TIMEZONE = 'America/New_York';
+const OWNER_EMAILS = ['bendoryair@gmail.com'];
+
+let zoomMeetingUrl = DEFAULT_ZOOM_MEETING_URL;
+let nextMeetingTime = null;
+let nextMeetingTimezone = DEFAULT_MEETING_TIMEZONE;
+let meetingCountdownInterval = null;
+let meetingSettingsUnsubscribe = null;
+let zoomElements = [];
+const meetingSettingsDocRef = db.collection('settings').doc('meeting');
 
 // Enable offline persistence for better reliability
 db.enablePersistence({ synchronizeTabs: true })
@@ -42,7 +52,7 @@ db.enablePersistence({ synchronizeTabs: true })
  * Retries a few times because fixedSubscriptions.js loads after dashboard.js.
  */
 function ensureSubscriptionsInitialized(attempt = 0) {
-    const MAX_ATTEMPTS = 20;
+    const MAX_ATTEMPTS = 10;
 
     if (typeof window.initializeSubscriptions === 'function') {
         console.log('[INIT] Initializing realtime subscriptions');
@@ -53,7 +63,7 @@ function ensureSubscriptionsInitialized(attempt = 0) {
     if (attempt < MAX_ATTEMPTS) {
         const nextAttempt = attempt + 1;
         console.warn(`[INIT] Subscriptions not ready (attempt ${nextAttempt}/${MAX_ATTEMPTS}), retrying...`);
-        setTimeout(() => ensureSubscriptionsInitialized(nextAttempt), 300);
+        setTimeout(() => ensureSubscriptionsInitialized(nextAttempt), 100);
         return;
     }
 
@@ -767,15 +777,28 @@ auth.onAuthStateChanged(async (user) => {
             currentUserRole = userData.role || 'writer';
         }
 
-        await fetchEditors();
-        await fetchAllUsers();
+        // Show UI immediately after getting user info
         setupUI();
-        setupNavAndListeners();
-
-        ensureSubscriptionsInitialized();
-
         document.getElementById('loader').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
+
+        // Parallelize data fetching and setup (non-blocking)
+        Promise.all([
+            fetchEditors(),
+            fetchAllUsers()
+        ]).then(() => {
+            console.log('[INIT] User data loaded successfully');
+        }).catch(error => {
+            console.error('[INIT] Error fetching user data:', error);
+        });
+
+        // Setup UI controls (non-blocking)
+        setupNavAndListeners();
+        setupOwnerOnlyControls();
+        subscribeToMeetingSettings();
+
+        // Initialize subscriptions in background (non-blocking)
+        ensureSubscriptionsInitialized();
 
     } catch (error) {
         console.error("Initialization Error:", error);
@@ -848,24 +871,41 @@ function setupUI() {
     if (currentUserRole === 'admin') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
     }
+    toggleOwnerOnlySections();
+}
+
+function isOwnerUser() {
+    if (!currentUser || !currentUser.email) return false;
+    return OWNER_EMAILS.includes(currentUser.email.toLowerCase());
+}
+
+function toggleOwnerOnlySections() {
+    const showOwner = isOwnerUser();
+    document.querySelectorAll('.owner-only').forEach(el => {
+        const desiredDisplay = el.dataset.ownerDisplay || 'block';
+        if (el.id === 'zoom-settings-panel') {
+            const isOpen = el.dataset.open === 'true';
+            el.style.display = showOwner && isOpen ? desiredDisplay : 'none';
+        } else {
+            el.style.display = showOwner ? desiredDisplay : 'none';
+        }
+    });
 }
 
 function initializeZoomCTA() {
-    const zoomElements = Array.from(document.querySelectorAll('[data-zoom-link]'));
+    zoomElements = Array.from(document.querySelectorAll('[data-zoom-link]'));
     if (!zoomElements.length) return;
 
     zoomElements.forEach(el => {
-        if (el.tagName.toLowerCase() === 'a') {
-            el.setAttribute('href', ZOOM_MEETING_URL);
-            el.setAttribute('target', '_blank');
-            el.setAttribute('rel', 'noopener noreferrer');
-        } else {
+        if (el.tagName.toLowerCase() !== 'a') {
             el.addEventListener('click', event => {
                 event.preventDefault();
-                window.open(ZOOM_MEETING_URL, '_blank', 'noopener,noreferrer');
+                window.open(zoomMeetingUrl, '_blank', 'noopener,noreferrer');
             });
         }
     });
+
+    applyZoomLinkToElements();
 
     const updateZoomState = () => {
         const live = isWithinZoomWindow();
@@ -881,6 +921,36 @@ function initializeZoomCTA() {
     setInterval(updateZoomState, 30000);
 }
 
+function applyZoomLinkToElements() {
+    if (!zoomElements.length) {
+        zoomElements = Array.from(document.querySelectorAll('[data-zoom-link]'));
+    }
+
+    zoomElements.forEach(el => {
+        if (el.tagName.toLowerCase() === 'a') {
+            el.setAttribute('href', zoomMeetingUrl);
+            el.setAttribute('target', '_blank');
+            el.setAttribute('rel', 'noopener noreferrer');
+        }
+    });
+
+    const zoomLinkDisplay = document.getElementById('zoom-link-display');
+    if (zoomLinkDisplay) {
+        zoomLinkDisplay.textContent = zoomMeetingUrl;
+        zoomLinkDisplay.setAttribute('href', zoomMeetingUrl);
+    }
+
+    const zoomInput = document.getElementById('zoom-link-input');
+    if (zoomInput && zoomInput !== document.activeElement) {
+        zoomInput.value = zoomMeetingUrl;
+    }
+}
+
+function setZoomMeetingUrl(newUrl) {
+    zoomMeetingUrl = (newUrl && typeof newUrl === 'string') ? newUrl : DEFAULT_ZOOM_MEETING_URL;
+    applyZoomLinkToElements();
+}
+
 function isWithinZoomWindow() {
     const now = new Date();
     const isMonday = now.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short' }) === 'Mon';
@@ -892,6 +962,364 @@ function isWithinZoomWindow() {
     const minutes = parseInt(hourStr, 10) * 60 + parseInt(minuteStr, 10);
     
     return minutes >= (18 * 60 + 30) && minutes < (20 * 60 + 30);
+}
+
+// ==================
+//  Meeting + Zoom Owner Controls
+// ==================
+function setupOwnerOnlyControls() {
+    toggleOwnerOnlySections();
+
+    const zoomForm = document.getElementById('zoom-link-form');
+    if (zoomForm && !zoomForm.dataset.listenerAttached) {
+        zoomForm.addEventListener('submit', handleZoomLinkSave);
+        zoomForm.dataset.listenerAttached = 'true';
+    }
+
+    const meetingForm = document.getElementById('meeting-form');
+    if (meetingForm && !meetingForm.dataset.listenerAttached) {
+        meetingForm.addEventListener('submit', handleMeetingScheduleSave);
+        meetingForm.dataset.listenerAttached = 'true';
+    }
+
+    const clearMeetingBtn = document.getElementById('clear-meeting-button');
+    if (clearMeetingBtn && !clearMeetingBtn.dataset.listenerAttached) {
+        clearMeetingBtn.addEventListener('click', handleClearMeetingSchedule);
+        clearMeetingBtn.dataset.listenerAttached = 'true';
+    }
+
+    const settingsToggle = document.getElementById('open-zoom-settings');
+    const settingsPanel = document.getElementById('zoom-settings-panel');
+    if (settingsToggle && settingsPanel && !settingsToggle.dataset.listenerAttached) {
+        settingsToggle.addEventListener('click', () => {
+            const isOpen = settingsPanel.dataset.open === 'true';
+            const nextState = !isOpen;
+            settingsPanel.dataset.open = nextState ? 'true' : 'false';
+            settingsPanel.style.display = nextState ? (settingsPanel.dataset.ownerDisplay || 'block') : 'none';
+            settingsPanel.setAttribute('aria-hidden', (!nextState).toString());
+            settingsToggle.setAttribute('aria-expanded', nextState.toString());
+        });
+        settingsToggle.dataset.listenerAttached = 'true';
+    }
+}
+
+function subscribeToMeetingSettings() {
+    try {
+        if (meetingSettingsUnsubscribe) {
+            meetingSettingsUnsubscribe();
+            meetingSettingsUnsubscribe = null;
+        }
+
+        meetingSettingsUnsubscribe = meetingSettingsDocRef.onSnapshot(snapshot => {
+            const data = snapshot.exists ? snapshot.data() : {};
+            const zoomLink = sanitizeZoomLink(data.zoomLink) || DEFAULT_ZOOM_MEETING_URL;
+            setZoomMeetingUrl(zoomLink);
+
+            const meetingTimestamp = data.nextMeetingTime && data.nextMeetingTime.toDate ? data.nextMeetingTime.toDate() : null;
+            const meetingTimezone = data.nextMeetingTimezone || DEFAULT_MEETING_TIMEZONE;
+
+            updateMeetingDisplay(meetingTimestamp, meetingTimezone);
+            updateMeetingEditorForm(meetingTimestamp, meetingTimezone);
+        }, error => {
+            console.error('[MEETING] Failed to subscribe to meeting settings:', error);
+            showNotification('Live meeting settings are unavailable right now.', 'error');
+        });
+    } catch (error) {
+        console.error('[MEETING] Error while initializing meeting settings:', error);
+    }
+}
+
+async function handleZoomLinkSave(event) {
+    event.preventDefault();
+    if (!isOwnerUser()) {
+        showNotification('Only Yair can update the Zoom link.', 'error');
+        return;
+    }
+
+    const input = document.getElementById('zoom-link-input');
+    if (!input) return;
+
+    const sanitizedLink = sanitizeZoomLink(input.value);
+    if (!sanitizedLink) {
+        showNotification('Please enter a valid https:// Zoom link.', 'error');
+        return;
+    }
+
+    try {
+        await meetingSettingsDocRef.set({ zoomLink: sanitizedLink }, { merge: true });
+        setZoomMeetingUrl(sanitizedLink);
+        showNotification('Zoom link updated for everyone.', 'success');
+    } catch (error) {
+        console.error('[MEETING] Failed to update Zoom link:', error);
+        showNotification('Could not update the Zoom link. Please try again.', 'error');
+    }
+}
+
+function sanitizeZoomLink(rawLink) {
+    if (!rawLink || typeof rawLink !== 'string') return '';
+    try {
+        const candidate = rawLink.trim();
+        const parsed = new URL(candidate);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+            return '';
+        }
+        return parsed.toString();
+    } catch (error) {
+        return '';
+    }
+}
+
+async function handleMeetingScheduleSave(event) {
+    event.preventDefault();
+    if (!isOwnerUser()) {
+        showNotification('Only Yair can update the meeting schedule.', 'error');
+        return;
+    }
+
+    const dateInput = document.getElementById('meeting-date-input');
+    const timeInput = document.getElementById('meeting-time-input');
+    const timezoneInput = document.getElementById('meeting-timezone-input');
+
+    if (!dateInput || !timeInput) {
+        showNotification('Meeting inputs are missing on the page.', 'error');
+        return;
+    }
+
+    const dateValue = dateInput.value;
+    const timeValue = timeInput.value;
+    const timeZone = timezoneInput?.value || DEFAULT_MEETING_TIMEZONE;
+
+    if (!dateValue || !timeValue) {
+        showNotification('Please choose both a date and a time.', 'error');
+        return;
+    }
+
+    const meetingDate = buildDateForTimezone(dateValue, timeValue, timeZone);
+    if (!meetingDate || isNaN(meetingDate.getTime())) {
+        showNotification('Unable to read that date/time. Please try again.', 'error');
+        return;
+    }
+
+    try {
+        await meetingSettingsDocRef.set({
+            nextMeetingTime: firebase.firestore.Timestamp.fromDate(meetingDate),
+            nextMeetingTimezone: timeZone
+        }, { merge: true });
+
+        updateMeetingDisplay(meetingDate, timeZone);
+        showNotification('Next meeting updated.', 'success');
+    } catch (error) {
+        console.error('[MEETING] Failed to save meeting schedule:', error);
+        showNotification('Could not save the meeting time. Please try again.', 'error');
+    }
+}
+
+async function handleClearMeetingSchedule() {
+    if (!isOwnerUser()) {
+        showNotification('Only Yair can clear the meeting schedule.', 'error');
+        return;
+    }
+
+    try {
+        await meetingSettingsDocRef.set({
+            nextMeetingTime: null,
+            nextMeetingTimezone: DEFAULT_MEETING_TIMEZONE
+        }, { merge: true });
+
+        updateMeetingDisplay(null, DEFAULT_MEETING_TIMEZONE);
+        updateMeetingEditorForm(null, DEFAULT_MEETING_TIMEZONE);
+        showNotification('Meeting schedule cleared.', 'success');
+    } catch (error) {
+        console.error('[MEETING] Failed to clear meeting schedule:', error);
+        showNotification('Could not clear the meeting schedule.', 'error');
+    }
+}
+
+function updateMeetingDisplay(meetingDate, timeZone = DEFAULT_MEETING_TIMEZONE) {
+    const summaryEl = document.getElementById('meeting-summary');
+    const statusEl = document.getElementById('meeting-status');
+    const countdownEl = document.getElementById('meeting-countdown');
+    const timezoneEl = document.getElementById('meeting-timezone-label');
+
+    if (meetingCountdownInterval) {
+        clearInterval(meetingCountdownInterval);
+        meetingCountdownInterval = null;
+    }
+
+    nextMeetingTime = meetingDate && !isNaN(meetingDate?.getTime?.()) ? meetingDate : null;
+    nextMeetingTimezone = timeZone || DEFAULT_MEETING_TIMEZONE;
+
+    if (timezoneEl) {
+        timezoneEl.textContent = nextMeetingTimezone;
+    }
+
+    if (!nextMeetingTime) {
+        if (summaryEl) summaryEl.textContent = 'No meeting scheduled';
+        if (statusEl) statusEl.textContent = 'Yair will set the next date.';
+        if (countdownEl) {
+            countdownEl.textContent = '-- : -- : --';
+            countdownEl.classList.remove('live', 'past');
+        }
+        return;
+    }
+
+    if (summaryEl) {
+        summaryEl.textContent = nextMeetingTime.toLocaleString('en-US', {
+            timeZone: nextMeetingTimezone,
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZoneName: 'short'
+        });
+    }
+
+    const updateCountdown = () => {
+        const now = new Date();
+        const diff = nextMeetingTime.getTime() - now.getTime();
+
+        if (diff <= 0) {
+            if (countdownEl) {
+                countdownEl.textContent = 'LIVE NOW';
+                countdownEl.classList.add('live');
+                countdownEl.classList.remove('past');
+            }
+            if (statusEl) {
+                statusEl.textContent = 'The scheduled meeting time has arrived.';
+            }
+
+            if (meetingCountdownInterval) {
+                clearInterval(meetingCountdownInterval);
+                meetingCountdownInterval = null;
+            }
+            return;
+        }
+
+        if (countdownEl) {
+            const days = Math.floor(diff / 86400000);
+            const hours = Math.floor((diff % 86400000) / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+
+            const parts = [];
+            if (days > 0) parts.push(`${days}d`);
+            parts.push(`${hours.toString().padStart(2, '0')}h`);
+            parts.push(`${minutes.toString().padStart(2, '0')}m`);
+            parts.push(`${seconds.toString().padStart(2, '0')}s`);
+
+            countdownEl.textContent = parts.join(' ');
+            countdownEl.classList.remove('live', 'past');
+        }
+
+        if (statusEl) {
+            statusEl.textContent = 'Countdown is live for everyone.';
+        }
+    };
+
+    updateCountdown();
+    meetingCountdownInterval = setInterval(updateCountdown, 1000);
+}
+
+function updateMeetingEditorForm(meetingDate, timeZone = DEFAULT_MEETING_TIMEZONE) {
+    const dateInput = document.getElementById('meeting-date-input');
+    const timeInput = document.getElementById('meeting-time-input');
+    const timezoneInput = document.getElementById('meeting-timezone-input');
+
+    if (timezoneInput) {
+        const allowed = Array.from(timezoneInput.options || []).some(option => option.value === timeZone);
+        timezoneInput.value = allowed ? timeZone : DEFAULT_MEETING_TIMEZONE;
+    }
+
+    if (meetingDate && !isNaN(meetingDate?.getTime?.())) {
+        const formatted = formatDateTimeForInputs(meetingDate, timeZone);
+        if (dateInput) dateInput.value = formatted.dateString;
+        if (timeInput) timeInput.value = formatted.timeString;
+    } else {
+        if (dateInput) dateInput.value = '';
+        if (timeInput) timeInput.value = '';
+    }
+}
+
+function formatDateTimeForInputs(date, timeZone) {
+    try {
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone,
+            hour12: false,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const parts = formatter.formatToParts(date).reduce((acc, part) => {
+            if (part.type !== 'literal') {
+                acc[part.type] = part.value;
+            }
+            return acc;
+        }, {});
+
+        return {
+            dateString: `${parts.year}-${parts.month}-${parts.day}`,
+            timeString: `${parts.hour}:${parts.minute}`
+        };
+    } catch (error) {
+        console.error('[MEETING] Failed to format date for inputs:', error);
+        return { dateString: '', timeString: '' };
+    }
+}
+
+function buildDateForTimezone(dateValue, timeValue, timeZone = DEFAULT_MEETING_TIMEZONE) {
+    try {
+        const localDate = new Date(`${dateValue}T${timeValue}:00`);
+        if (isNaN(localDate.getTime())) return null;
+
+        const targetOffset = getTimeZoneOffsetMinutes(timeZone, localDate);
+        const localOffset = -localDate.getTimezoneOffset();
+        const offsetDiff = targetOffset - localOffset;
+
+        return new Date(localDate.getTime() - offsetDiff * 60000);
+    } catch (error) {
+        console.error('[MEETING] Failed to build meeting date for timezone:', error);
+        return null;
+    }
+}
+
+function getTimeZoneOffsetMinutes(timeZone, date = new Date()) {
+    try {
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone,
+            hour12: false,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+
+        const parts = formatter.formatToParts(date).reduce((acc, part) => {
+            if (part.type !== 'literal') {
+                acc[part.type] = part.value;
+            }
+            return acc;
+        }, {});
+
+        const asUTC = Date.UTC(
+            Number(parts.year),
+            Number(parts.month) - 1,
+            Number(parts.day),
+            Number(parts.hour),
+            Number(parts.minute),
+            Number(parts.second)
+        );
+
+        return (asUTC - date.getTime()) / 60000;
+    } catch (error) {
+        console.error('[MEETING] Failed to compute timezone offset:', error);
+        return -new Date().getTimezoneOffset();
+    }
 }
 
 // ==================

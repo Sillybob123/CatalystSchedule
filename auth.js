@@ -19,24 +19,80 @@ const auth = firebase.auth();
 // Login functionality
 const loginForm = document.getElementById('login-form');
 const loginError = document.getElementById('login-error');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const loginButton = document.querySelector('.login-submit');
+const passwordToggle = document.getElementById('toggle-password');
 
-loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
+// Focus email on load for quicker sign in
+setTimeout(() => emailInput && emailInput.focus(), 150);
 
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+const setLoadingState = (isLoading) => {
+    if (!loginButton) return;
+    loginButton.disabled = isLoading;
+    loginButton.classList.toggle('is-loading', isLoading);
+    loginButton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+};
 
-    auth.signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            // Signed in
-            const user = userCredential.user;
-            console.log('User logged in:', user.uid);
-            window.location.href = 'dashboard.html'; // Redirect to dashboard
-        })
-        .catch((error) => {
-            loginError.textContent = "Error: " + error.message;
-            console.error('Login error:', error);
-        });
+const showError = (message = '') => {
+    if (!loginError) return;
+    loginError.textContent = message;
+    loginError.hidden = !message;
+};
+
+showError('');
+
+if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+            showError('Please enter both your email and password.');
+            (!email ? emailInput : passwordInput).focus();
+            return;
+        }
+
+        showError('');
+        setLoadingState(true);
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                // Signed in
+                const user = userCredential.user;
+                console.log('User logged in:', user.uid);
+                window.location.href = 'dashboard.html'; // Redirect to dashboard
+            })
+            .catch((error) => {
+                showError(error.message || 'Unable to sign in right now.');
+                console.error('Login error:', error);
+            })
+            .finally(() => {
+                setLoadingState(false);
+            });
+    });
+} else {
+    console.warn('Login form not found on this page.');
+}
+
+// Toggle password visibility for better UX
+if (passwordToggle && passwordInput) {
+    passwordToggle.addEventListener('click', () => {
+        const isHidden = passwordInput.type === 'password';
+        passwordInput.type = isHidden ? 'text' : 'password';
+        passwordToggle.textContent = isHidden ? 'Hide' : 'Show';
+        passwordToggle.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+        passwordInput.focus();
+    });
+}
+
+// Clear error message when the user edits fields
+[emailInput, passwordInput].forEach((input) => {
+    if (input) {
+        input.addEventListener('input', () => showError(''));
+    }
 });
 
 // Check if a user is already logged in
