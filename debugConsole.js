@@ -9,7 +9,7 @@
     debugConsole.className = 'show'; // Start visible
     debugConsole.innerHTML = `
         <div class="debug-header">
-            <h4>Debug Console - Save Tracker</h4>
+            <h4>🐛 Debug Console - Save Tracker</h4>
             <button class="debug-clear" onclick="clearDebugLogs()">Clear</button>
         </div>
         <div id="debug-logs"></div>
@@ -17,7 +17,7 @@
     
     const debugToggle = document.createElement('button');
     debugToggle.className = 'debug-toggle';
-    debugToggle.textContent = 'Debug';
+    debugToggle.textContent = '🐛 Debug';
     debugToggle.onclick = () => {
         debugConsole.classList.toggle('show');
     };
@@ -80,8 +80,8 @@
     console.error = function(...args) {
         originalError.apply(console, args);
         const message = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
-        debugLog('Error: ' + message, 'error');
+        debugLog('❌ ' + message, 'error');
     };
     
-    debugLog('Debug console initialized', 'success');
+    debugLog('🚀 Debug console initialized', 'success');
 })();

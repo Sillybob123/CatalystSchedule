@@ -25,6 +25,7 @@ try {
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+const ZOOM_MEETING_URL = 'https://gwu-edu.zoom.us/j/97392237308';
 
 // ---- App State ----
 let currentUser = null, currentUserName = null, currentUserRole = null;
@@ -76,6 +77,7 @@ auth.onAuthStateChanged(async (user) => {
         // Setup UI and listeners
         setupUI();
         setupListeners();
+        initializeZoomCTA();
         
         // Subscribe to posts
         subscribeToPosts();
@@ -133,22 +135,27 @@ function setupUI() {
 // ==================
 function setupListeners() {
     // Navigation
-    const logout = document.getElementById('logout-button');
-    if (logout) {
-        logout.addEventListener('click', () => {
-            auth.signOut().then(() => {
-                console.log("[AUTH] User signed out");
-            }).catch(error => {
-                console.error("[ERROR] Logout error:", error);
-            });
+    document.getElementById('logout-button').addEventListener('click', () => {
+        auth.signOut().then(() => {
+            console.log("[AUTH] User signed out");
+        }).catch(error => {
+            console.error("[ERROR] Logout error:", error);
         });
-    }
+    });
     
-    // Header button / FAB triggers
-    const headerBtn = document.getElementById('new-post-btn');
-    if (headerBtn) headerBtn.addEventListener('click', openPostModal);
-    const fabBtn = document.getElementById('fab-new-post');
-    if (fabBtn) fabBtn.addEventListener('click', openPostModal);
+    // FAB and modal triggers
+    const postTriggers = [
+        document.getElementById('fab-new-post'),
+        document.getElementById('header-new-post')
+    ];
+
+    postTriggers.forEach(trigger => {
+        if (!trigger) return;
+        trigger.addEventListener('click', event => {
+            event.preventDefault();
+            openPostModal();
+        });
+    });
     
     // Form submission
     document.getElementById('post-form').addEventListener('submit', handlePostFormSubmit);
@@ -217,15 +224,15 @@ function setupFormEnhancements() {
                 
                 // Update preview based on platform
                 const platformInfo = {
-                    instagram: { icon: '', title: 'Instagram Preview' },
-                    linkedin: { icon: '', title: 'LinkedIn Preview' },
-                    twitter: { icon: '', title: 'Twitter Preview' },
-                    facebook: { icon: '', title: 'Facebook Preview' }
+                    instagram: { icon: '📸', title: 'Instagram Preview' },
+                    linkedin: { icon: '💼', title: 'LinkedIn Preview' },
+                    twitter: { icon: '🐦', title: 'Twitter Preview' },
+                    facebook: { icon: '📘', title: 'Facebook Preview' }
                 };
                 
                 const info = platformInfo[platform];
                 if (info) {
-                    previewIcon.textContent = '';
+                    previewIcon.textContent = info.icon;
                     previewTitle.textContent = info.title;
                 }
                 
@@ -252,6 +259,50 @@ function setupFormEnhancements() {
             previewContent.textContent = 'Your content will appear here...';
         }
     }
+}
+
+function initializeZoomCTA() {
+    const zoomElements = Array.from(document.querySelectorAll('[data-zoom-link]'));
+    if (!zoomElements.length) return;
+
+    zoomElements.forEach(el => {
+        if (el.tagName.toLowerCase() === 'a') {
+            el.setAttribute('href', ZOOM_MEETING_URL);
+            el.setAttribute('target', '_blank');
+            el.setAttribute('rel', 'noopener noreferrer');
+        } else {
+            el.addEventListener('click', event => {
+                event.preventDefault();
+                window.open(ZOOM_MEETING_URL, '_blank', 'noopener,noreferrer');
+            });
+        }
+    });
+
+    const updateZoomState = () => {
+        const live = isWithinZoomWindow();
+        zoomElements.forEach(el => {
+            el.classList.toggle('zoom-live', live);
+            el.setAttribute('aria-label', live ? 'Join Zoom (live now)' : 'Join Zoom (Mondays 6:30-8:30pm ET)');
+            el.title = live ? 'Live now: The Catalyst Meeting' : 'Join Zoom on Mondays, 6:30-8:30pm ET';
+        });
+    };
+
+    updateZoomState();
+    // Update every 30 seconds to keep in sync with the meeting window
+    setInterval(updateZoomState, 30000);
+}
+
+function isWithinZoomWindow() {
+    const now = new Date();
+    const isMonday = now.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short' }) === 'Mon';
+    if (!isMonday) return false;
+    
+    const [hourStr, minuteStr] = now
+        .toLocaleString('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit' })
+        .split(':');
+    const minutes = parseInt(hourStr, 10) * 60 + parseInt(minuteStr, 10);
+    
+    return minutes >= (18 * 60 + 30) && minutes < (20 * 60 + 30);
 }
 
 // ==================
@@ -307,16 +358,14 @@ function renderKanbanBoard(posts) {
     board.innerHTML = '';
     
     const columns = [
-        { id: 'proposed', title: 'Proposed', sub: 'Submitted for review' },
-        { id: 'approved', title: 'Approved', sub: 'Ready for assignment' },
-        { id: 'assigned', title: 'Assigned', sub: 'Draft scheduled / in progress' },
-        { id: 'posted', title: 'Posted', sub: 'Published' }
+        { id: 'proposed', title: 'Proposed', icon: '💡' },
+        { id: 'approved', title: 'Approved', icon: '✅' },
+        { id: 'assigned', title: 'Assigned', icon: '👤' },
+        { id: 'posted', title: 'Posted', icon: '🚀' }
     ];
     
     columns.forEach(column => {
-        const columnPosts = posts
-            .filter(post => post.status === column.id)
-            .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+        const columnPosts = posts.filter(post => post.status === column.id);
         console.log(`[COLUMN] "${column.title}" has ${columnPosts.length} posts`);
         
         const columnEl = document.createElement('div');
@@ -326,11 +375,11 @@ function renderKanbanBoard(posts) {
             <div class="column-header">
                 <div class="column-title">
                     <div class="column-title-main">
+                        <span class="column-icon">${column.icon}</span>
                         <span class="column-title-text">${column.title}</span>
                     </div>
                     <span class="task-count">${columnPosts.length}</span>
                 </div>
-                ${column.sub ? `<div class=\"column-subtitle\">${column.sub}</div>` : ''}
             </div>
             <div class="column-content">
                 <div class="kanban-cards"></div>
@@ -344,6 +393,7 @@ function renderKanbanBoard(posts) {
             const emptyState = document.createElement('div');
             emptyState.className = 'empty-column';
             emptyState.innerHTML = `
+                <div class="empty-column-icon">${column.icon}</div>
                 <div class="empty-column-text">No ${column.title.toLowerCase()} posts</div>
                 <div class="empty-column-subtext">Posts will appear here when they reach this stage</div>
             `;
@@ -362,84 +412,52 @@ function createPostCard(post) {
     const card = document.createElement('div');
     card.className = `kanban-card platform-${post.platform}`;
     card.dataset.id = post.id;
-
+    
     // Check if overdue
     const isOverdue = new Date(post.deadline) < new Date() && post.status !== 'posted';
     const isDueSoon = !isOverdue && new Date(post.deadline) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-
-    if (isOverdue) {
-        card.classList.add('overdue');
-    } else if (isDueSoon) {
-        card.classList.add('due-soon');
-    }
-
+    
+    if (isOverdue) card.classList.add('overdue');
+    if (isDueSoon) card.classList.add('due-soon');
+    
     // Format deadline
     const deadline = new Date(post.deadline);
     const deadlineText = deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-    // Platform info (no emojis)
+    
+    // Platform info
     const platformInfo = {
-        instagram: { name: 'Instagram' },
-        linkedin: { name: 'LinkedIn' },
-        twitter: { name: 'Twitter' },
-        facebook: { name: 'Facebook' }
+        instagram: { icon: '📸', name: 'Instagram' },
+        linkedin: { icon: '💼', name: 'LinkedIn' },
+        twitter: { icon: '🐦', name: 'Twitter' },
+        facebook: { icon: '📘', name: 'Facebook' }
     };
-
-    const platform = platformInfo[post.platform] || { name: (post.platform || 'Unknown') };
-
-    // Get author name
-    const author = allUsers.find(u => u.id === post.authorId);
-    const fallbackAuthor = author ? author.name : 'Unknown';
-    const authorName = post.proposerName || fallbackAuthor;
-
-    // Get assignee name if assigned
-    let assignmentHTML = '';
-    let assigneeName = post.assigneeName || '';
-    if (!assigneeName && post.assignedTo) {
-        const assignee = allUsers.find(u => u.id === post.assignedTo);
-        assigneeName = assignee ? assignee.name : '';
-    }
-    if (assigneeName) {
-        assignmentHTML = `<div class="card-assignment">Assigned to ${escapeHtml(assigneeName)}</div>`;
-    }
-
-    // No content preview on cards (keep containers clean)
-
-    // Deadline styling
-    let deadlineClass = 'card-deadline';
-    if (isOverdue) {
-        deadlineClass += ' overdue';
-    } else if (isDueSoon) {
-        deadlineClass += ' due-today';
-    }
-
-    const statusDisplayMap = {
-        proposed: 'Pending',
-        approved: 'Approved',
-        assigned: 'Scheduled',
-        posted: 'Published',
-        rejected: 'Rejected'
-    };
-    const statusLabel = statusDisplayMap[post.status] || ((post.status || '').charAt(0).toUpperCase() + (post.status || '').slice(1));
-
+    
+    const platform = platformInfo[post.platform] || { icon: '📱', name: post.platform };
+    
     card.innerHTML = `
         <h4 class="card-title">${escapeHtml(post.title)}</h4>
-
         <div class="card-meta">
-            <span class="card-type">${escapeHtml(platform.name)}</span>
-            <span class="card-status">${escapeHtml(statusLabel)}</span>
+            <div class="platform-badge ${post.platform}">
+                <span>${platform.icon}</span>
+                <span>${platform.name}</span>
+            </div>
+            <div class="status-badge ${post.status}">${post.status}</div>
         </div>
+        ${post.content ? `<div class="card-content-preview">${escapeHtml(post.content.substring(0, 100))}${post.content.length > 100 ? '...' : ''}</div>` : ''}
         <div class="card-footer">
             <div class="card-author">
-                <div class="user-avatar" style="background-color: ${stringToColor(authorName)}">${authorName.charAt(0).toUpperCase()}</div>
-                <span>${escapeHtml(authorName)}</span>
+                <div class="user-avatar" style="background-color: ${stringToColor(post.proposerName)}">
+                    ${post.proposerName.charAt(0).toUpperCase()}
+                </div>
+                <span>${escapeHtml(post.proposerName)}</span>
             </div>
-            <span class="${deadlineClass}">${deadlineText}</span>
+            <div class="card-deadline ${isOverdue ? 'overdue' : isDueSoon ? 'due-today' : ''}">
+                ${deadlineText}
+            </div>
         </div>
-
-        ${assignmentHTML}
+        ${post.assigneeName ? `<div class="card-assignment">Assigned to ${escapeHtml(post.assigneeName)}</div>` : ''}
     `;
-
+    
     card.addEventListener('click', () => openDetailsModal(post.id));
     return card;
 }
@@ -500,14 +518,14 @@ function refreshDetailsModal(post) {
     
     const platformBadge = document.getElementById('details-platform');
     const platformInfo = {
-        instagram: { name: 'Instagram' },
-        linkedin: { name: 'LinkedIn' },
-        twitter: { name: 'Twitter' },
-        facebook: { name: 'Facebook' }
+        instagram: { icon: '📸', name: 'Instagram' },
+        linkedin: { icon: '💼', name: 'LinkedIn' },
+        twitter: { icon: '🐦', name: 'Twitter' },
+        facebook: { icon: '📘', name: 'Facebook' }
     };
-    const platform = platformInfo[post.platform] || { name: post.platform };
+    const platform = platformInfo[post.platform] || { icon: '📱', name: post.platform };
     platformBadge.className = `platform-badge ${post.platform}`;
-    platformBadge.textContent = platform.name;
+    platformBadge.innerHTML = `<span>${platform.icon}</span><span>${platform.name}</span>`;
     
     // Timeline
     const createdDate = post.createdAt ? new Date(post.createdAt.seconds * 1000) : new Date();

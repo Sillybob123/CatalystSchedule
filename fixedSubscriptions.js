@@ -26,7 +26,7 @@ function setupBulletproofSubscriptions() {
         console.log('[BULLETPROOF PROJECTS] Changes:', snapshot.docChanges().map(c => `${c.type}: ${c.doc.id}`));
         
         if (typeof debugLog === 'function') {
-            debugLog(`Projects update: ${snapshot.docs.length} documents`, 'info');
+            debugLog(`📦 Projects update: ${snapshot.docs.length} documents`, 'info');
         }
         
         try {
@@ -43,7 +43,7 @@ function setupBulletproofSubscriptions() {
             console.log('[BULLETPROOF] Current view:', currentView);
             
             if (typeof debugLog === 'function') {
-                debugLog(`${allProjects.length} projects loaded successfully`, 'success');
+                debugLog(`✅ ${allProjects.length} projects loaded successfully`, 'success');
             }
             
             // Force re-render
@@ -86,13 +86,13 @@ function setupBulletproofSubscriptions() {
         } catch (error) {
             console.error('[BULLETPROOF ERROR] Projects processing failed:', error);
             if (typeof debugLog === 'function') {
-            debugLog(`Error processing projects: ${error.message}`, 'error');
+                debugLog(`❌ Error processing projects: ${error.message}`, 'error');
             }
         }
     }, error => {
         console.error('[BULLETPROOF ERROR] Projects subscription failed:', error);
         if (typeof debugLog === 'function') {
-            debugLog(`Projects subscription error: ${error.message}`, 'error');
+            debugLog(`❌ Projects subscription error: ${error.message}`, 'error');
         }
     });
     
@@ -103,7 +103,7 @@ function setupBulletproofSubscriptions() {
         console.log('[BULLETPROOF TASKS] Changes:', snapshot.docChanges().map(c => `${c.type}: ${c.doc.id}`));
         
         if (typeof debugLog === 'function') {
-            debugLog(`Tasks update: ${snapshot.docs.length} documents`, 'info');
+            debugLog(`📝 Tasks update: ${snapshot.docs.length} documents`, 'info');
         }
         
         try {
@@ -120,7 +120,7 @@ function setupBulletproofSubscriptions() {
             console.log('[BULLETPROOF] Current view:', currentView);
             
             if (typeof debugLog === 'function') {
-                debugLog(`${allTasks.length} tasks loaded successfully`, 'success');
+                debugLog(`✅ ${allTasks.length} tasks loaded successfully`, 'success');
             }
             
             // Force re-render
@@ -149,13 +149,13 @@ function setupBulletproofSubscriptions() {
         } catch (error) {
             console.error('[BULLETPROOF ERROR] Tasks processing failed:', error);
             if (typeof debugLog === 'function') {
-                debugLog(`Error processing tasks: ${error.message}`, 'error');
+                debugLog(`❌ Error processing tasks: ${error.message}`, 'error');
             }
         }
     }, error => {
         console.error('[BULLETPROOF ERROR] Tasks subscription failed:', error);
         if (typeof debugLog === 'function') {
-            debugLog(`Tasks subscription error: ${error.message}`, 'error');
+            debugLog(`❌ Tasks subscription error: ${error.message}`, 'error');
         }
     });
 }

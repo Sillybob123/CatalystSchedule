@@ -96,44 +96,46 @@ function getProjectState(project, view, currentUser) {
     // MAIN WORKFLOW VIEWS (interviews & opeds)
     // ========================================
 
-    // 1. PITCH STAGE
+    // 1. TOPIC PROPOSAL STAGE
     if (project.proposalStatus !== 'approved') {
-        console.log(`[STATE] ${project.title} -> PITCH (${project.proposalStatus})`);
+        console.log(`[STATE] ${project.title} -> PROPOSAL (${project.proposalStatus})`);
         let color = 'default';
         if (project.proposalStatus === 'rejected') color = 'red';
-        return {
-            column: "Pitch",
-            color: color,
-            statusText: `Proposal ${project.proposalStatus}`
+        return { 
+            column: "Topic Proposal", 
+            color: color, 
+            statusText: `Proposal ${project.proposalStatus}` 
         };
     }
 
-    // 2. OUTREACH & PREP / INTERVIEW (Interview projects only)
+    // 2. INTERVIEW STAGE (Interview projects only)
     if (project.type === 'Interview' && !timeline["Interview Complete"]) {
-        console.log(`[STATE] ${project.title} -> INTERVIEW FLOW`);
+        console.log(`[STATE] ${project.title} -> INTERVIEW STAGE`);
         
+        // Interview scheduled but not complete
         if (timeline["Interview Scheduled"]) {
-            return {
-                column: "Interview",
-                color: 'yellow',
-                statusText: "Interview Scheduled"
+            return { 
+                column: "Interview Stage", 
+                color: 'yellow', 
+                statusText: "Interview Scheduled" 
             };
         }
         
-        return {
-            column: "Outreach & Prep",
-            color: 'default',
-            statusText: "Contact Interviews + Prep"
+        // Interview not yet scheduled
+        return { 
+            column: "Interview Stage", 
+            color: 'default', 
+            statusText: "Schedule Interview" 
         };
     }
 
-    // 3. DRAFTING
+    // 3. WRITING STAGE
     if (!timeline["Article Writing Complete"]) {
-        console.log(`[STATE] ${project.title} -> DRAFTING`);
-        return {
-            column: "Drafting",
-            color: 'yellow',
-            statusText: "Writing in Progress"
+        console.log(`[STATE] ${project.title} -> WRITING STAGE`);
+        return { 
+            column: "Writing Stage", 
+            color: 'yellow', 
+            statusText: "Writing in Progress" 
         };
     }
 
@@ -144,37 +146,41 @@ function getProjectState(project, view, currentUser) {
         // Need editor assignment
         if (!project.editorId) {
             console.log(`[STATE] ${project.title} -> NEEDS EDITOR`);
-            return {
-                column: "Drafting",
-                color: 'yellow',
-                statusText: "Awaiting Editor Assignment"
+            return { 
+                column: "Writing Stage", 
+                color: 'yellow', 
+                statusText: "Awaiting Editor Assignment" 
             };
         }
         
         // Editor assigned, review not complete
         if (!timeline["Review Complete"]) {
-            console.log(`[STATE] ${project.title} -> EDITOR REVIEW`);
-            return {
-                column: "Editor Review",
-                color: 'yellow',
-                statusText: "Under Review"
+            console.log(`[STATE] ${project.title} -> IN REVIEW`);
+            return { 
+                column: "In Review", 
+                color: 'yellow', 
+                statusText: "Under Review" 
             };
         }
         
         // Review complete, author needs to review suggestions
         if (timeline["Review Complete"] && !timeline["Suggestions Reviewed"]) {
-            console.log(`[STATE] ${project.title} -> COPY EDIT`);
-            return {
-                column: "Copy Edit",
-                color: 'blue',
-                statusText: "Author Reviewing Feedback"
+            console.log(`[STATE] ${project.title} -> REVIEWING SUGGESTIONS`);
+            return { 
+                column: "Reviewing Suggestions", 
+                color: 'blue', 
+                statusText: "Author Reviewing Feedback" 
             };
         }
     }
 
     // FALLBACK (should rarely hit this)
     console.log(`[STATE] ${project.title} -> FALLBACK`);
-    return { column: "Pitch", color: 'default', statusText: "Pending" };
+    return { 
+        column: "Topic Proposal", 
+        color: 'default', 
+        statusText: "Pending" 
+    };
 }
 
 /**
@@ -256,8 +262,8 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, db, curren
  */
 function getColumnsForView(view) {
     const KANBAN_COLUMNS = {
-        'interviews': ["Pitch", "Outreach & Prep", "Interview", "Drafting", "Editor Review", "Copy Edit", "Completed"],
-        'opeds': ["Pitch", "Drafting", "Editor Review", "Copy Edit", "Completed"],
+        'interviews': ["Topic Proposal", "Interview Stage", "Writing Stage", "In Review", "Reviewing Suggestions", "Completed"],
+        'opeds': ["Topic Proposal", "Writing Stage", "In Review", "Reviewing Suggestions", "Completed"],
         'my-assignments': ["To Do", "In Progress", "In Review", "Done"]
     };
     

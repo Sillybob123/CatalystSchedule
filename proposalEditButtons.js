@@ -57,7 +57,7 @@ function attachEditListeners() {
         }
     };
     
-    console.log('[EDIT BUTTONS] All listeners attached');
+    console.log('[EDIT BUTTONS] ✅ All listeners attached!');
 }
 
 // Try immediately

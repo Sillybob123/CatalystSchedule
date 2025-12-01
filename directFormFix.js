@@ -3,7 +3,7 @@
 // Prevents all page reloads during form submission
 // ===============================
 
-console.log('[DIRECT FIX] Loading direct form fix...');
+console.log('[DIRECT FIX] 🚀 Loading direct form fix...');
 
 // Prevent ALL form submissions from causing page reload
 document.addEventListener('submit', function(e) {
@@ -28,13 +28,13 @@ document.addEventListener('click', function(e) {
         
         // Call the submission handler directly
         if (typeof window.handleProjectFormSubmit === 'function') {
-            console.log('[DIRECT FIX] Calling handleProjectFormSubmit');
+            console.log('[DIRECT FIX] ✅ Calling handleProjectFormSubmit');
             window.handleProjectFormSubmit(e);
         } else {
-            console.error('[DIRECT FIX] handleProjectFormSubmit not found!');
+            console.error('[DIRECT FIX] ❌ handleProjectFormSubmit not found!');
         }
         return false;
     }
 }, true); // Use capture phase
 
-console.log('[DIRECT FIX] Direct form fix loaded and active');
+console.log('[DIRECT FIX] ✅ Direct form fix loaded and active');
