@@ -130,6 +130,9 @@ function setupBulletproofSubscriptions() {
                 if (typeof debugLog === 'function') {
                     debugLog('🎨 Tasks board updated with new data', 'info');
                 }
+            } else {
+                // Keep availability panel and calendar in sync with task assignments
+                renderCurrentViewEnhanced();
             }
             updateNavCounts();
             

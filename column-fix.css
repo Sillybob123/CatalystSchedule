@@ -42,6 +42,90 @@
   overflow: hidden !important;
 }
 
+.column-title-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.availability-column {
+  grid-column: span 2;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  border: 1px dashed var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.availability-header {
+  border-bottom: 2px dashed var(--muted-border);
+}
+
+.availability-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--success-color);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+}
+
+.availability-subtitle {
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.availability-list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.availability-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-xs);
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.availability-person:hover {
+  background: rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.availability-avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+}
+
+.availability-name {
+  font-weight: 600;
+  color: var(--text-color);
+  line-height: 1;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.availability-empty {
+  text-align: center;
+  padding: 14px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  background: rgba(148, 163, 184, 0.12);
+  font-weight: 600;
+}
+
 /* Column header stays at top */
 .column-header {
   flex-shrink: 0 !important;
@@ -361,6 +445,12 @@
   border-radius: 12px;
   margin-right: 4px;
   margin-bottom: 4px;
+}
+
+@media (max-width: 1200px) {
+  .availability-column {
+    grid-column: span 4;
+  }
 }
 
 /* Responsive adjustments - MAINTAIN 4 COLUMNS */

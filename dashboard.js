@@ -856,6 +856,10 @@ async function fetchAllUsers() {
                 allUsers.push(fallbackUser);
             }
         }
+
+        // Refresh the board so availability shows real names once the roster loads
+        renderCurrentViewEnhanced();
+        updateNavCounts();
     } catch (error) {
         console.error("Error fetching users:", error);
         allUsers = [];
@@ -3168,6 +3172,43 @@ function resolveProjectState(project, view, user) {
     };
 }
 
+function getActiveUserIds() {
+    const busyUserIds = new Set();
+
+    allProjects.forEach(project => {
+        const state = resolveProjectState(project, currentView, currentUser);
+        const isComplete = state.column === 'Completed' || (state.statusText || '').toLowerCase().includes('completed');
+
+        if (!isComplete) {
+            if (project.authorId) busyUserIds.add(project.authorId);
+            if (project.editorId) busyUserIds.add(project.editorId);
+        }
+    });
+
+    allTasks.forEach(task => {
+        if (!task || task.status === 'completed') return;
+
+        const assigneeIds = Array.isArray(task.assigneeIds) ? [...task.assigneeIds] : [];
+
+        if (task.assigneeId && !assigneeIds.includes(task.assigneeId)) {
+            assigneeIds.push(task.assigneeId);
+        }
+
+        assigneeIds.forEach(id => {
+            if (id) busyUserIds.add(id);
+        });
+    });
+
+    return busyUserIds;
+}
+
+function getAvailableUsers() {
+    if (!Array.isArray(allUsers) || allUsers.length === 0) return [];
+
+    const busyUserIds = getActiveUserIds();
+    return allUsers.filter(user => user && user.id && !busyUserIds.has(user.id));
+}
+
 function handlePendingEditorAlerts() {
     if (currentUserRole !== 'admin' || !currentUser) {
         pendingEditorAlertedProjects.clear();
@@ -3233,6 +3274,60 @@ function ensureGlobalModalCloseHandler() {
     console.log('[SETUP] Global modal close delegation attached');
 }
 
+function createAvailabilityColumn(availableUsers) {
+    const columnEl = document.createElement('div');
+    columnEl.className = 'kanban-column availability-column';
+    columnEl.setAttribute('aria-label', 'Team members without active assignments');
+
+    columnEl.innerHTML = `
+        <div class="column-header availability-header">
+            <div class="column-title">
+                <div class="column-title-main">
+                    <span class="availability-dot"></span>
+                    <span class="column-title-text">Not Working On Anything</span>
+                </div>
+                <span class="task-count">${availableUsers.length}</span>
+            </div>
+            <p class="availability-subtitle">Ready to pick up a project</p>
+        </div>
+        <div class="column-content">
+            <div class="availability-list"></div>
+        </div>
+    `;
+
+    const listEl = columnEl.querySelector('.availability-list');
+
+    if (!availableUsers.length) {
+        const empty = document.createElement('div');
+        empty.className = 'availability-empty';
+        empty.textContent = allUsers.length === 0 ? 'Team roster loading...' : 'Everyone is assigned right now.';
+        listEl.appendChild(empty);
+        return columnEl;
+    }
+
+    const sortedAvailable = [...availableUsers].sort((a, b) => {
+        return getUserDisplayName(a).localeCompare(getUserDisplayName(b));
+    });
+
+    sortedAvailable.forEach(user => {
+        const displayName = getUserDisplayName(user);
+        const safeName = escapeHtml(displayName);
+
+        const person = document.createElement('div');
+        person.className = 'availability-person';
+        person.innerHTML = `
+            <div class="user-avatar availability-avatar" style="background: ${stringToColor(displayName)}">
+                ${displayName.charAt(0).toUpperCase()}
+            </div>
+            <div class="availability-name">${safeName}</div>
+        `;
+
+        listEl.appendChild(person);
+    });
+
+    return columnEl;
+}
+
 function renderKanbanBoard(projects) {
     const board = document.getElementById('kanban-board');
     board.innerHTML = '';
@@ -3267,6 +3362,13 @@ function renderKanbanBoard(projects) {
 
         board.appendChild(columnEl);
     });
+
+    const shouldShowAvailability = ['dashboard', 'interviews', 'opeds'].includes(currentView);
+
+    if (shouldShowAvailability) {
+        const availableUsers = getAvailableUsers();
+        board.appendChild(createAvailabilityColumn(availableUsers));
+    }
 }
 
 function filterProjects() {
