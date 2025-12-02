@@ -100,6 +100,76 @@
   box-shadow: var(--shadow-sm);
 }
 
+.availability-person.inactive-two-weeks {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.availability-person.inactive-two-weeks:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.availability-person.inactive-two-weeks .availability-name {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.availability-person.inactive-two-weeks .availability-avatar {
+  background: #dc2626 !important;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.availability-person.on-break {
+  opacity: 0.45;
+  background: rgba(148, 163, 184, 0.15);
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.availability-person.on-break .availability-name {
+  color: #475569;
+  font-weight: 600;
+}
+
+.availability-person.on-break .availability-avatar {
+  background: #94a3b8 !important;
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.availability-key {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 0 0 10px 0;
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.availability-key .key-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.availability-key .key-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.availability-key .key-dot-inactive {
+  background: #dc2626;
+}
+
+.availability-key .key-dot-break {
+  background: #94a3b8;
+}
+
+.availability-key .key-text {
+  white-space: nowrap;
+}
+
 .availability-avatar {
   width: 22px;
   height: 22px;

@@ -3209,6 +3209,97 @@ function getAvailableUsers() {
     return allUsers.filter(user => user && user.id && !busyUserIds.has(user.id));
 }
 
+const INACTIVITY_EXEMPT_NAMES = ['alex carter', 'stephanie solomon'];
+
+function isInactivityExempt(name) {
+    if (!name) return false;
+    return INACTIVITY_EXEMPT_NAMES.includes(String(name).trim().toLowerCase());
+}
+
+function parseActivityDate(value) {
+    if (!value || typeof value === 'boolean') return null;
+
+    let date = null;
+
+    if (value.seconds !== undefined) {
+        date = new Date(value.seconds * 1000);
+    } else if (typeof value.toDate === 'function') {
+        date = value.toDate();
+    } else if (value instanceof Date) {
+        date = value;
+    } else if (typeof value === 'number') {
+        date = new Date(value);
+    } else if (typeof value === 'string') {
+        const parsed = new Date(value);
+        date = isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    if (!date || isNaN(date.getTime())) {
+        return null;
+    }
+
+    return date;
+}
+
+function getUserLastActivityDate(userId) {
+    let lastActivityDate = null;
+
+    const recordDate = (value) => {
+        const date = parseActivityDate(value);
+        if (date && (!lastActivityDate || date > lastActivityDate)) {
+            lastActivityDate = date;
+        }
+    };
+
+    // Check all projects for this user's activity
+    allProjects.forEach(project => {
+        if (project.authorId === userId || project.editorId === userId) {
+            [project.createdAt, project.updatedAt, project.completedAt].forEach(recordDate);
+
+            if (project.timeline) {
+                Object.values(project.timeline).forEach(recordDate);
+            }
+
+            if (Array.isArray(project.activity)) {
+                project.activity.forEach(item => recordDate(item?.timestamp));
+            }
+        }
+    });
+
+    // Check all tasks for this user's activity
+    allTasks.forEach(task => {
+        const assigneeIds = Array.isArray(task.assigneeIds) ? task.assigneeIds : [];
+        if (task.assigneeId) assigneeIds.push(task.assigneeId);
+
+        if (assigneeIds.includes(userId)) {
+            [task.createdAt, task.updatedAt, task.completedAt].forEach(recordDate);
+
+            if (Array.isArray(task.activity)) {
+                task.activity.forEach(item => recordDate(item?.timestamp));
+            }
+        }
+    });
+
+    return lastActivityDate;
+}
+
+function isUserInactiveTwoWeeks(userId, displayName) {
+    if (isInactivityExempt(displayName)) {
+        return false;
+    }
+
+    const lastActivity = getUserLastActivityDate(userId);
+    if (!lastActivity) {
+        // If no activity found, consider them inactive
+        return true;
+    }
+
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+    return lastActivity < twoWeeksAgo;
+}
+
 function handlePendingEditorAlerts() {
     if (currentUserRole !== 'admin' || !currentUser) {
         pendingEditorAlertedProjects.clear();
@@ -3291,6 +3382,16 @@ function createAvailabilityColumn(availableUsers) {
             <p class="availability-subtitle">Ready to pick up a project</p>
         </div>
         <div class="column-content">
+            <div class="availability-key" aria-label="Status legend">
+                <div class="key-item">
+                    <span class="key-dot key-dot-inactive"></span>
+                    <span class="key-text">Turns red after 2 weeks of no activity</span>
+                </div>
+                <div class="key-item">
+                    <span class="key-dot key-dot-break"></span>
+                    <span class="key-text">On break</span>
+                </div>
+            </div>
             <div class="availability-list"></div>
         </div>
     `;
@@ -3305,16 +3406,38 @@ function createAvailabilityColumn(availableUsers) {
         return columnEl;
     }
 
-    const sortedAvailable = [...availableUsers].sort((a, b) => {
-        return getUserDisplayName(a).localeCompare(getUserDisplayName(b));
+    const regularUsers = [];
+    const exemptUsers = [];
+
+    availableUsers.forEach(user => {
+        const name = getUserDisplayName(user);
+        const targetList = isInactivityExempt(name) ? exemptUsers : regularUsers;
+        targetList.push({
+            user,
+            name,
+            normalized: name.toLowerCase()
+        });
     });
 
-    sortedAvailable.forEach(user => {
+    const sortedRegular = regularUsers
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(entry => entry.user);
+
+    const sortedExempt = INACTIVITY_EXEMPT_NAMES
+        .map(name => exemptUsers.find(entry => entry.normalized === name))
+        .filter(Boolean)
+        .map(entry => entry.user);
+
+    const orderedUsers = [...sortedRegular, ...sortedExempt];
+
+    orderedUsers.forEach(user => {
         const displayName = getUserDisplayName(user);
         const safeName = escapeHtml(displayName);
+        const isInactive = isUserInactiveTwoWeeks(user.id, displayName);
+        const onBreak = isInactivityExempt(displayName);
 
         const person = document.createElement('div');
-        person.className = 'availability-person';
+        person.className = `availability-person ${isInactive ? 'inactive-two-weeks' : ''} ${onBreak ? 'on-break' : ''}`;
         person.innerHTML = `
             <div class="user-avatar availability-avatar" style="background: ${stringToColor(displayName)}">
                 ${displayName.charAt(0).toUpperCase()}
