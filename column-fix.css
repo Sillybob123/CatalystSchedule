@@ -73,6 +73,35 @@
   font-size: 12px;
 }
 
+.add-availability-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #3b82f6;
+}
+
+.add-availability-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: scale(1.05);
+}
+
+.add-availability-btn:active {
+  transform: scale(0.95);
+}
+
+.add-availability-btn svg {
+  flex-shrink: 0;
+}
+
 .availability-list {
   display: flex;
   flex-direction: row;
@@ -98,6 +127,13 @@
   background: rgba(59, 130, 246, 0.1);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
+}
+
+.availability-person[style*="cursor: pointer"]:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .availability-person.inactive-two-weeks {

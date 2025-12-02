@@ -296,6 +296,14 @@ let calendarDate = new Date();
 const pendingEditorAlertedProjects = new Set();
 let taskFormSubmitListenerAttached = false;
 let modalCloseDelegationAttached = false;
+let availabilityOverrides = {}; // Stores admin overrides for user availability
+let availabilityOverridesUnsubscribe = null;
+let availabilityOverridesInitPromise = null;
+let availabilityOverridesLoaded = false;
+let lastAvailabilityOverrideWrite = 0;
+let availabilityOverlayEscHandler = null;
+let availabilityPreviousOverflow = '';
+const availabilityOverridesRef = db.collection('settings').doc('availabilityOverrides');
 
 // ==================
 //  Modal Management
@@ -785,7 +793,8 @@ auth.onAuthStateChanged(async (user) => {
         // Parallelize data fetching and setup (non-blocking)
         Promise.all([
             fetchEditors(),
-            fetchAllUsers()
+            fetchAllUsers(),
+            loadAvailabilityOverrides()
         ]).then(() => {
             console.log('[INIT] User data loaded successfully');
         }).catch(error => {
@@ -880,7 +889,7 @@ function setupUI() {
 
 function isOwnerUser() {
     if (!currentUser || !currentUser.email) return false;
-    return OWNER_EMAILS.includes(currentUser.email.toLowerCase());
+    return OWNER_EMAILS.includes(currentUser.email.trim().toLowerCase());
 }
 
 function toggleOwnerOnlySections() {
@@ -3206,7 +3215,24 @@ function getAvailableUsers() {
     if (!Array.isArray(allUsers) || allUsers.length === 0) return [];
 
     const busyUserIds = getActiveUserIds();
-    return allUsers.filter(user => user && user.id && !busyUserIds.has(user.id));
+    return allUsers.filter(user => {
+        if (!user || !user.id) return false;
+
+        const override = availabilityOverrides[user.id];
+
+        // Check if user is hidden by admin override
+        if (override?.status === 'hidden') {
+            return false;
+        }
+
+        // Check if admin forced them to show (even if busy)
+        if (override?.status === 'show') {
+            return true;
+        }
+
+        // Otherwise, show only if not busy
+        return !busyUserIds.has(user.id);
+    });
 }
 
 const INACTIVITY_EXEMPT_NAMES = ['alex carter', 'stephanie solomon'];
@@ -3284,6 +3310,17 @@ function getUserLastActivityDate(userId) {
 }
 
 function isUserInactiveTwoWeeks(userId, displayName) {
+    // Check admin overrides first
+    if (availabilityOverrides[userId]) {
+        const override = availabilityOverrides[userId];
+        if (override.status === 'active') {
+            return false; // Admin marked as active/not inactive
+        }
+        if (override.status === 'inactive') {
+            return true; // Admin marked as inactive
+        }
+    }
+
     if (isInactivityExempt(displayName)) {
         return false;
     }
@@ -3298,6 +3335,374 @@ function isUserInactiveTwoWeeks(userId, displayName) {
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
     return lastActivity < twoWeeksAgo;
+}
+
+function isOwnerAdmin() {
+    if (!currentUser || !currentUser.email) return false;
+    return OWNER_EMAILS.includes(currentUser.email.trim().toLowerCase());
+}
+
+function loadAvailabilityOverrides() {
+    if (availabilityOverridesInitPromise) {
+        return availabilityOverridesInitPromise;
+    }
+
+    availabilityOverridesInitPromise = new Promise((resolve) => {
+        availabilityOverridesUnsubscribe = availabilityOverridesRef.onSnapshot((doc) => {
+            // Ignore local echo while a write is still pending so we don't flicker state
+            if (doc.metadata.hasPendingWrites) {
+                return;
+            }
+
+            const data = doc.exists ? doc.data() : {};
+            const overridesFromDb = data.overrides || {};
+            const updatedAt = parseActivityDate(data.lastUpdated);
+            const updatedMs = updatedAt ? updatedAt.getTime() : 0;
+
+            // Prevent older snapshots (e.g., cache) from overwriting a fresh admin edit
+            const CLOCK_DRIFT_BUFFER_MS = 2000;
+            if (
+                updatedMs &&
+                lastAvailabilityOverrideWrite &&
+                (updatedMs + CLOCK_DRIFT_BUFFER_MS) <= lastAvailabilityOverrideWrite
+            ) {
+                console.log('[AVAILABILITY] Ignoring stale overrides snapshot');
+                return;
+            }
+
+            availabilityOverrides = overridesFromDb;
+            availabilityOverridesLoaded = true;
+            console.log('[AVAILABILITY] Synced overrides:', availabilityOverrides);
+
+            if (['interviews', 'opeds', 'dashboard'].includes(currentView)) {
+                renderKanbanBoard(filterProjects());
+            }
+
+            resolve();
+        }, (error) => {
+            console.error('[AVAILABILITY] Error loading overrides:', error);
+            availabilityOverrides = {};
+            availabilityOverridesLoaded = true;
+            resolve();
+        });
+    });
+
+    return availabilityOverridesInitPromise;
+}
+
+async function saveAvailabilityOverride(userId, status) {
+    if (!isOwnerAdmin()) {
+        console.error('[AVAILABILITY] Only owner can save overrides');
+        return;
+    }
+
+    try {
+        lastAvailabilityOverrideWrite = Date.now();
+        availabilityOverridesLoaded = true;
+
+        if (status === 'auto') {
+            // Remove override to use automatic detection
+            delete availabilityOverrides[userId];
+        } else {
+            availabilityOverrides[userId] = {
+                status: status, // 'active', 'inactive', 'show', or 'hidden'
+                updatedAt: new Date(),
+                updatedBy: currentUser.email
+            };
+        }
+
+        await availabilityOverridesRef.set({
+            overrides: availabilityOverrides,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log('[AVAILABILITY] Saved override for user:', userId, status);
+        showNotification('Availability status updated', 'success');
+
+        // Re-render the board to reflect changes
+        if (currentView === 'interviews' || currentView === 'opeds' || currentView === 'dashboard') {
+            renderKanbanBoard(filterProjects());
+        }
+    } catch (error) {
+        console.error('[AVAILABILITY] Error saving override:', error);
+        showNotification('Failed to update availability status', 'error');
+    }
+}
+
+function destroyAvailabilityOverlay() {
+    if (availabilityOverlayEscHandler) {
+        document.removeEventListener('keydown', availabilityOverlayEscHandler);
+        availabilityOverlayEscHandler = null;
+    }
+
+    document.body.style.overflow = availabilityPreviousOverflow;
+    availabilityPreviousOverflow = '';
+
+    const existing = document.getElementById('availability-overlay');
+    if (existing && existing.parentNode) {
+        existing.parentNode.removeChild(existing);
+    }
+}
+
+function createAvailabilityShell({ title, subtitle, accent }) {
+    destroyAvailabilityOverlay();
+
+    availabilityPreviousOverflow = document.body.style.overflow || '';
+    document.body.style.overflow = 'hidden';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'availability-overlay';
+    overlay.className = 'availability-overlay';
+
+    overlay.innerHTML = `
+        <div class="availability-card" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}" tabindex="-1">
+            <div class="availability-card__header">
+                <div>
+                    <div class="availability-pill">${accent || 'Availability'}</div>
+                    <h3 class="availability-title">${escapeHtml(title)}</h3>
+                    ${subtitle ? `<p class="availability-subtitle">${escapeHtml(subtitle)}</p>` : ''}
+                </div>
+                <button class="availability-close" type="button" aria-label="Close availability dialog">×</button>
+            </div>
+            <div class="availability-card__body"></div>
+            <div class="availability-card__footer">
+                <button type="button" class="availability-secondary" data-close>Close (Esc)</button>
+            </div>
+        </div>
+    `;
+
+    const card = overlay.querySelector('.availability-card');
+    const body = overlay.querySelector('.availability-card__body');
+    const footer = overlay.querySelector('.availability-card__footer');
+    const closeButtons = overlay.querySelectorAll('.availability-close, [data-close]');
+
+    const close = () => {
+        overlay.classList.add('closing');
+        setTimeout(() => {
+            destroyAvailabilityOverlay();
+        }, 150);
+    };
+
+    availabilityOverlayEscHandler = (e) => {
+        if (e.key === 'Escape') {
+            close();
+        }
+    };
+
+    document.addEventListener('keydown', availabilityOverlayEscHandler);
+
+    closeButtons.forEach(btn => btn.addEventListener('click', close));
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            close();
+        }
+    });
+
+    document.body.appendChild(overlay);
+    if (card && typeof card.focus === 'function') {
+        card.focus();
+    }
+
+    return { overlay, body, footer, close };
+}
+
+function showAvailabilityManagementModal(userId, displayName) {
+    if (!isOwnerAdmin()) {
+        return;
+    }
+
+    const currentOverride = availabilityOverrides[userId]?.status || 'auto';
+    const safeName = escapeHtml(displayName);
+
+    const options = [
+        {
+            value: 'auto',
+            title: 'Automatic',
+            description: 'Use the 2-week rule and turn red when inactive.',
+            badge: 'Default',
+            icon: '🔄'
+        },
+        {
+            value: 'active',
+            title: 'Mark as Active',
+            description: 'Keep them normal (not red) regardless of activity.',
+            badge: 'Override',
+            icon: '✅'
+        },
+        {
+            value: 'inactive',
+            title: 'Mark as Inactive',
+            description: 'Keep them highlighted red even if they do work.',
+            badge: 'Alert',
+            icon: '🔴'
+        },
+        {
+            value: 'show',
+            title: 'Force Show in List',
+            description: 'Always show in “Not Working” even when busy.',
+            badge: 'Pin',
+            icon: '📌'
+        },
+        {
+            value: 'hidden',
+            title: 'Hide from List',
+            description: 'Remove from the “Not Working” section entirely.',
+            badge: 'Hide',
+            icon: '👁️'
+        }
+    ];
+
+    const { body, footer, close } = createAvailabilityShell({
+        title: `Manage ${safeName}`,
+        subtitle: 'Quickly change how this person appears in the “Not Working” panel.',
+        accent: 'Admin Control'
+    });
+
+    const helperText = document.createElement('div');
+    helperText.className = 'availability-helper';
+    helperText.innerHTML = `
+        <div class="availability-helper__dot"></div>
+        <div>
+            <div class="availability-helper__title">Tap once to save</div>
+            <div class="availability-helper__desc">Click an option below to apply instantly. Click outside or press Esc to close.</div>
+        </div>
+    `;
+
+    const list = document.createElement('div');
+    list.className = 'availability-options';
+
+    let saving = false;
+
+    options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `availability-option ${opt.value === currentOverride ? 'active' : ''}`;
+        btn.dataset.value = opt.value;
+        btn.innerHTML = `
+            <div class="availability-option__icon">${opt.icon}</div>
+            <div class="availability-option__text">
+                <div class="availability-option__title">${opt.title}</div>
+                <div class="availability-option__desc">${opt.description}</div>
+            </div>
+            <div class="availability-option__badge">${opt.badge}</div>
+        `;
+
+        btn.addEventListener('click', async () => {
+            if (saving) return;
+            saving = true;
+
+            list.querySelectorAll('.availability-option').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active', 'loading');
+
+            try {
+                await saveAvailabilityOverride(userId, opt.value);
+                close();
+            } catch (err) {
+                console.error('[AVAILABILITY] Failed to save selection:', err);
+                btn.classList.remove('loading');
+                saving = false;
+            }
+        });
+
+        list.appendChild(btn);
+    });
+
+    body.appendChild(helperText);
+    body.appendChild(list);
+
+    const currentStatus = document.createElement('div');
+    currentStatus.className = 'availability-current';
+    currentStatus.textContent = `Current: ${currentOverride === 'auto' ? 'Automatic (2-week rule)' : options.find(o => o.value === currentOverride)?.title || 'Automatic'}`;
+    footer.insertBefore(currentStatus, footer.firstChild);
+}
+
+function showAddToAvailabilityModal() {
+    if (!isOwnerAdmin()) {
+        return;
+    }
+
+    const availableUserIds = new Set(getAvailableUsers().map(u => u.id));
+    const busyOrHiddenUsers = allUsers
+        .filter(user => user && user.id && !availableUserIds.has(user.id))
+        .sort((a, b) => getUserDisplayName(a).localeCompare(getUserDisplayName(b)));
+
+    if (busyOrHiddenUsers.length === 0) {
+        showNotification('All team members are already in the availability section', 'info');
+        return;
+    }
+
+    const { body, close } = createAvailabilityShell({
+        title: 'Add someone to “Not Working”',
+        subtitle: 'Force a person into the list even if they have active work.',
+        accent: 'Pin to list'
+    });
+
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.placeholder = 'Search people by name or email';
+    search.className = 'availability-search';
+    search.setAttribute('aria-label', 'Search people to add');
+
+    const list = document.createElement('div');
+    list.className = 'availability-add-list';
+
+    const renderList = (query = '') => {
+        list.innerHTML = '';
+        const normalized = query.trim().toLowerCase();
+
+        const filtered = busyOrHiddenUsers.filter(user => {
+            if (!normalized) return true;
+            const name = getUserDisplayName(user).toLowerCase();
+            const email = (user.email || '').toLowerCase();
+            return name.includes(normalized) || email.includes(normalized);
+        });
+
+        if (!filtered.length) {
+            const empty = document.createElement('div');
+            empty.className = 'availability-empty-state';
+            empty.textContent = 'No matches found.';
+            list.appendChild(empty);
+            return;
+        }
+
+        filtered.forEach(user => {
+            const displayName = getUserDisplayName(user);
+            const safeName = escapeHtml(displayName);
+            const isHidden = availabilityOverrides[user.id]?.status === 'hidden';
+            const statusText = isHidden ? 'Hidden' : 'Working on projects';
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'availability-add-item';
+            btn.dataset.userId = user.id;
+            btn.innerHTML = `
+                <div class="availability-add-item__avatar" style="background:${stringToColor(displayName)}">${displayName.charAt(0).toUpperCase()}</div>
+                <div class="availability-add-item__text">
+                    <div class="availability-add-item__name">${safeName}</div>
+                    <div class="availability-add-item__meta">${statusText}</div>
+                </div>
+                <span class="availability-add-item__action">Add</span>
+            `;
+
+            btn.addEventListener('click', async () => {
+                btn.classList.add('loading');
+                await saveAvailabilityOverride(user.id, 'show');
+                showNotification(`Added ${safeName} to availability section`, 'success');
+                close();
+            });
+
+            list.appendChild(btn);
+        });
+    };
+
+    renderList();
+
+    search.addEventListener('input', (e) => {
+        renderList(e.target.value);
+    });
+
+    body.appendChild(search);
+    body.appendChild(list);
 }
 
 function handlePendingEditorAlerts() {
@@ -3370,6 +3775,15 @@ function createAvailabilityColumn(availableUsers) {
     columnEl.className = 'kanban-column availability-column';
     columnEl.setAttribute('aria-label', 'Team members without active assignments');
 
+    const addButtonHtml = isOwnerAdmin() ? `
+        <button class="add-availability-btn" title="Add someone to this list" aria-label="Add person to availability list">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        </button>
+    ` : '';
+
     columnEl.innerHTML = `
         <div class="column-header availability-header">
             <div class="column-title">
@@ -3377,7 +3791,10 @@ function createAvailabilityColumn(availableUsers) {
                     <span class="availability-dot"></span>
                     <span class="column-title-text">Not Working On Anything</span>
                 </div>
-                <span class="task-count">${availableUsers.length}</span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span class="task-count">${availableUsers.length}</span>
+                    ${addButtonHtml}
+                </div>
             </div>
             <p class="availability-subtitle">Ready to pick up a project</p>
         </div>
@@ -3397,6 +3814,16 @@ function createAvailabilityColumn(availableUsers) {
     `;
 
     const listEl = columnEl.querySelector('.availability-list');
+
+    // Add click handler for the + button
+    if (isOwnerAdmin()) {
+        const addBtn = columnEl.querySelector('.add-availability-btn');
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                showAddToAvailabilityModal();
+            });
+        }
+    }
 
     if (!availableUsers.length) {
         const empty = document.createElement('div');
@@ -3438,6 +3865,18 @@ function createAvailabilityColumn(availableUsers) {
 
         const person = document.createElement('div');
         person.className = `availability-person ${isInactive ? 'inactive-two-weeks' : ''} ${onBreak ? 'on-break' : ''}`;
+        person.dataset.userId = user.id;
+        person.dataset.userName = displayName;
+
+        // Add click handler for owner admin
+        if (isOwnerAdmin()) {
+            person.style.cursor = 'pointer';
+            person.title = 'Click to manage availability status';
+            person.addEventListener('click', () => {
+                showAvailabilityManagementModal(user.id, displayName);
+            });
+        }
+
         person.innerHTML = `
             <div class="user-avatar availability-avatar" style="background: ${stringToColor(displayName)}">
                 ${displayName.charAt(0).toUpperCase()}
@@ -4125,6 +4564,9 @@ function closeAllModals() {
     if (appContainer) {
         appContainer.style.filter = '';
     }
+
+    // Also close availability overlays created dynamically
+    destroyAvailabilityOverlay();
     
     // Force browser to apply the display:none before continuing
     document.body.offsetHeight; // Force reflow
