@@ -30,7 +30,7 @@
   <body>
     <div id="loader" class="loader-container">
       <div class="loader" role="status" aria-label="Loading"></div>
-      <p style="margin-top: 20px; color: #64748b;">Loading Catalyst Tracker...</p>
+      <p style="margin-top: 20px; color: #c0c9d5;">Loading Catalyst Tracker...</p>
     </div>
 
     <div id="app-container" class="app-container" style="display: none">
@@ -129,6 +129,15 @@
               ></line>
             </svg>
             <span>Calendar</span>
+          </a>
+          <a href="#" id="nav-meeting-prep" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 20v-1a4 4 0 014-4h6a4 4 0 014 4v1"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+              <path d="M17 11a4 4 0 110-6"></path>
+              <path d="M7 11a4 4 0 100-6"></path>
+            </svg>
+            <span>Meeting Preparation</span>
           </a>
 
           <p class="nav-heading">Workflows</p>
@@ -355,6 +364,140 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div id="meeting-prep-view" class="meeting-prep-view" style="display: none;">
+          <section class="meeting-prep-hero">
+            <div class="meeting-prep-hero-text">
+              <p class="eyebrow">Next up</p>
+              <h2 class="hero-title-compact">Countdown to breakout</h2>
+              <p id="meeting-prep-datetime" class="hero-datetime">Next meeting details will appear here.</p>
+
+              <div class="hero-quick">
+                <div class="mini-tile">
+                  <p class="chip-label muted">Timezone</p>
+                  <span id="meeting-prep-timezone" class="hero-meta">Eastern Time</span>
+                </div>
+              </div>
+            </div>
+            <div class="meeting-prep-hero-countdown">
+              <p class="chip-label muted">Live countdown</p>
+              <div id="meeting-prep-countdown" class="countdown-display large">-- : -- : --</div>
+            </div>
+          </section>
+
+          <div class="meeting-prep-shell">
+            <section class="prep-panel prep-panel--live">
+              <header class="prep-panel-header">
+                <div>
+                  <p class="eyebrow">Breakout rooms</p>
+                  <h3>Live roster</h3>
+                  <p class="prep-card-subtext">Your team is highlighted so you can find it fast.</p>
+                </div>
+                <span class="chip muted">Live view</span>
+              </header>
+              <div id="prep-groups-list" class="prep-group-list">
+                <div class="empty-state subtle">No prep teams yet. Admins can create the first one.</div>
+              </div>
+            </section>
+
+            <section class="prep-panel prep-panel--admin admin-only" style="display: none;">
+              <header class="prep-panel-header">
+                <div>
+                  <p class="eyebrow">Admin builder</p>
+                  <h3>Assign teams and articles</h3>
+                  <p class="prep-card-subtext">Choose team count, randomize or hand-pick, add links, and publish. Bench is welcomed for absences.</p>
+                </div>
+                <span class="chip accent">Admins can edit</span>
+              </header>
+
+              <div class="prep-builder">
+                <div class="prep-banner">
+                  <div>
+                    <p class="eyebrow">Bench-friendly</p>
+                    <p class="muted-text small">People on the bench won't block publishing. Empty teams are removed automatically.</p>
+                  </div>
+                  <span class="bench-badge" id="prep-bench-badge">0 on the bench</span>
+                </div>
+
+                <div id="prep-builder-setup" class="prep-builder-setup">
+                  <div class="prep-step">
+                    <p class="step-eyebrow">Question 1</p>
+                    <h4>How many teams?</h4>
+                    <div class="team-count-options" id="prep-team-count-options">
+                      <button type="button" class="team-count-option" data-team-count="2">2 teams</button>
+                      <button type="button" class="team-count-option" data-team-count="3">3 teams</button>
+                      <button type="button" class="team-count-option active" data-team-count="4">4 teams</button>
+                      <button type="button" class="team-count-option" data-team-count="5">5 teams</button>
+                      <button type="button" class="team-count-option" data-team-count="6">6 teams</button>
+                    </div>
+                  </div>
+
+                  <div class="prep-step">
+                    <p class="step-eyebrow">Question 2</p>
+                    <h4>How should we assign people?</h4>
+                    <div class="assignment-options" id="prep-assignment-options">
+                      <label class="assignment-card active" data-mode="random">
+                        <input type="radio" name="prep-assignment-mode" value="random" checked />
+                        <div>
+                          <span class="assignment-title">Random shuffle</span>
+                          <p>We will evenly distribute everyone across the teams you chose.</p>
+                        </div>
+                      </label>
+                      <label class="assignment-card" data-mode="manual">
+                        <input type="radio" name="prep-assignment-mode" value="manual" />
+                        <div>
+                          <span class="assignment-title">Assign individuals</span>
+                          <p>Pick which teammates go into each group manually.</p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="builder-buttons">
+                    <button type="button" class="save-btn primary" id="prep-build-teams">Build teams</button>
+                    <button type="button" class="clear-btn" id="prep-load-existing">Load current teams</button>
+                  </div>
+                </div>
+
+                <div id="prep-builder-workspace" class="prep-builder-workspace">
+                  <div class="prep-builder-actions">
+                    <div class="builder-meta" id="prep-builder-summary">Pick a mode to start.</div>
+                    <div class="builder-buttons">
+                      <button type="button" class="clear-btn" id="prep-builder-reset">Start over</button>
+                      <button type="button" class="save-btn primary" id="prep-builder-save">Save &amp; publish</button>
+                    </div>
+                  </div>
+
+                  <div id="prep-manual-assignment" class="prep-manual-assignment" style="display: none;">
+                    <div class="prep-manual-actions">
+                      <div class="builder-meta">Assign each teammate to a team number.</div>
+                      <div class="builder-buttons">
+                        <button type="button" class="clear-btn" id="prep-manual-balance">Auto-balance</button>
+                        <button type="button" class="save-btn" id="prep-apply-manual">Apply manual teams</button>
+                      </div>
+                    </div>
+                    <div class="prep-manual-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Team</th>
+                          </tr>
+                        </thead>
+                        <tbody id="prep-manual-table-body"></tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div id="prep-team-columns" class="prep-team-columns">
+                    <div class="empty-state subtle">Build or load teams to assign article links.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
       </main>
     </div>

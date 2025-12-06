@@ -292,6 +292,16 @@ let currentUser = null, currentUserName = null, currentUserRole = null;
 let allProjects = [], allEditors = [], allTasks = [], allUsers = [];
 let currentlyViewedProjectId = null, currentlyViewedTaskId = null;
 let currentView = 'interviews';
+let meetingPrepGroups = [];
+let meetingPrepUnsubscribe = null;
+let meetingPrepEditId = null;
+let prepBuilderState = {
+    teamCount: 4,
+    mode: 'random',
+    workspaceTeams: [],
+    benchIds: []
+};
+let prepManualAssignments = {};
 let calendarDate = new Date();
 const pendingEditorAlertedProjects = new Set();
 let taskFormSubmitListenerAttached = false;
@@ -805,6 +815,8 @@ auth.onAuthStateChanged(async (user) => {
         setupNavAndListeners();
         setupOwnerOnlyControls();
         subscribeToMeetingSettings();
+        setupMeetingPrepControls();
+        subscribeToMeetingPrepGroups();
 
         // Initialize subscriptions in background (non-blocking)
         ensureSubscriptionsInitialized();
@@ -869,6 +881,8 @@ async function fetchAllUsers() {
         // Refresh the board so availability shows real names once the roster loads
         renderCurrentViewEnhanced();
         updateNavCounts();
+        renderPrepMemberOptions();
+        renderMeetingPrepView();
     } catch (error) {
         console.error("Error fetching users:", error);
         allUsers = [];
@@ -1153,6 +1167,11 @@ function updateMeetingDisplay(meetingDate, timeZone = DEFAULT_MEETING_TIMEZONE) 
     const statusEl = document.getElementById('meeting-status');
     const countdownEl = document.getElementById('meeting-countdown');
     const timezoneEl = document.getElementById('meeting-timezone-label');
+    const prepDatetimeEl = document.getElementById('meeting-prep-datetime');
+    const prepCountdownEl = document.getElementById('meeting-prep-countdown');
+    const prepCountdownInlineEl = document.getElementById('meeting-prep-countdown-inline');
+    const prepStatusEl = document.getElementById('meeting-prep-status');
+    const prepTimezoneEl = document.getElementById('meeting-prep-timezone');
 
     if (meetingCountdownInterval) {
         clearInterval(meetingCountdownInterval);
@@ -1162,45 +1181,54 @@ function updateMeetingDisplay(meetingDate, timeZone = DEFAULT_MEETING_TIMEZONE) 
     nextMeetingTime = meetingDate && !isNaN(meetingDate?.getTime?.()) ? meetingDate : null;
     nextMeetingTimezone = timeZone || DEFAULT_MEETING_TIMEZONE;
 
+    const friendlyTimezone = (nextMeetingTimezone || DEFAULT_MEETING_TIMEZONE).replace(/_/g, ' ');
+    const countdownTargets = [countdownEl, prepCountdownEl, prepCountdownInlineEl].filter(Boolean);
+    const statusTargets = [statusEl, prepStatusEl].filter(Boolean);
+
     if (timezoneEl) {
         timezoneEl.textContent = nextMeetingTimezone;
+    }
+    if (prepTimezoneEl) {
+        prepTimezoneEl.textContent = `Timezone: ${friendlyTimezone}`;
     }
 
     if (!nextMeetingTime) {
         if (summaryEl) summaryEl.textContent = 'No meeting scheduled';
-        if (statusEl) statusEl.textContent = 'Yair will set the next date.';
-        if (countdownEl) {
-            countdownEl.textContent = '-- : -- : --';
-            countdownEl.classList.remove('live', 'past');
-        }
+        if (prepDatetimeEl) prepDatetimeEl.textContent = 'No meeting scheduled yet.';
+        statusTargets.forEach(el => el.textContent = 'Yair will set the next date.');
+        countdownTargets.forEach(el => {
+            el.textContent = '-- : -- : --';
+            el.classList.remove('live', 'past');
+        });
         return;
     }
 
-    if (summaryEl) {
-        summaryEl.textContent = nextMeetingTime.toLocaleString('en-US', {
-            timeZone: nextMeetingTimezone,
-            weekday: 'long',
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZoneName: 'short'
-        });
-    }
+    const meetingLabel = nextMeetingTime.toLocaleString('en-US', {
+        timeZone: nextMeetingTimezone,
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short'
+    });
+
+    if (summaryEl) summaryEl.textContent = meetingLabel;
+    if (prepDatetimeEl) prepDatetimeEl.textContent = meetingLabel;
 
     const updateCountdown = () => {
         const now = new Date();
         const diff = nextMeetingTime.getTime() - now.getTime();
 
         if (diff <= 0) {
-            if (countdownEl) {
-                countdownEl.textContent = 'LIVE NOW';
-                countdownEl.classList.add('live');
-                countdownEl.classList.remove('past');
-            }
-            if (statusEl) {
-                statusEl.textContent = 'The scheduled meeting time has arrived.';
-            }
+            countdownTargets.forEach(el => {
+                el.textContent = 'LIVE NOW';
+                el.classList.add('live');
+                el.classList.remove('past');
+            });
+            statusTargets.forEach(el => {
+                el.textContent = 'The scheduled meeting time has arrived.';
+            });
 
             if (meetingCountdownInterval) {
                 clearInterval(meetingCountdownInterval);
@@ -1209,25 +1237,27 @@ function updateMeetingDisplay(meetingDate, timeZone = DEFAULT_MEETING_TIMEZONE) 
             return;
         }
 
-        if (countdownEl) {
-            const days = Math.floor(diff / 86400000);
-            const hours = Math.floor((diff % 86400000) / 3600000);
-            const minutes = Math.floor((diff % 3600000) / 60000);
-            const seconds = Math.floor((diff % 60000) / 1000);
+        const days = Math.floor(diff / 86400000);
+        const hours = Math.floor((diff % 86400000) / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
 
-            const parts = [];
-            if (days > 0) parts.push(`${days}d`);
-            parts.push(`${hours.toString().padStart(2, '0')}h`);
-            parts.push(`${minutes.toString().padStart(2, '0')}m`);
-            parts.push(`${seconds.toString().padStart(2, '0')}s`);
+        const parts = [];
+        if (days > 0) parts.push(`${days}d`);
+        parts.push(`${hours.toString().padStart(2, '0')}h`);
+        parts.push(`${minutes.toString().padStart(2, '0')}m`);
+        parts.push(`${seconds.toString().padStart(2, '0')}s`);
 
-            countdownEl.textContent = parts.join(' ');
-            countdownEl.classList.remove('live', 'past');
-        }
+        const countdownText = parts.join(' ');
 
-        if (statusEl) {
-            statusEl.textContent = 'Countdown is live for everyone.';
-        }
+        countdownTargets.forEach(el => {
+            el.textContent = countdownText;
+            el.classList.remove('live', 'past');
+        });
+
+        statusTargets.forEach(el => {
+            el.textContent = 'Countdown is live for everyone.';
+        });
     };
 
     updateCountdown();
@@ -1333,6 +1363,1540 @@ function getTimeZoneOffsetMinutes(timeZone, date = new Date()) {
         console.error('[MEETING] Failed to compute timezone offset:', error);
         return -new Date().getTimezoneOffset();
     }
+}
+
+// ==================
+//  Meeting Preparation
+// ==================
+function sanitizeArticleLink(rawLink) {
+    if (!rawLink || typeof rawLink !== 'string') return '';
+    try {
+        const candidate = rawLink.trim();
+        const parsed = new URL(candidate);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+            return '';
+        }
+        return parsed.toString();
+    } catch (error) {
+        return '';
+    }
+}
+
+function formatArticleLinkLabel(link) {
+    if (!link) return '';
+    try {
+        const parsed = new URL(link);
+        return parsed.hostname.replace(/^www\./, '');
+    } catch (error) {
+        return '';
+    }
+}
+
+function formatPrepTimestamp(timestamp) {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : timestamp;
+    if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+
+    return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+    });
+}
+
+function setupMeetingPrepControls() {
+    const teamCountButtons = document.querySelectorAll('.team-count-option');
+    teamCountButtons.forEach(button => {
+        if (button.dataset.listenerAttached) return;
+        button.addEventListener('click', () => {
+            const count = Math.min(6, Math.max(2, parseInt(button.dataset.teamCount, 10) || 4));
+            prepBuilderState.teamCount = count;
+            syncTeamCountButtons();
+        });
+        button.dataset.listenerAttached = 'true';
+    });
+    syncTeamCountButtons();
+
+    const assignmentCards = document.querySelectorAll('#prep-assignment-options .assignment-card');
+    assignmentCards.forEach(card => {
+        if (card.dataset.listenerAttached) return;
+        card.addEventListener('click', () => {
+            const mode = card.dataset.mode || 'random';
+            prepBuilderState.mode = mode;
+            syncAssignmentModeCards(mode);
+        });
+        card.dataset.listenerAttached = 'true';
+    });
+    syncAssignmentModeCards();
+
+    const buildBtn = document.getElementById('prep-build-teams');
+    if (buildBtn && !buildBtn.dataset.listenerAttached) {
+        buildBtn.addEventListener('click', handlePrepBuildTeams);
+        buildBtn.dataset.listenerAttached = 'true';
+    }
+
+    const resetBtn = document.getElementById('prep-builder-reset');
+    if (resetBtn && !resetBtn.dataset.listenerAttached) {
+        resetBtn.addEventListener('click', resetPrepBuilder);
+        resetBtn.dataset.listenerAttached = 'true';
+    }
+
+    const saveBtn = document.getElementById('prep-builder-save');
+    if (saveBtn && !saveBtn.dataset.listenerAttached) {
+        saveBtn.addEventListener('click', handleSavePrepTeams);
+        saveBtn.dataset.listenerAttached = 'true';
+    }
+
+    const loadExistingBtn = document.getElementById('prep-load-existing');
+    if (loadExistingBtn && !loadExistingBtn.dataset.listenerAttached) {
+        loadExistingBtn.addEventListener('click', () => loadExistingPrepTeams(false));
+        loadExistingBtn.dataset.listenerAttached = 'true';
+    }
+
+    const manualBalanceBtn = document.getElementById('prep-manual-balance');
+    if (manualBalanceBtn && !manualBalanceBtn.dataset.listenerAttached) {
+        manualBalanceBtn.addEventListener('click', autoBalanceManualAssignments);
+        manualBalanceBtn.dataset.listenerAttached = 'true';
+    }
+
+    const applyManualBtn = document.getElementById('prep-apply-manual');
+    if (applyManualBtn && !applyManualBtn.dataset.listenerAttached) {
+        applyManualBtn.addEventListener('click', applyManualAssignments);
+        applyManualBtn.dataset.listenerAttached = 'true';
+    }
+
+    const teamColumns = document.getElementById('prep-team-columns');
+    if (teamColumns && !teamColumns.dataset.listenerAttached) {
+        teamColumns.addEventListener('click', (event) => {
+            const removeBtn = event.target.closest('[data-remove-member]');
+            if (removeBtn) {
+                const memberId = removeBtn.dataset.memberId;
+                const teamId = removeBtn.dataset.teamId;
+                removeMemberFromTeam(memberId, teamId);
+            }
+        });
+
+        teamColumns.addEventListener('change', (event) => {
+            const moveSelect = event.target.closest('[data-move-member]');
+            const benchAssign = event.target.closest('[data-assign-bench]');
+
+            if (moveSelect) {
+                const memberId = moveSelect.dataset.memberId;
+                const fromTeamId = moveSelect.dataset.teamId;
+                const toTeamId = moveSelect.value;
+                moveMemberToTeam(memberId, fromTeamId, toTeamId);
+            }
+
+            if (benchAssign) {
+                const memberId = benchAssign.dataset.memberId;
+                const targetTeamId = benchAssign.value;
+                addBenchMemberToTeam(memberId, targetTeamId);
+                benchAssign.value = '';
+            }
+        });
+
+        teamColumns.dataset.listenerAttached = 'true';
+    }
+
+    const groupsList = document.getElementById('prep-groups-list');
+    if (groupsList && !groupsList.dataset.listenerAttached) {
+        groupsList.addEventListener('click', (event) => {
+            const editBtn = event.target.closest('[data-edit-group]');
+            if (editBtn) {
+                event.preventDefault();
+                startMeetingPrepEdit(editBtn.dataset.editGroup);
+            }
+        });
+        groupsList.dataset.listenerAttached = 'true';
+    }
+
+    updateBuilderSummary('Pick a mode to start.');
+}
+
+function getPrepRoster() {
+    if (!Array.isArray(allUsers) || !allUsers.length) return [];
+
+    return [...allUsers]
+        .filter(user => user && user.id)
+        .map(user => ({
+            id: user.id,
+            name: getUserDisplayName(user),
+            role: user.role || '',
+            email: user.email || ''
+        }))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+
+function getPrepRosterMap() {
+    const map = new Map();
+    getPrepRoster().forEach(user => {
+        map.set(user.id, user);
+    });
+    return map;
+}
+
+function syncTeamCountButtons() {
+    const safeCount = Math.min(6, Math.max(2, prepBuilderState.teamCount || 4));
+    prepBuilderState.teamCount = safeCount;
+
+    document.querySelectorAll('.team-count-option').forEach(button => {
+        const count = parseInt(button.dataset.teamCount, 10);
+        button.classList.toggle('active', count === safeCount);
+    });
+}
+
+function syncAssignmentModeCards(mode = prepBuilderState.mode) {
+    prepBuilderState.mode = mode === 'manual' ? 'manual' : 'random';
+    document.querySelectorAll('#prep-assignment-options .assignment-card').forEach(card => {
+        const isActive = card.dataset.mode === prepBuilderState.mode;
+        card.classList.toggle('active', isActive);
+
+        const input = card.querySelector('input[type="radio"]');
+        if (input) input.checked = isActive;
+    });
+}
+
+function updateBuilderSummary(text) {
+    const summary = document.getElementById('prep-builder-summary');
+    if (summary) {
+        summary.textContent = text || 'Pick a mode to start.';
+    }
+}
+
+function updatePrepHeroStats() {
+    const teamCountEl = document.getElementById('prep-hero-team-count');
+    const linkCountEl = document.getElementById('prep-hero-link-count');
+    const overviewTeamsEl = document.getElementById('prep-overview-teams');
+    const overviewLinksEl = document.getElementById('prep-overview-links');
+
+    if (!teamCountEl && !linkCountEl && !overviewTeamsEl && !overviewLinksEl) return;
+
+    const teamCount = meetingPrepGroups.length || 0;
+    const linkCount = meetingPrepGroups.filter(group => sanitizeArticleLink(group.articleLink || '')).length;
+
+    if (teamCountEl) teamCountEl.textContent = teamCount === 0 ? '—' : teamCount;
+    if (linkCountEl) linkCountEl.textContent = linkCount === 0 ? '—' : linkCount;
+    if (overviewTeamsEl) overviewTeamsEl.textContent = teamCount === 0 ? '—' : teamCount;
+    if (overviewLinksEl) overviewLinksEl.textContent = linkCount === 0 ? '—' : linkCount;
+
+    updateBenchBadges();
+}
+
+function updateBenchBadges(countOverride = null) {
+    const benchCount = Math.max(0, typeof countOverride === 'number'
+        ? countOverride
+        : (Array.isArray(prepBuilderState.benchIds) ? prepBuilderState.benchIds.length : 0));
+    const benchLabel = benchCount === 1 ? 'person' : 'people';
+
+    const benchHero = document.getElementById('prep-bench-count');
+    const benchOverview = document.getElementById('prep-overview-bench');
+    const benchBadge = document.getElementById('prep-bench-badge');
+    const benchNote = document.getElementById('prep-bench-note');
+
+    if (benchHero) benchHero.textContent = benchCount;
+    if (benchOverview) benchOverview.textContent = benchCount;
+    if (benchBadge) benchBadge.textContent = `${benchCount} ${benchLabel} on the bench`;
+    if (benchNote) {
+        benchNote.textContent = benchCount
+            ? `${benchCount} ${benchLabel} benched for absences. Publishing will still go through.`
+            : 'Bench anyone who is out; publishing will still work.';
+    }
+}
+
+function renderTeamColumns(teams = []) {
+    const container = document.getElementById('prep-team-columns');
+    if (!container) return;
+
+    container.innerHTML = '';
+    updateBenchBadges();
+
+    if (!teams.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state subtle';
+        empty.textContent = 'Build or load teams to assign article links.';
+        container.appendChild(empty);
+        return;
+    }
+
+    const rosterMap = getPrepRosterMap();
+
+    teams.forEach((team, index) => {
+        const card = document.createElement('div');
+        card.className = 'team-column-card';
+        const teamId = team.id || `team-${index + 1}`;
+        const teamLabel = team.title || `Team ${index + 1}`;
+        card.dataset.teamId = teamId;
+
+        const header = document.createElement('div');
+        header.className = 'team-column-header';
+
+        const titleInput = document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.className = 'team-title-input';
+        titleInput.placeholder = 'Team name';
+        titleInput.value = teamLabel;
+        titleInput.setAttribute('data-team-field', 'title');
+        header.appendChild(titleInput);
+
+        const meta = document.createElement('div');
+        meta.className = 'team-column-meta';
+        const members = getPrepGroupMembers(team);
+
+        const memberMeta = document.createElement('span');
+        memberMeta.className = 'meta-pill';
+        memberMeta.textContent = `${members.length} ${members.length === 1 ? 'person' : 'people'}`;
+        meta.appendChild(memberMeta);
+
+        const linkMeta = document.createElement('span');
+        linkMeta.className = 'meta-pill';
+        linkMeta.textContent = team.articleLink ? 'Link added' : 'Link needed';
+        meta.appendChild(linkMeta);
+
+        header.appendChild(meta);
+        card.appendChild(header);
+
+        const linkInput = document.createElement('input');
+        linkInput.type = 'url';
+        linkInput.className = 'team-article-input';
+        linkInput.placeholder = 'Paste the article link for this team';
+        linkInput.value = team.articleLink || '';
+        linkInput.setAttribute('data-team-field', 'articleLink');
+        card.appendChild(linkInput);
+
+        const focusInput = document.createElement('input');
+        focusInput.type = 'text';
+        focusInput.className = 'team-focus-input';
+        focusInput.placeholder = 'Add a focus or note (optional)';
+        focusInput.value = team.notes || team.focus || '';
+        focusInput.setAttribute('data-team-field', 'notes');
+        card.appendChild(focusInput);
+
+        const memberLabel = document.createElement('p');
+        memberLabel.className = 'prep-card-subtext';
+        memberLabel.textContent = 'Members';
+        card.appendChild(memberLabel);
+
+        const membersWrap = document.createElement('div');
+        membersWrap.className = 'team-column-members';
+
+        if (!members.length) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-state subtle';
+            empty.textContent = 'No teammates assigned yet.';
+            membersWrap.appendChild(empty);
+        } else {
+            members.forEach(member => {
+                const pill = document.createElement('div');
+                pill.className = 'member-pill';
+                pill.dataset.memberId = member.id;
+
+                const nameEl = document.createElement('span');
+                nameEl.textContent = member.name || 'Team member';
+                pill.appendChild(nameEl);
+
+                const roleEl = document.createElement('span');
+                roleEl.className = 'muted-text';
+                roleEl.textContent = member.role || '';
+                pill.appendChild(roleEl);
+
+                const controls = document.createElement('div');
+                controls.className = 'member-controls';
+
+                const moveSelect = document.createElement('select');
+                moveSelect.className = 'member-move-select';
+                moveSelect.dataset.moveMember = 'true';
+                moveSelect.dataset.memberId = member.id;
+                moveSelect.dataset.teamId = teamId;
+
+                teams.forEach((candidateTeam, idx) => {
+                    const option = document.createElement('option');
+                    option.value = candidateTeam.id || `team-${idx + 1}`;
+                    option.textContent = candidateTeam.title || `Team ${idx + 1}`;
+                    option.selected = option.value === teamId;
+                    moveSelect.appendChild(option);
+                });
+
+                controls.appendChild(moveSelect);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'clear-btn ghost member-remove';
+                removeBtn.setAttribute('data-remove-member', 'true');
+                removeBtn.setAttribute('data-member-id', member.id);
+                removeBtn.setAttribute('data-team-id', teamId);
+                removeBtn.textContent = '✕';
+                controls.appendChild(removeBtn);
+
+                pill.appendChild(controls);
+                membersWrap.appendChild(pill);
+            });
+        }
+
+        card.appendChild(membersWrap);
+        container.appendChild(card);
+    });
+
+    if (prepBuilderState.benchIds && prepBuilderState.benchIds.length) {
+        const benchCard = document.createElement('div');
+        benchCard.className = 'team-column-card bench-card';
+
+        const benchHeader = document.createElement('div');
+        benchHeader.className = 'team-column-header';
+        const benchTitle = document.createElement('div');
+        benchTitle.className = 'team-column-meta';
+        benchTitle.textContent = 'Unassigned bench';
+        benchHeader.appendChild(benchTitle);
+        benchCard.appendChild(benchHeader);
+
+        const benchWrap = document.createElement('div');
+        benchWrap.className = 'team-column-members';
+
+        prepBuilderState.benchIds.forEach(memberId => {
+            const rosterUser = rosterMap.get(memberId);
+            const name = rosterUser?.name || rosterUser?.email || memberId;
+            const role = rosterUser?.role || '';
+
+            const pill = document.createElement('div');
+            pill.className = 'member-pill';
+            pill.dataset.memberId = memberId;
+
+            const nameEl = document.createElement('span');
+            nameEl.textContent = name;
+            pill.appendChild(nameEl);
+
+            const roleEl = document.createElement('span');
+            roleEl.className = 'muted-text';
+            roleEl.textContent = role;
+            pill.appendChild(roleEl);
+
+            const controls = document.createElement('div');
+            controls.className = 'member-controls';
+
+            const assignSelect = document.createElement('select');
+            assignSelect.className = 'member-move-select';
+            assignSelect.dataset.assignBench = 'true';
+            assignSelect.dataset.memberId = memberId;
+
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Send to team...';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            assignSelect.appendChild(placeholder);
+
+            teams.forEach((candidateTeam, idx) => {
+                const option = document.createElement('option');
+                option.value = candidateTeam.id || `team-${idx + 1}`;
+                option.textContent = candidateTeam.title || `Team ${idx + 1}`;
+                assignSelect.appendChild(option);
+            });
+
+            controls.appendChild(assignSelect);
+            pill.appendChild(controls);
+            benchWrap.appendChild(pill);
+        });
+
+        benchCard.appendChild(benchWrap);
+        container.appendChild(benchCard);
+    }
+
+    updateBenchBadges();
+}
+
+function renderManualAssignmentTable(roster, teamCount) {
+    const tableBody = document.getElementById('prep-manual-table-body');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '';
+
+    if (!Array.isArray(roster) || !roster.length) {
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = 3;
+        emptyCell.textContent = 'Team roster is still loading.';
+        emptyRow.appendChild(emptyCell);
+        tableBody.appendChild(emptyRow);
+        return;
+    }
+
+    roster.forEach(user => {
+        const row = document.createElement('tr');
+
+        const nameCell = document.createElement('td');
+        nameCell.textContent = user.name || user.email || 'Team member';
+        row.appendChild(nameCell);
+
+        const roleCell = document.createElement('td');
+        roleCell.textContent = user.role || '';
+        row.appendChild(roleCell);
+
+        const teamCell = document.createElement('td');
+        const select = document.createElement('select');
+
+        for (let i = 1; i <= teamCount; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `Team ${i}`;
+            select.appendChild(option);
+        }
+
+        const assignedTeam = prepManualAssignments[user.id] || 1;
+        select.value = assignedTeam;
+        select.addEventListener('change', () => {
+            const value = Math.min(teamCount, Math.max(1, parseInt(select.value, 10) || 1));
+            prepManualAssignments[user.id] = value;
+        });
+
+        teamCell.appendChild(select);
+        row.appendChild(teamCell);
+        tableBody.appendChild(row);
+    });
+}
+
+function hydrateManualAssignmentsFromGroups(groups = []) {
+    prepManualAssignments = {};
+    groups.forEach((group, index) => {
+        const teamNumber = index + 1;
+        const members = Array.isArray(group.memberIds) ? group.memberIds : [];
+        members.forEach(memberId => {
+            prepManualAssignments[memberId] = teamNumber;
+        });
+    });
+}
+
+function seedManualAssignments(roster, teamCount) {
+    const shuffled = [...roster];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    prepManualAssignments = {};
+    shuffled.forEach((user, index) => {
+        prepManualAssignments[user.id] = (index % teamCount) + 1;
+    });
+}
+
+function ensureBenchIntegrity() {
+    const assigned = new Set();
+    (prepBuilderState.workspaceTeams || []).forEach(team => {
+        (team.memberIds || []).forEach(id => assigned.add(id));
+    });
+
+    const seen = new Set();
+    prepBuilderState.benchIds = (prepBuilderState.benchIds || []).filter(id => {
+        if (assigned.has(id) || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+    });
+}
+
+function addUserToTeam(team, user) {
+    if (!team || !user) return;
+    if (!Array.isArray(team.memberIds)) team.memberIds = [];
+    if (!Array.isArray(team.memberNames)) team.memberNames = [];
+    if (team.memberIds.includes(user.id)) return;
+
+    team.memberIds.push(user.id);
+    team.memberNames.push(user.name || user.email || 'Team member');
+}
+
+function removeMemberFromTeam(memberId, fromTeamId) {
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can edit prep teams.', 'error');
+        return;
+    }
+    if (!memberId || !fromTeamId) return;
+
+    const team = (prepBuilderState.workspaceTeams || []).find(t => t.id === fromTeamId);
+    if (!team) return;
+
+    const idx = Array.isArray(team.memberIds) ? team.memberIds.indexOf(memberId) : -1;
+    if (idx !== -1) {
+        team.memberIds.splice(idx, 1);
+        if (Array.isArray(team.memberNames)) {
+            team.memberNames.splice(idx, 1);
+        }
+    }
+
+    if (!prepBuilderState.benchIds.includes(memberId)) {
+        prepBuilderState.benchIds.push(memberId);
+    }
+
+    ensureBenchIntegrity();
+    renderTeamColumns(prepBuilderState.workspaceTeams);
+    updateBuilderSummary('Adjusted team members. Remember to save & publish.');
+}
+
+function moveMemberToTeam(memberId, fromTeamId, toTeamId) {
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can edit prep teams.', 'error');
+        return;
+    }
+    if (!memberId || !toTeamId) return;
+    if (fromTeamId === toTeamId) return;
+
+    const teams = prepBuilderState.workspaceTeams || [];
+    const rosterMap = getPrepRosterMap();
+    const fromTeam = teams.find(t => t.id === fromTeamId);
+    const toTeam = teams.find(t => t.id === toTeamId);
+
+    if (!toTeam) {
+        showNotification('Target team not found.', 'error');
+        return;
+    }
+
+    if (fromTeam) {
+        const idx = Array.isArray(fromTeam.memberIds) ? fromTeam.memberIds.indexOf(memberId) : -1;
+        if (idx !== -1) {
+            fromTeam.memberIds.splice(idx, 1);
+            if (Array.isArray(fromTeam.memberNames)) {
+                fromTeam.memberNames.splice(idx, 1);
+            }
+        }
+    }
+
+    const user = rosterMap.get(memberId) || { id: memberId, name: memberId };
+    addUserToTeam(toTeam, user);
+
+    prepBuilderState.benchIds = (prepBuilderState.benchIds || []).filter(id => id !== memberId);
+    ensureBenchIntegrity();
+    renderTeamColumns(teams);
+    updateBuilderSummary('Adjusted team members. Remember to save & publish.');
+}
+
+function addBenchMemberToTeam(memberId, targetTeamId) {
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can edit prep teams.', 'error');
+        return;
+    }
+    if (!memberId || !targetTeamId) return;
+
+    const teams = prepBuilderState.workspaceTeams || [];
+    const rosterMap = getPrepRosterMap();
+    const targetTeam = teams.find(t => t.id === targetTeamId);
+    if (!targetTeam) {
+        showNotification('Target team not found.', 'error');
+        return;
+    }
+
+    const user = rosterMap.get(memberId) || { id: memberId, name: memberId };
+    addUserToTeam(targetTeam, user);
+
+    prepBuilderState.benchIds = (prepBuilderState.benchIds || []).filter(id => id !== memberId);
+    ensureBenchIntegrity();
+    renderTeamColumns(teams);
+    updateBuilderSummary('Assigned from bench. Remember to save & publish.');
+}
+
+function autoBalanceManualAssignments() {
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can adjust prep teams.', 'error');
+        return;
+    }
+
+    const roster = getPrepRoster();
+    if (!roster.length) {
+        showNotification('Team roster is still loading.', 'error');
+        return;
+    }
+
+    seedManualAssignments(roster, prepBuilderState.teamCount);
+    prepBuilderState.benchIds = [];
+    renderManualAssignmentTable(roster, prepBuilderState.teamCount);
+    updateBuilderSummary(`Balanced ${roster.length} teammates across ${prepBuilderState.teamCount} teams.`);
+}
+
+function applyManualAssignments() {
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can assign teams.', 'error');
+        return;
+    }
+
+    const roster = getPrepRoster();
+    const teamCount = prepBuilderState.teamCount;
+
+    if (!roster.length) {
+        showNotification('Team roster is still loading.', 'error');
+        return;
+    }
+
+    if (roster.length < teamCount) {
+        showNotification('Choose fewer teams so each has at least one person.', 'error');
+        return;
+    }
+
+    const baseTeams = prepBuilderState.workspaceTeams.length
+        ? prepBuilderState.workspaceTeams
+        : meetingPrepGroups;
+
+    const teams = Array.from({ length: teamCount }, (_, index) => {
+        const existing = baseTeams[index];
+        return {
+            id: existing?.id || `team-${index + 1}`,
+            title: existing?.title || `Team ${index + 1}`,
+            articleLink: existing?.articleLink || '',
+            notes: existing?.notes || existing?.focus || '',
+            createdAt: existing?.createdAt || null,
+            memberIds: [],
+            memberNames: []
+        };
+    });
+
+    roster.forEach(user => {
+        const chosenTeam = Math.min(teamCount, Math.max(1, parseInt(prepManualAssignments[user.id], 10) || 1)) - 1;
+        teams[chosenTeam].memberIds.push(user.id);
+        teams[chosenTeam].memberNames.push(user.name || user.email || 'Team member');
+    });
+
+    const emptyTeam = teams.find(team => team.memberIds.length === 0);
+    if (emptyTeam) {
+        showNotification('Every team needs at least one member. Adjust assignments.', 'error');
+        return;
+    }
+
+    prepBuilderState.workspaceTeams = teams;
+    prepBuilderState.benchIds = [];
+    renderTeamColumns(teams);
+    updateBuilderSummary(`Manual teams ready — ${roster.length} people across ${teamCount} teams. Add article links and Save & publish.`);
+    scrollToPrepBuilder();
+}
+
+function handlePrepBuildTeams() {
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can organize prep teams.', 'error');
+        return;
+    }
+
+    const roster = getPrepRoster();
+    const teamCount = prepBuilderState.teamCount;
+
+    if (!roster.length) {
+        showNotification('Team roster is still loading.', 'error');
+        return;
+    }
+
+    if (roster.length < teamCount) {
+        showNotification('Choose fewer teams so each has at least one person.', 'error');
+        return;
+    }
+
+    if (prepBuilderState.mode === 'manual') {
+        seedManualAssignments(roster, teamCount);
+        prepBuilderState.benchIds = [];
+        renderManualAssignmentTable(roster, teamCount);
+        const manualSection = document.getElementById('prep-manual-assignment');
+        if (manualSection) manualSection.style.display = 'block';
+        prepBuilderState.workspaceTeams = [];
+        renderTeamColumns([]);
+        updateBuilderSummary(`Assign ${roster.length} teammates into ${teamCount} teams.`);
+        scrollToPrepBuilder();
+        return;
+    }
+
+    const teams = buildTeamsFromRoster(roster, teamCount);
+    prepBuilderState.workspaceTeams = teams;
+    prepBuilderState.benchIds = [];
+    renderTeamColumns(teams);
+    const manualSection = document.getElementById('prep-manual-assignment');
+    if (manualSection) manualSection.style.display = 'none';
+    updateBuilderSummary(`Randomly generated ${teamCount} teams with ${roster.length} people. Drop article links for each team.`);
+    scrollToPrepBuilder();
+}
+
+function loadExistingPrepTeams(silent = false) {
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can load prep teams.', 'error');
+        return;
+    }
+
+    if (!meetingPrepGroups.length) {
+        if (!silent) {
+            showNotification('No prep teams to load yet.', 'error');
+        }
+        return;
+    }
+
+    const teams = meetingPrepGroups.map((group, index) => ({
+        id: group.id,
+        title: group.title || `Team ${index + 1}`,
+        articleLink: group.articleLink || '',
+        notes: group.notes || group.focus || '',
+        createdAt: group.createdAt || null,
+        memberIds: Array.isArray(group.memberIds) ? group.memberIds : [],
+        memberNames: Array.isArray(group.memberNames) ? group.memberNames : []
+    }));
+
+    prepBuilderState.teamCount = Math.min(Math.max(teams.length, 2), 6);
+    prepBuilderState.mode = 'manual';
+    prepBuilderState.benchIds = [];
+    syncTeamCountButtons();
+    syncAssignmentModeCards();
+
+    const roster = getPrepRoster();
+    hydrateManualAssignmentsFromGroups(teams);
+    renderManualAssignmentTable(roster, prepBuilderState.teamCount);
+    const manualSection = document.getElementById('prep-manual-assignment');
+    if (manualSection) manualSection.style.display = 'block';
+
+    prepBuilderState.workspaceTeams = teams;
+    renderTeamColumns(teams);
+    updateBuilderSummary(`Loaded ${teams.length} live teams. Adjust and Save & publish.`);
+    if (!silent) {
+        scrollToPrepBuilder();
+    }
+}
+
+function resetPrepBuilder() {
+    prepBuilderState = {
+        teamCount: 4,
+        mode: 'random',
+        workspaceTeams: [],
+        benchIds: []
+    };
+    prepManualAssignments = {};
+    syncTeamCountButtons();
+    syncAssignmentModeCards();
+    const manualSection = document.getElementById('prep-manual-assignment');
+    if (manualSection) manualSection.style.display = 'none';
+    renderTeamColumns([]);
+    updateBuilderSummary('Pick a mode to start.');
+}
+
+function scrollToPrepBuilder() {
+    const workspace = document.getElementById('prep-builder-workspace');
+    if (workspace) {
+        workspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function buildTeamsFromRoster(roster, teamCount) {
+    if (!Array.isArray(roster) || roster.length === 0) return [];
+
+    const shuffled = [...roster];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    const baseTeams = prepBuilderState.workspaceTeams.length
+        ? prepBuilderState.workspaceTeams
+        : meetingPrepGroups;
+
+    const teams = Array.from({ length: teamCount }, (_, index) => {
+        const existing = baseTeams[index];
+        return {
+            id: existing?.id || `team-${index + 1}`,
+            title: existing?.title || `Team ${index + 1}`,
+            articleLink: existing?.articleLink || '',
+            notes: existing?.notes || existing?.focus || '',
+            createdAt: existing?.createdAt || null,
+            memberIds: [],
+            memberNames: []
+        };
+    });
+
+    shuffled.forEach((user, index) => {
+        const teamIndex = index % teamCount;
+        teams[teamIndex].memberIds.push(user.id);
+        teams[teamIndex].memberNames.push(user.name || user.email || 'Team member');
+    });
+
+    return teams;
+}
+
+async function handleSavePrepTeams() {
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can save prep teams.', 'error');
+        return;
+    }
+
+    const container = document.getElementById('prep-team-columns');
+    const cards = container
+        ? Array.from(container.querySelectorAll('.team-column-card')).filter(card => !card.classList.contains('bench-card'))
+        : [];
+
+    if (!cards.length) {
+        showNotification('Build teams before saving.', 'error');
+        return;
+    }
+
+    const teamsToSave = [];
+    const issues = [];
+    const rosterSize = getPrepRoster().length;
+    const benchCount = Array.isArray(prepBuilderState.benchIds) ? prepBuilderState.benchIds.length : 0;
+    const removedEmptyTeams = [];
+
+    cards.forEach((card, index) => {
+        const teamId = card.dataset.teamId || `team-${index + 1}`;
+        const baseTeam = prepBuilderState.workspaceTeams.find(team => team.id === teamId) || prepBuilderState.workspaceTeams[index] || {};
+
+        const titleInput = card.querySelector('.team-title-input');
+        const linkInput = card.querySelector('.team-article-input');
+        const focusInput = card.querySelector('.team-focus-input');
+
+        const title = (titleInput?.value || '').trim() || `Team ${index + 1}`;
+        const articleLink = sanitizeArticleLink(linkInput?.value || '');
+        const notes = (focusInput?.value || '').trim();
+
+        const memberIds = Array.isArray(baseTeam.memberIds) ? baseTeam.memberIds : [];
+        const memberNames = Array.isArray(baseTeam.memberNames) ? baseTeam.memberNames : [];
+
+        if (!memberIds.length) {
+            removedEmptyTeams.push(teamId);
+            return;
+        }
+
+        if (!articleLink) {
+            issues.push(`Team ${index + 1} needs a valid article link.`);
+        }
+
+        teamsToSave.push({
+            id: baseTeam.id || teamId,
+            title,
+            articleLink,
+            notes,
+            memberIds,
+            memberNames,
+            createdAt: baseTeam.createdAt || null
+        });
+    });
+
+    if (!teamsToSave.length) {
+        showNotification('Add at least one teammate before publishing.', 'error');
+        return;
+    }
+
+    if (issues.length) {
+        showNotification(issues[0], 'error');
+        return;
+    }
+
+    if (removedEmptyTeams.length) {
+        prepBuilderState.workspaceTeams = (prepBuilderState.workspaceTeams || []).filter(team => !removedEmptyTeams.includes(team.id));
+        renderTeamColumns(prepBuilderState.workspaceTeams);
+        updateBuilderSummary(`Removed ${removedEmptyTeams.length} empty team${removedEmptyTeams.length === 1 ? '' : 's'}. Bench stays for absences.`);
+    }
+
+    const actionBits = [
+        `Publish ${teamsToSave.length} prep team${teamsToSave.length === 1 ? '' : 's'}`,
+        removedEmptyTeams.length ? `remove ${removedEmptyTeams.length} empty team${removedEmptyTeams.length === 1 ? '' : 's'}` : null,
+        benchCount > 0 ? `leave ${benchCount} on the bench for absences` : `for ${rosterSize} people`
+    ];
+    const confirmMessage = `${actionBits.filter(Boolean).join(' and ')}?`;
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    try {
+        const collection = db.collection('meetingPrepGroups');
+        const batch = db.batch();
+        const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+
+        const incomingIds = teamsToSave.map(team => team.id).filter(Boolean);
+        meetingPrepGroups.forEach(group => {
+            if (!incomingIds.includes(group.id)) {
+                batch.delete(collection.doc(group.id));
+            }
+        });
+
+        teamsToSave.forEach((team, index) => {
+            const docRef = team.id ? collection.doc(team.id) : collection.doc();
+            batch.set(docRef, {
+                title: team.title,
+                articleLink: team.articleLink,
+                notes: team.notes || '',
+                memberIds: team.memberIds,
+                memberNames: team.memberNames,
+                updatedBy: currentUser?.email || currentUserName,
+                updatedAt: timestamp,
+                createdAt: team.createdAt || timestamp,
+                meetingTime: nextMeetingTime ? firebase.firestore.Timestamp.fromDate(nextMeetingTime) : null
+            });
+        });
+
+        await batch.commit();
+        showNotification('Prep teams updated and published.', 'success');
+        resetPrepBuilder();
+    } catch (error) {
+        console.error('[MEETING PREP] Failed to save team builder:', error);
+        showNotification('Could not save the prep teams. Please try again.', 'error');
+    }
+}
+
+function subscribeToMeetingPrepGroups() {
+    try {
+        if (meetingPrepUnsubscribe) {
+            meetingPrepUnsubscribe();
+            meetingPrepUnsubscribe = null;
+        }
+
+        meetingPrepUnsubscribe = db.collection('meetingPrepGroups')
+            .orderBy('updatedAt', 'desc')
+            .onSnapshot(snapshot => {
+                meetingPrepGroups = snapshot.docs.map(doc => {
+                    const data = doc.data() || {};
+                    return {
+                        id: doc.id,
+                        ...data,
+                        memberIds: Array.isArray(data.memberIds) ? data.memberIds : [],
+                        memberNames: Array.isArray(data.memberNames) ? data.memberNames : []
+                    };
+                });
+
+                renderMeetingPrepView();
+                updateNavCounts();
+            }, error => {
+                console.error('[MEETING PREP] Failed to subscribe to teams:', error);
+                showNotification('Live meeting prep teams are unavailable right now.', 'error');
+            });
+    } catch (error) {
+        console.error('[MEETING PREP] Error setting up prep subscription:', error);
+    }
+}
+
+function renderPrepMemberOptions(selectedIds = []) {
+    const container = document.getElementById('prep-member-options');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (!Array.isArray(allUsers) || allUsers.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state subtle';
+        empty.textContent = 'Team roster loading...';
+        container.appendChild(empty);
+        updatePrepMemberCount(0);
+        return;
+    }
+
+    const sortedUsers = [...allUsers].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    sortedUsers.forEach(user => {
+        const option = document.createElement('label');
+        option.className = 'prep-member-chip';
+
+        option.innerHTML = `
+            <input type="checkbox" value="${escapeHtml(user.id)}" ${selectedIds.includes(user.id) ? 'checked' : ''} />
+            <div class="prep-chip-avatar">${escapeHtml((user.name || '?').charAt(0).toUpperCase())}</div>
+            <div class="prep-chip-text">
+                <span class="prep-chip-name">${escapeHtml(user.name || 'Team member')}</span>
+                <span class="prep-chip-role">${escapeHtml(user.role || user.email || '')}</span>
+            </div>
+        `;
+
+        container.appendChild(option);
+    });
+
+    updatePrepMemberCount(selectedIds.length);
+}
+
+function updatePrepMemberCount(countOverride = null) {
+    const counter = document.getElementById('prep-member-count');
+    if (!counter) return;
+
+    let selectedCount = typeof countOverride === 'number' ? countOverride : null;
+    if (selectedCount === null) {
+        selectedCount = document.querySelectorAll('#prep-member-options input[type="checkbox"]:checked').length;
+    }
+
+    const label = selectedCount === 1 ? 'person' : 'people';
+    counter.textContent = `${selectedCount} ${label}`;
+}
+
+function renderMeetingPrepView() {
+    const myContainer = document.getElementById('my-prep-assignments');
+    if (myContainer) {
+        myContainer.innerHTML = '';
+        const myGroups = meetingPrepGroups.filter(group => {
+            const memberIds = Array.isArray(group.memberIds) ? group.memberIds : [];
+            return memberIds.includes(currentUser?.uid);
+        });
+        const myGroupIds = myGroups.map(g => g.id);
+
+        if (!currentUser || !currentUser.uid) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-state';
+            empty.textContent = 'Sign in to see your prep assignments.';
+            myContainer.appendChild(empty);
+        } else {
+            if (!myGroups.length) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'No prep teams yet. An admin will place you before the meeting.';
+                myContainer.appendChild(empty);
+            } else {
+                const note = document.createElement('p');
+                note.className = 'prep-card-subtext';
+                note.textContent = 'Your team is highlighted below. Quick view:';
+                myContainer.appendChild(note);
+
+                myGroups.forEach(group => {
+                    myContainer.appendChild(buildPrepGroupCard(group, {
+                        showEditButton: currentUserRole === 'admin',
+                        isMyTeam: true,
+                        compact: true
+                    }));
+                });
+            }
+        }
+    }
+
+    const allContainer = document.getElementById('prep-groups-list');
+    if (allContainer) {
+        allContainer.innerHTML = '';
+
+        if (!meetingPrepGroups.length) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-state subtle';
+            empty.textContent = 'No prep teams yet. Admins can create the first one.';
+            allContainer.appendChild(empty);
+        } else {
+            const myGroupIds = new Set(
+                meetingPrepGroups
+                    .filter(group => Array.isArray(group.memberIds) && group.memberIds.includes(currentUser?.uid))
+                    .map(group => group.id)
+            );
+
+            meetingPrepGroups.forEach(group => {
+                const isMine = myGroupIds.has(group.id);
+                allContainer.appendChild(buildPrepGroupCard(group, {
+                    showEditButton: currentUserRole === 'admin',
+                    isMyTeam: isMine
+                }));
+            });
+        }
+    }
+
+    if (currentUserRole === 'admin' && !prepBuilderState.workspaceTeams.length && meetingPrepGroups.length) {
+        loadExistingPrepTeams(true);
+    }
+
+    updatePrepHeroStats();
+}
+
+function buildPrepGroupCard(group, { showEditButton = false, isMyTeam = false, compact = false } = {}) {
+    const card = document.createElement('div');
+    card.className = 'prep-group-card';
+    if (isMyTeam) card.classList.add('prep-group-card--mine');
+    if (compact) card.classList.add('prep-group-card--compact');
+    card.dataset.groupId = group.id;
+
+    const members = getPrepGroupMembers(group);
+    const sanitizedLink = sanitizeArticleLink(group.articleLink || '');
+    const linkLabel = formatArticleLinkLabel(sanitizedLink);
+    const notes = (group.notes || group.focus || '').trim();
+    const updatedAt = formatPrepTimestamp(group.updatedAt || group.createdAt);
+    const updatedBy = group.updatedBy || '';
+
+    const header = document.createElement('div');
+    header.className = 'prep-group-header';
+
+    const textColumn = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'prep-group-title';
+    title.textContent = group.title || 'Prep Team';
+    textColumn.appendChild(title);
+    if (isMyTeam) {
+        const badge = document.createElement('span');
+        badge.className = 'my-team-badge';
+        badge.textContent = 'My team';
+        textColumn.appendChild(badge);
+    }
+
+    const linkEl = document.createElement(sanitizedLink ? 'a' : 'div');
+    linkEl.className = 'prep-article-link';
+    if (sanitizedLink) {
+        linkEl.href = sanitizedLink;
+        linkEl.target = '_blank';
+        linkEl.rel = 'noopener noreferrer';
+        linkEl.textContent = linkLabel ? `Open ${linkLabel}` : 'Open article';
+    } else {
+        linkEl.textContent = 'Add an article link';
+        linkEl.classList.add('muted-text');
+    }
+    textColumn.appendChild(linkEl);
+
+    if (updatedAt || updatedBy) {
+        const meta = document.createElement('p');
+        meta.className = 'muted-text';
+        const metaBits = [];
+        if (updatedBy) metaBits.push(`Updated by ${updatedBy.split('@')[0]}`);
+        if (updatedAt) metaBits.push(updatedAt);
+        meta.textContent = metaBits.join(' • ');
+        textColumn.appendChild(meta);
+    }
+
+    header.appendChild(textColumn);
+
+    if (showEditButton) {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'clear-btn';
+        editBtn.textContent = 'Edit in builder';
+        editBtn.setAttribute('data-edit-group', group.id);
+        header.appendChild(editBtn);
+    }
+
+    card.appendChild(header);
+
+    const metaList = document.createElement('div');
+    metaList.className = 'prep-group-meta';
+
+    const memberCount = members.length;
+    const meetingLabel = formatPrepTimestamp(group.meetingTime || nextMeetingTime);
+
+    if (meetingLabel) {
+        metaList.appendChild(createPrepMetaItem('Meeting', meetingLabel));
+    }
+
+    if (memberCount) {
+        metaList.appendChild(createPrepMetaItem('Members', `${memberCount} teammate${memberCount === 1 ? '' : 's'}`));
+    }
+
+    if (linkLabel) {
+        metaList.appendChild(createPrepMetaItem('Article', linkLabel));
+    }
+
+    if (metaList.childElementCount > 0) {
+        card.appendChild(metaList);
+    }
+
+    if (!compact) {
+        const notesEl = document.createElement('p');
+        notesEl.className = 'prep-notes';
+        notesEl.textContent = notes ? `Focus: ${notes}` : 'Add a focus so this breakout knows what to prep.';
+        card.appendChild(notesEl);
+
+        const membersWrap = document.createElement('div');
+        membersWrap.className = 'prep-members';
+
+        if (!members.length) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-state subtle';
+            empty.textContent = 'No teammates assigned yet.';
+            membersWrap.appendChild(empty);
+        } else {
+            members.forEach(member => {
+                const pill = document.createElement('div');
+                pill.className = 'prep-member';
+
+                const avatar = document.createElement('div');
+                avatar.className = 'prep-member-avatar';
+                avatar.style.background = member.color || stringToColor(member.name || member.id);
+                avatar.textContent = (member.initial || (member.name || '?').charAt(0)).toUpperCase();
+
+                const text = document.createElement('div');
+                const nameEl = document.createElement('div');
+                nameEl.className = 'prep-member-name';
+                nameEl.textContent = member.name || 'Team member';
+                text.appendChild(nameEl);
+
+                const roleEl = document.createElement('div');
+                roleEl.className = 'prep-member-role';
+                roleEl.textContent = member.role || '';
+                text.appendChild(roleEl);
+
+                pill.appendChild(avatar);
+                pill.appendChild(text);
+                membersWrap.appendChild(pill);
+            });
+        }
+
+        card.appendChild(membersWrap);
+    } else {
+        const notesEl = document.createElement('p');
+        notesEl.className = 'prep-notes';
+        notesEl.textContent = notes ? `Focus: ${notes}` : 'Your team is highlighted in the roster.';
+        card.appendChild(notesEl);
+    }
+
+    return card;
+}
+
+function createPrepMetaItem(label, value) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'prep-meta-item';
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'prep-meta-label';
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement('span');
+    valueEl.className = 'prep-meta-value';
+    valueEl.textContent = value;
+
+    wrapper.appendChild(labelEl);
+    wrapper.appendChild(valueEl);
+    return wrapper;
+}
+
+function getPrepGroupMembers(group) {
+    if (!group) return [];
+    const memberIds = Array.isArray(group.memberIds) ? group.memberIds : [];
+    const memberNames = Array.isArray(group.memberNames) ? group.memberNames : [];
+
+    if (memberIds.length) {
+        return memberIds.map((id, index) => {
+            const roster = allUsers.find(user => user.id === id);
+            const displayName = roster?.name || memberNames[index] || getUserDisplayName({ id });
+            return {
+                id,
+                name: displayName,
+                role: roster?.role || '',
+                color: stringToColor(displayName || id)
+            };
+        });
+    }
+
+    if (memberNames.length) {
+        return memberNames.map((name, index) => ({
+            id: `member-${index}`,
+            name,
+            role: '',
+            color: stringToColor(name || `member-${index}`)
+        }));
+    }
+
+    return [];
+}
+
+function startMeetingPrepEdit(groupId) {
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can edit prep teams.', 'error');
+        return;
+    }
+
+    if (!meetingPrepGroups.length) {
+        showNotification('No prep teams to edit yet.', 'error');
+        return;
+    }
+
+    const teams = meetingPrepGroups.map((group, index) => ({
+        id: group.id,
+        title: group.title || `Team ${index + 1}`,
+        articleLink: group.articleLink || '',
+        notes: group.notes || group.focus || '',
+        createdAt: group.createdAt || null,
+        memberIds: Array.isArray(group.memberIds) ? group.memberIds : [],
+        memberNames: Array.isArray(group.memberNames) ? group.memberNames : []
+    }));
+
+    prepBuilderState.mode = 'manual';
+    prepBuilderState.teamCount = Math.min(Math.max(teams.length, 2), 6);
+    syncTeamCountButtons();
+    syncAssignmentModeCards();
+
+    const roster = getPrepRoster();
+    hydrateManualAssignmentsFromGroups(teams);
+    renderManualAssignmentTable(roster, prepBuilderState.teamCount);
+    const manualSection = document.getElementById('prep-manual-assignment');
+    if (manualSection) manualSection.style.display = 'block';
+
+    prepBuilderState.workspaceTeams = teams;
+    renderTeamColumns(teams);
+    updateBuilderSummary('Editing current teams. Update members or links, then Save & publish.');
+    scrollToPrepBuilder();
+
+    meetingPrepEditId = groupId || null;
+}
+
+function resetMeetingPrepForm() {
+    meetingPrepEditId = null;
+    const form = document.getElementById('meeting-prep-form');
+    if (form) {
+        form.reset();
+    }
+
+    const titleEl = document.getElementById('meeting-prep-form-title');
+    const saveBtn = document.getElementById('meeting-prep-save');
+    const cancelBtn = document.getElementById('meeting-prep-cancel');
+
+    if (titleEl) titleEl.textContent = 'Create prep team';
+    if (saveBtn) saveBtn.textContent = 'Save team';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+
+    renderPrepMemberOptions();
+}
+
+async function handleMeetingPrepSubmit(event) {
+    event.preventDefault();
+
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can update prep teams.', 'error');
+        return;
+    }
+
+    const titleInput = document.getElementById('prep-title-input');
+    const linkInput = document.getElementById('prep-link-input');
+    const notesInput = document.getElementById('prep-notes-input');
+    const selectedMemberIds = Array.from(document.querySelectorAll('#prep-member-options input[type="checkbox"]:checked'))
+        .map(input => input.value);
+
+    const title = titleInput?.value.trim();
+    const articleLink = sanitizeArticleLink(linkInput?.value || '');
+    const notes = notesInput?.value.trim() || '';
+
+    if (!title) {
+        showNotification('Please add a team or article title.', 'error');
+        return;
+    }
+
+    if (!articleLink) {
+        showNotification('Add a valid article link (http/https).', 'error');
+        return;
+    }
+
+    if (!selectedMemberIds.length) {
+        showNotification('Pick at least one teammate.', 'error');
+        return;
+    }
+
+    const members = selectedMemberIds.map(id => {
+        const roster = allUsers.find(user => user.id === id);
+        return {
+            id,
+            name: roster?.name || getUserDisplayName({ id }),
+            role: roster?.role || ''
+        };
+    });
+
+    const payload = {
+        title,
+        articleLink,
+        notes,
+        memberIds: members.map(m => m.id),
+        memberNames: members.map(m => m.name),
+        updatedBy: currentUser?.email || currentUserName,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        meetingTime: nextMeetingTime ? firebase.firestore.Timestamp.fromDate(nextMeetingTime) : null
+    };
+
+    try {
+        if (meetingPrepEditId) {
+            await db.collection('meetingPrepGroups').doc(meetingPrepEditId).set(payload, { merge: true });
+            showNotification('Prep team updated.', 'success');
+        } else {
+            payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            await db.collection('meetingPrepGroups').add(payload);
+            showNotification('Prep team created.', 'success');
+        }
+
+        resetMeetingPrepForm();
+    } catch (error) {
+        console.error('[MEETING PREP] Failed to save team:', error);
+        showNotification('Could not save the prep team. Please try again.', 'error');
+    }
+}
+
+async function handleGeneratePrepTeams() {
+    if (currentUserRole !== 'admin') {
+        showNotification('Only admins can auto-generate prep teams.', 'error');
+        return;
+    }
+
+    if (!Array.isArray(allUsers) || allUsers.length < 2) {
+        showNotification('Need at least two users to build teams.', 'error');
+        return;
+    }
+
+    const sizeSelect = document.getElementById('prep-group-size');
+    const groupSize = Math.min(4, Math.max(2, parseInt(sizeSelect?.value, 10) || 3));
+
+    const roster = [...allUsers]
+        .filter(user => user && user.id)
+        .map(user => ({
+            id: user.id,
+            name: getUserDisplayName(user),
+            role: user.role || '',
+            email: user.email || ''
+        }));
+
+    if (roster.length < 2) {
+        showNotification('No valid users found to build teams.', 'error');
+        return;
+    }
+
+    const groups = buildRandomPrepGroups(roster, groupSize);
+    if (!groups.length) {
+        showNotification('Could not generate teams. Try a different size.', 'error');
+        return;
+    }
+
+    const confirmMessage = `This will replace existing prep teams with random groups of ${groupSize}. Continue?`;
+    if (!confirm(confirmMessage)) return;
+
+    try {
+        const batch = db.batch();
+        const prepCollection = db.collection('meetingPrepGroups');
+
+        // Clear existing teams to avoid duplicates
+        meetingPrepGroups.forEach(group => {
+            const ref = prepCollection.doc(group.id);
+            batch.delete(ref);
+        });
+
+        const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+
+        groups.forEach((groupMembers, index) => {
+            const docRef = prepCollection.doc();
+            batch.set(docRef, {
+                title: `Team ${index + 1}`,
+                articleLink: '',
+                notes: '',
+                memberIds: groupMembers.map(m => m.id),
+                memberNames: groupMembers.map(m => m.name),
+                updatedAt: timestamp,
+                createdAt: timestamp,
+                updatedBy: currentUser?.email || currentUserName,
+                meetingTime: nextMeetingTime ? firebase.firestore.Timestamp.fromDate(nextMeetingTime) : null
+            });
+        });
+
+        await batch.commit();
+        resetMeetingPrepForm();
+        showNotification('Random prep teams generated.', 'success');
+    } catch (error) {
+        console.error('[MEETING PREP] Failed to generate teams:', error);
+        showNotification('Could not generate teams. Please try again.', 'error');
+    }
+}
+
+function buildRandomPrepGroups(roster, groupSize) {
+    if (!Array.isArray(roster) || roster.length === 0) return [];
+
+    const shuffled = [...roster];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    const groups = [];
+    for (let i = 0; i < shuffled.length; i += groupSize) {
+        groups.push(shuffled.slice(i, i + groupSize));
+    }
+
+    // Avoid single-person groups by combining the last two groups when needed
+    if (groups.length >= 2 && groups[groups.length - 1].length === 1) {
+        const last = groups.pop();
+        const penultimate = groups.pop();
+        const combined = penultimate.concat(last);
+
+        if (combined.length <= 4) {
+            groups.push(combined);
+        } else if (combined.length === 5) {
+            groups.push(combined.slice(0, 3));
+            groups.push(combined.slice(3));
+        } else {
+            // Fallback: split roughly evenly without singles
+            const mid = Math.ceil(combined.length / 2);
+            groups.push(combined.slice(0, mid));
+            groups.push(combined.slice(mid));
+        }
+    }
+
+    return groups;
 }
 
 // ==================
@@ -1500,7 +3064,8 @@ function handleNavClick(view) {
         'interviews': 'Catalyst in the Capital',
         'opeds': 'Op-Eds',
         'calendar': 'Deadlines Calendar',
-        'tasks': 'Task Management'
+        'tasks': 'Task Management',
+        'meeting-prep': 'Meeting Preparation'
     };
     document.getElementById('board-title').textContent = viewTitles[view] || view;
 
@@ -1510,6 +3075,9 @@ function handleNavClick(view) {
     if (view === 'tasks') {
         addProjectBtn.style.display = 'none';
         addTaskBtn.style.display = 'inline-flex';
+    } else if (view === 'meeting-prep') {
+        addProjectBtn.style.display = 'none';
+        addTaskBtn.style.display = 'none';
     } else {
         addProjectBtn.style.display = 'inline-flex';
         addTaskBtn.style.display = 'none';
@@ -1522,20 +3090,25 @@ function renderCurrentViewEnhanced() {
     const boardView = document.getElementById('board-view');
     const tasksView = document.getElementById('tasks-view');
     const calendarView = document.getElementById('calendar-view');
+    const meetingPrepView = document.getElementById('meeting-prep-view');
 
-    boardView.style.display = 'none';
-    tasksView.style.display = 'none';
-    calendarView.style.display = 'none';
+    if (boardView) boardView.style.display = 'none';
+    if (tasksView) tasksView.style.display = 'none';
+    if (calendarView) calendarView.style.display = 'none';
+    if (meetingPrepView) meetingPrepView.style.display = 'none';
 
     if (currentView === 'calendar') {
-        calendarView.style.display = 'block';
+        if (calendarView) calendarView.style.display = 'block';
         setupCalendarListeners();
         renderCalendar();
     } else if (currentView === 'tasks') {
-        tasksView.style.display = 'block';
+        if (tasksView) tasksView.style.display = 'block';
         renderTasksBoard(allTasks);
+    } else if (currentView === 'meeting-prep') {
+        if (meetingPrepView) meetingPrepView.style.display = 'block';
+        renderMeetingPrepView();
     } else {
-        boardView.style.display = 'block';
+        if (boardView) boardView.style.display = 'block';
         renderKanbanBoard(filterProjects());
     }
 }
@@ -1575,6 +3148,18 @@ function updateNavCounts() {
     const navLink = document.querySelector('#nav-my-assignments span');
     if (navLink) {
         navLink.textContent = `My Assignments (${totalAssignments})`;
+    }
+
+    const meetingPrepNav = document.querySelector('#nav-meeting-prep span');
+    if (meetingPrepNav) {
+        const assignedPrepTeams = meetingPrepGroups.filter(group => {
+            const memberIds = Array.isArray(group.memberIds) ? group.memberIds : [];
+            return currentUser && memberIds.includes(currentUser.uid);
+        }).length;
+
+        meetingPrepNav.textContent = assignedPrepTeams > 0
+            ? `Meeting Preparation (${assignedPrepTeams})`
+            : 'Meeting Preparation';
     }
 }
 
