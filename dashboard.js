@@ -1406,7 +1406,8 @@ function formatPrepTimestamp(timestamp) {
 }
 
 function setupMeetingPrepControls() {
-    const teamCountButtons = document.querySelectorAll('.team-count-option');
+    // Support both old (.team-count-option) and new (.prep-count-btn) selectors
+    const teamCountButtons = document.querySelectorAll('.team-count-option, .prep-count-btn');
     teamCountButtons.forEach(button => {
         if (button.dataset.listenerAttached) return;
         button.addEventListener('click', () => {
@@ -1418,6 +1419,7 @@ function setupMeetingPrepControls() {
     });
     syncTeamCountButtons();
 
+    // Support old radio cards
     const assignmentCards = document.querySelectorAll('#prep-assignment-options .assignment-card');
     assignmentCards.forEach(card => {
         if (card.dataset.listenerAttached) return;
@@ -1427,6 +1429,18 @@ function setupMeetingPrepControls() {
             syncAssignmentModeCards(mode);
         });
         card.dataset.listenerAttached = 'true';
+    });
+
+    // Support new mode buttons
+    const modeButtons = document.querySelectorAll('#prep-assignment-options .prep-mode-btn');
+    modeButtons.forEach(btn => {
+        if (btn.dataset.listenerAttached) return;
+        btn.addEventListener('click', () => {
+            const mode = btn.dataset.mode || 'random';
+            prepBuilderState.mode = mode;
+            syncAssignmentModeCards(mode);
+        });
+        btn.dataset.listenerAttached = 'true';
     });
     syncAssignmentModeCards();
 
@@ -1540,7 +1554,8 @@ function syncTeamCountButtons() {
     const safeCount = Math.min(6, Math.max(2, prepBuilderState.teamCount || 4));
     prepBuilderState.teamCount = safeCount;
 
-    document.querySelectorAll('.team-count-option').forEach(button => {
+    // Support both old and new button classes
+    document.querySelectorAll('.team-count-option, .prep-count-btn').forEach(button => {
         const count = parseInt(button.dataset.teamCount, 10);
         button.classList.toggle('active', count === safeCount);
     });
@@ -1548,12 +1563,20 @@ function syncTeamCountButtons() {
 
 function syncAssignmentModeCards(mode = prepBuilderState.mode) {
     prepBuilderState.mode = mode === 'manual' ? 'manual' : 'random';
+
+    // Support old radio card style
     document.querySelectorAll('#prep-assignment-options .assignment-card').forEach(card => {
         const isActive = card.dataset.mode === prepBuilderState.mode;
         card.classList.toggle('active', isActive);
 
         const input = card.querySelector('input[type="radio"]');
         if (input) input.checked = isActive;
+    });
+
+    // Support new button style
+    document.querySelectorAll('#prep-assignment-options .prep-mode-btn').forEach(btn => {
+        const isActive = btn.dataset.mode === prepBuilderState.mode;
+        btn.classList.toggle('active', isActive);
     });
 }
 
@@ -2407,51 +2430,51 @@ function updatePrepMemberCount(countOverride = null) {
 }
 
 function renderMeetingPrepView() {
-    const myContainer = document.getElementById('my-prep-assignments');
-    if (myContainer) {
-        myContainer.innerHTML = '';
+    // Render "My Team" section
+    const myTeamCard = document.getElementById('prep-my-team-card');
+    if (myTeamCard) {
         const myGroups = meetingPrepGroups.filter(group => {
             const memberIds = Array.isArray(group.memberIds) ? group.memberIds : [];
             return memberIds.includes(currentUser?.uid);
         });
-        const myGroupIds = myGroups.map(g => g.id);
 
-        if (!currentUser || !currentUser.uid) {
-            const empty = document.createElement('div');
-            empty.className = 'empty-state';
-            empty.textContent = 'Sign in to see your prep assignments.';
-            myContainer.appendChild(empty);
+        if (myGroups.length > 0) {
+            const myGroup = myGroups[0]; // Show first assigned team
+            myTeamCard.classList.add('has-team');
+            myTeamCard.innerHTML = buildMyTeamContent(myGroup);
         } else {
-            if (!myGroups.length) {
-                const empty = document.createElement('div');
-                empty.className = 'empty-state';
-                empty.textContent = 'No prep teams yet. An admin will place you before the meeting.';
-                myContainer.appendChild(empty);
-            } else {
-                const note = document.createElement('p');
-                note.className = 'prep-card-subtext';
-                note.textContent = 'Your team is highlighted below. Quick view:';
-                myContainer.appendChild(note);
-
-                myGroups.forEach(group => {
-                    myContainer.appendChild(buildPrepGroupCard(group, {
-                        showEditButton: currentUserRole === 'admin',
-                        isMyTeam: true,
-                        compact: true
-                    }));
-                });
-            }
+            myTeamCard.classList.remove('has-team');
+            myTeamCard.innerHTML = `
+                <div class="prep-my-team-empty">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <p>You haven't been assigned to a team yet.</p>
+                    <span class="prep-hint">Check back closer to the meeting!</span>
+                </div>
+            `;
         }
     }
 
+    // Update team count
+    const teamCountEl = document.getElementById('prep-team-count');
+    if (teamCountEl) {
+        const count = meetingPrepGroups.length;
+        teamCountEl.textContent = `${count} team${count === 1 ? '' : 's'}`;
+    }
+
+    // Render all teams grid
     const allContainer = document.getElementById('prep-groups-list');
     if (allContainer) {
         allContainer.innerHTML = '';
 
         if (!meetingPrepGroups.length) {
             const empty = document.createElement('div');
-            empty.className = 'empty-state subtle';
-            empty.textContent = 'No prep teams yet. Admins can create the first one.';
+            empty.className = 'prep-empty-state';
+            empty.innerHTML = '<p>No teams created yet.</p>';
             allContainer.appendChild(empty);
         } else {
             const myGroupIds = new Set(
@@ -2462,10 +2485,7 @@ function renderMeetingPrepView() {
 
             meetingPrepGroups.forEach(group => {
                 const isMine = myGroupIds.has(group.id);
-                allContainer.appendChild(buildPrepGroupCard(group, {
-                    showEditButton: currentUserRole === 'admin',
-                    isMyTeam: isMine
-                }));
+                allContainer.appendChild(buildSimplifiedTeamCard(group, isMine));
             });
         }
     }
@@ -2475,6 +2495,91 @@ function renderMeetingPrepView() {
     }
 
     updatePrepHeroStats();
+}
+
+function buildMyTeamContent(group) {
+    const members = getPrepGroupMembers(group);
+    const sanitizedLink = sanitizeArticleLink(group.articleLink || '');
+    const notes = (group.notes || group.focus || '').trim();
+
+    let membersHtml = members.map(member => {
+        const isMe = member.id === currentUser?.uid;
+        return `
+            <div class="prep-member-chip ${isMe ? 'is-me' : ''}">
+                <div class="prep-member-avatar" style="background: ${member.color || stringToColor(member.name || member.id)}">${(member.name || '?').charAt(0).toUpperCase()}</div>
+                <span>${escapeHtml(member.name || 'Team member')}</span>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="prep-my-team-content">
+            <div class="prep-my-team-header">
+                <div class="prep-my-team-title">
+                    <h3>${escapeHtml(group.title || 'Your Team')}</h3>
+                    <span class="prep-my-badge">Your Team</span>
+                </div>
+                ${sanitizedLink ? `
+                    <a href="${sanitizedLink}" target="_blank" rel="noopener noreferrer" class="prep-article-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                        Open Article
+                    </a>
+                ` : '<span class="prep-hint">No article link yet</span>'}
+            </div>
+            ${notes ? `<p class="prep-hint" style="margin: 8px 0;">${escapeHtml(notes)}</p>` : ''}
+            <div class="prep-my-team-members">
+                ${membersHtml || '<span class="prep-hint">No members assigned</span>'}
+            </div>
+        </div>
+    `;
+}
+
+function buildSimplifiedTeamCard(group, isMyTeam = false) {
+    const card = document.createElement('div');
+    card.className = `prep-team-card ${isMyTeam ? 'is-my-team' : ''}`;
+    card.dataset.groupId = group.id;
+
+    const members = getPrepGroupMembers(group);
+    const sanitizedLink = sanitizeArticleLink(group.articleLink || '');
+
+    let membersHtml = members.slice(0, 6).map(member => {
+        return `
+            <div class="prep-team-member">
+                <div class="prep-team-member-avatar" style="background: ${member.color || stringToColor(member.name || member.id)}">${(member.name || '?').charAt(0).toUpperCase()}</div>
+                <span>${escapeHtml(member.name || 'Member')}</span>
+            </div>
+        `;
+    }).join('');
+
+    if (members.length > 6) {
+        membersHtml += `<div class="prep-team-member">+${members.length - 6} more</div>`;
+    }
+
+    card.innerHTML = `
+        <div class="prep-team-card-header">
+            <span class="prep-team-name">${escapeHtml(group.title || 'Team')}</span>
+            <span class="prep-team-member-count">${members.length} member${members.length === 1 ? '' : 's'}</span>
+        </div>
+        ${sanitizedLink ? `
+            <a href="${sanitizedLink}" target="_blank" rel="noopener noreferrer" class="prep-team-article">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                View Article
+            </a>
+        ` : ''}
+        <div class="prep-team-members-list">
+            ${membersHtml || '<span class="prep-hint">No members</span>'}
+        </div>
+    `;
+
+    return card;
 }
 
 function buildPrepGroupCard(group, { showEditButton = false, isMyTeam = false, compact = false } = {}) {

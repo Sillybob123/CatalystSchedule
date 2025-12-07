@@ -104,3 +104,107 @@ auth.onAuthStateChanged((user) => {
         }
     }
 });
+
+// Forgot Password Functionality
+const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+const backToLoginBtn = document.getElementById('back-to-login-btn');
+const forgotPasswordForm = document.getElementById('forgot-password-form');
+const forgotEmailInput = document.getElementById('forgot-email');
+const forgotError = document.getElementById('forgot-error');
+const forgotSuccess = document.getElementById('forgot-success');
+const sendResetBtn = document.getElementById('send-reset-btn');
+
+const showForgotError = (message = '') => {
+    if (!forgotError) return;
+    forgotError.textContent = message;
+    forgotError.hidden = !message;
+    if (forgotSuccess) forgotSuccess.hidden = true;
+};
+
+const showForgotSuccess = (message = '') => {
+    if (!forgotSuccess) return;
+    forgotSuccess.textContent = message;
+    forgotSuccess.hidden = !message;
+    if (forgotError) forgotError.hidden = true;
+};
+
+const setForgotLoadingState = (isLoading) => {
+    if (!sendResetBtn) return;
+    sendResetBtn.disabled = isLoading;
+    sendResetBtn.classList.toggle('is-loading', isLoading);
+    sendResetBtn.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+};
+
+// Show forgot password form
+if (forgotPasswordBtn) {
+    forgotPasswordBtn.addEventListener('click', () => {
+        if (loginForm) loginForm.style.display = 'none';
+        if (forgotPasswordForm) forgotPasswordForm.style.display = 'block';
+        if (forgotEmailInput) {
+            forgotEmailInput.value = emailInput?.value || '';
+            forgotEmailInput.focus();
+        }
+        showForgotError('');
+        showForgotSuccess('');
+    });
+}
+
+// Back to login form
+if (backToLoginBtn) {
+    backToLoginBtn.addEventListener('click', () => {
+        if (forgotPasswordForm) forgotPasswordForm.style.display = 'none';
+        if (loginForm) loginForm.style.display = 'block';
+        if (emailInput) emailInput.focus();
+        showForgotError('');
+        showForgotSuccess('');
+    });
+}
+
+// Handle forgot password submission
+if (forgotPasswordForm) {
+    forgotPasswordForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const email = forgotEmailInput?.value?.trim();
+
+        if (!email) {
+            showForgotError('Please enter your email address.');
+            forgotEmailInput?.focus();
+            return;
+        }
+
+        showForgotError('');
+        showForgotSuccess('');
+        setForgotLoadingState(true);
+
+        auth.sendPasswordResetEmail(email)
+            .then(() => {
+                showForgotSuccess('Password reset email sent! Please check your inbox and spam folder. The email will come from CatalystTracker@catalystmonday.firebaseapp.com');
+                if (forgotEmailInput) forgotEmailInput.value = '';
+            })
+            .catch((error) => {
+                console.error('Password reset error:', error);
+                let errorMessage = 'Unable to send reset email. Please try again.';
+
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = 'No account found with this email address.';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'Please enter a valid email address.';
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = 'Too many requests. Please wait a moment and try again.';
+                }
+
+                showForgotError(errorMessage);
+            })
+            .finally(() => {
+                setForgotLoadingState(false);
+            });
+    });
+}
+
+// Clear error messages when typing in forgot password form
+if (forgotEmailInput) {
+    forgotEmailInput.addEventListener('input', () => {
+        showForgotError('');
+    });
+}

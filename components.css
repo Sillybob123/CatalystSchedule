@@ -2490,394 +2490,508 @@
   border-radius: 12px;
 }
 
-/* === MEETING PREPARATION === */
+/* === MEETING PREPARATION - SIMPLIFIED === */
 .meeting-prep-view {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-4);
   padding-bottom: var(--space-4);
 }
 
-.meeting-prep-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
-  gap: var(--space-6);
-  padding: var(--space-5);
-  background: linear-gradient(135deg, #f7f9fb, #eef2f7);
-  color: #0f172a;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
-  border: 1px solid #e2e8f0;
-}
-
-.hero-eyebrow-row {
+/* Compact Countdown Banner */
+.prep-countdown-banner {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #1e293b, #334155);
+  border-radius: var(--radius-lg);
+  color: white;
 }
 
-.hero-eyebrow-compact {
-  gap: 8px;
+.prep-countdown-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #dbeafe;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.prep-countdown-label {
   font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.pill-glow {
-  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.35);
-  border: 1px solid rgba(96, 165, 250, 0.6);
+.prep-countdown-date {
+  font-weight: 600;
+  font-size: 15px;
 }
 
-.ghost-chip {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px dashed rgba(255, 255, 255, 0.14);
+.prep-countdown-timer {
+  font-size: 24px;
+  font-weight: 800;
+  font-family: 'SF Mono', 'Monaco', monospace;
+  letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 8px;
 }
 
-.meeting-prep-hero-text h2 {
-  font-size: 30px;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  color: #0b1220;
-  margin-top: 4px;
+/* My Team Section */
+.prep-my-team-section {
+  margin-top: var(--space-5);
   margin-bottom: var(--space-2);
 }
 
-.hero-title-compact {
-  font-size: 26px;
-}
-
-.hero-quick {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-top: var(--space-3);
-  align-items: stretch;
-}
-
-.mini-tile {
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  box-shadow: var(--shadow-xs);
-}
-
-.hero-meta {
-  display: block;
-  font-weight: 700;
-  color: #0f172a;
-  margin-top: 4px;
-}
-
-.hero-quick .ghost-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
-.hero-subhead {
-  color: rgba(226, 232, 240, 0.82);
-  max-width: 760px;
-}
-
-.meeting-prep-hero .muted-text {
-  color: rgba(226, 232, 240, 0.82);
-}
-
-.hero-detail-rail {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-3);
-  margin: var(--space-4) 0 var(--space-3);
-}
-
-.hero-detail {
-  padding: 14px 16px;
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.hero-detail-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.hero-datetime {
-  font-weight: 700;
-  color: #0f172a;
-  font-size: 18px;
-  margin-top: 2px;
-}
-
-.meeting-prep-hero-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.meeting-prep-hero-actions.simple-actions {
-  gap: var(--space-2);
-}
-
-.hero-countdown-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.hero-mini-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: var(--space-4);
-}
-
-.hero-mini-stats--stacked {
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-}
-
-.stat-card {
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: #e2e8f0;
-}
-
-.stat-card--bench {
-  border-color: rgba(244, 114, 182, 0.35);
-  background: rgba(244, 114, 182, 0.1);
-}
-
-.stat-label {
-  display: block;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.7);
-  margin-bottom: 4px;
-}
-
-.stat-value {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-}
-
-.countdown-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(15, 23, 42, 0.04);
-  color: #0f172a;
-  font-weight: 700;
-}
-
-.countdown-chip.soft {
-  background: rgba(255, 255, 255, 0.08);
-  border-style: dashed;
-}
-
-.chip-value {
-  color: #e2e8f0;
-  font-weight: 600;
-}
-
-.chip-label {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-  color: #475569;
-}
-
-.countdown-display.compact {
-  font-size: 16px;
-  letter-spacing: 0.02em;
-}
-
-.meeting-prep-hero .countdown-display {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  color: #0f172a;
-  box-shadow: var(--shadow-xs);
-}
-
-.ghost-link {
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  color: #0f172a;
-  background: rgba(255, 255, 255, 0.85);
-  text-decoration: none;
-  font-weight: 700;
-  transition: all 0.2s ease;
-}
-
-.ghost-link:hover {
-  background: #111827;
-  color: #ffffff;
-  transform: translateY(-1px);
-}
-
-.ghost-link-light {
-  border: 1px solid #e5e7eb;
-  background: #fff;
-}
-
-.ghost-card .ghost-link {
-  border-color: var(--muted-border);
-  color: var(--text-color);
-  background: #f8fafc;
-}
-
-.timezone-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  color: #0f172a;
-  font-weight: 600;
-}
-
-.meeting-prep-hero-countdown {
-  background: #ffffff;
+.prep-my-team-card {
+  background: white;
+  border: 2px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
-  border: 1px solid #e5e7eb;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 
-.countdown-display.large {
-  font-size: 28px;
-  letter-spacing: 0.05em;
-  font-weight: 800;
-  color: #0b1220;
-  margin: var(--space-2) 0;
+.prep-my-team-card.has-team {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
 }
 
-.prep-overview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--space-4);
-}
-
-.prep-overview-card {
-  background: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-md);
+.prep-my-team-empty {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-}
-
-.ghost-card {
-  background: linear-gradient(135deg, #f8fafc, #eef2ff);
-  border-style: dashed;
-}
-
-.card-top {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.prep-overview-meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
-  margin-top: var(--space-2);
-}
-
-.meta-chip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #f8fafc;
-  border: 1px solid var(--muted-border);
-}
-
-.meta-chip-value {
-  font-weight: 800;
-  color: var(--text-color);
-}
-
-.prep-list {
-  list-style: none;
-  padding: 0;
-  margin: var(--space-2) 0 0 0;
-  display: grid;
-  gap: 8px;
-}
-
-.prep-list li {
-  position: relative;
-  padding-left: 18px;
+  justify-content: center;
+  padding: var(--space-4);
+  text-align: center;
   color: var(--text-secondary);
 }
 
-.prep-list li::before {
-  content: '•';
-  color: var(--primary-color);
-  position: absolute;
-  left: 0;
+.prep-my-team-empty svg {
+  color: var(--muted-border);
+  margin-bottom: var(--space-3);
 }
 
-.quick-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: var(--space-2);
+.prep-my-team-empty p {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 4px;
 }
 
-.meeting-prep-shell {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-  gap: var(--space-4);
-  align-items: start;
+.prep-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
-.prep-column {
+/* My Team Content (when assigned) */
+.prep-my-team-content {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
-.meeting-prep-layout {
+.prep-my-team-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.prep-my-team-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.prep-my-team-title h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.prep-my-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fde68a;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.prep-article-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+
+.prep-article-btn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.prep-my-team-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.prep-member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.prep-member-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: white;
+  background: var(--primary-color);
+}
+
+.prep-member-chip.is-me {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.prep-member-chip.is-me .prep-member-avatar {
+  background: #f59e0b;
+}
+
+/* All Teams Section */
+.prep-teams-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.prep-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.prep-section-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.prep-team-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.prep-teams-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-3);
 }
 
+.prep-empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--space-6);
+  background: #f8fafc;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+}
+
+/* Team Card (in grid) */
+.prep-team-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-xs);
+  transition: all 0.15s ease;
+}
+
+.prep-team-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.prep-team-card.is-my-team {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.prep-team-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.prep-team-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-color);
+}
+
+.prep-team-member-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--muted-border);
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.prep-team-article {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary-color);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+
+.prep-team-article:hover {
+  text-decoration: underline;
+}
+
+.prep-team-members-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.prep-team-member {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-color);
+}
+
+.prep-team-member-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  background: var(--primary-color);
+}
+
+/* Admin Section */
+.prep-admin-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-color);
+}
+
+.prep-admin-card {
+  background: #f8fafc;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+}
+
+.prep-admin-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.prep-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prep-control-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.prep-team-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.prep-count-btn {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.prep-count-btn:hover,
+.prep-count-btn.active {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: var(--primary-subtle);
+}
+
+.prep-mode-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.prep-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.prep-mode-btn:hover,
+.prep-mode-btn.active {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: var(--primary-subtle);
+}
+
+.prep-admin-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+/* Manual Assignment Card */
+.prep-manual-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  margin-top: var(--space-3);
+  overflow: hidden;
+}
+
+.prep-manual-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.prep-manual-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.prep-manual-table {
+  max-height: 300px;
+  overflow: auto;
+}
+
+.prep-manual-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prep-manual-table th,
+.prep-manual-table td {
+  padding: 10px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.prep-manual-table th {
+  background: #f1f5f9;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.prep-manual-table select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: white;
+}
+
+/* Builder Workspace */
+.prep-builder-workspace {
+  margin-top: var(--space-3);
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+}
+
+.prep-workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.prep-workspace-header span {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.prep-workspace-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.prep-team-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+/* Legacy support classes */
 .prep-panel {
   background: var(--surface-color);
   border-radius: var(--radius-lg);
@@ -2887,6 +3001,31 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--primary-subtle);
+  color: var(--primary-color);
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+}
+
+.chip.accent {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.24);
+}
+
+.chip.muted {
+  background: var(--muted-border);
+  color: var(--text-secondary);
+  border-color: rgba(100, 116, 139, 0.2);
 }
 
 .prep-panel--user {
@@ -3424,45 +3563,42 @@
     max-height: 50vh;
   }
 
-  .meeting-prep-hero {
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
-  }
-
-  .meeting-prep-hero-countdown {
-    order: -1;
-  }
-
-  .meeting-prep-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .meeting-prep-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .prep-overview-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-detail-rail {
-    grid-template-columns: 1fr;
-  }
-
-  .meeting-prep-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-mini-stats {
-    grid-template-columns: 1fr;
-  }
-
-  .prep-builder-actions {
+  /* Meeting Prep Mobile */
+  .prep-countdown-banner {
     flex-direction: column;
-    align-items: flex-start;
+    gap: var(--space-3);
+    text-align: center;
   }
 
-  .assignment-options {
+  .prep-countdown-timer {
+    font-size: 20px;
+  }
+
+  .prep-teams-grid {
     grid-template-columns: 1fr;
+  }
+
+  .prep-admin-controls {
+    flex-direction: column;
+  }
+
+  .prep-mode-toggle {
+    flex-direction: column;
+  }
+
+  .prep-admin-actions {
+    flex-direction: column;
+  }
+
+  .prep-admin-actions button {
+    width: 100%;
+  }
+
+  .prep-team-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .prep-my-team-header {
+    flex-direction: column;
   }
 }

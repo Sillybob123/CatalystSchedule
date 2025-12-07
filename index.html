@@ -117,6 +117,38 @@
             <span class="btn-label">Sign In</span>
             <span class="btn-spinner" aria-hidden="true"></span>
           </button>
+
+          <button type="button" class="forgot-password-link" id="forgot-password-btn">
+            Forgot your password?
+          </button>
+        </form>
+
+        <!-- Forgot Password Form (hidden by default) -->
+        <form id="forgot-password-form" class="forgot-password-form" style="display: none;" novalidate>
+          <p id="forgot-error" class="error-message" role="alert" aria-live="polite" hidden></p>
+          <p id="forgot-success" class="success-message" role="status" aria-live="polite" hidden></p>
+
+          <div class="input-group">
+            <label for="forgot-email">Email Address</label>
+            <input
+              id="forgot-email"
+              type="email"
+              name="forgot-email"
+              required
+              autocomplete="email"
+              inputmode="email"
+              placeholder="you@catalystmag.com"
+            />
+          </div>
+
+          <button class="btn-primary login-submit" type="submit" id="send-reset-btn">
+            <span class="btn-label">Send Reset Email</span>
+            <span class="btn-spinner" aria-hidden="true"></span>
+          </button>
+
+          <button type="button" class="back-to-login-link" id="back-to-login-btn">
+            Back to Sign In
+          </button>
         </form>
 
         <div class="support-text">
