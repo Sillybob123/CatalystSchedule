@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Writing Guidelines - Catalyst Tracker</title>
+    <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png">
+    <link rel="stylesheet" href="base.css" />
+    <link rel="stylesheet" href="components.css" />
+    <link rel="stylesheet" href="guidelines.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  </head>
+
+  <body>
+    <!-- Loading State -->
+    <div id="loader" class="loader-container">
+      <div class="loader" role="status" aria-label="Loading"></div>
+      <p style="margin-top: 20px; color: #c0c9d5;">Loading Writing Guidelines...</p>
+    </div>
+
+    <!-- Main Application Container -->
+    <div id="app-container" class="app-container" style="display: none">
+
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <img src="https://static.wixstatic.com/media/11b1c4_d0a154e8ddf24787a03381f78041bd54~mv2.png" alt="Catalyst Logo" class="logo-img">
+          <h2>Catalyst Tracker</h2>
+        </div>
+
+        <div class="sidebar-card meeting-card subtle top" aria-live="polite">
+          <p class="meeting-eyebrow">Next Meeting</p>
+          <h3 id="meeting-summary" class="meeting-title">No meeting scheduled</h3>
+          <div class="countdown-display" id="meeting-countdown">-- : -- : --</div>
+        </div>
+
+        <nav class="sidebar-nav" aria-label="Primary">
+          <p class="nav-heading">Views</p>
+          <a
+            href="https://gwu-edu.zoom.us/j/97392237308"
+            class="nav-item join-zoom-nav"
+            id="join-zoom-sidebar"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-zoom-link
+            aria-label="Join Zoom (Mondays 6:30-8:30pm ET)"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              <path d="M23 7l-7 5 7 5V7z"></path>
+            </svg>
+            <span>Join Zoom</span>
+            <span class="live-dot" aria-hidden="true"></span>
+          </a>
+          <a href="dashboard.html?view=interviews" id="nav-dashboard" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span>Dashboard</span>
+          </a>
+          <a href="dashboard.html?view=tasks" id="nav-tasks" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            <span>Tasks</span>
+          </a>
+          <a href="dashboard.html?view=my-assignments" id="nav-my-assignments" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle stroke="currentColor" stroke-width="2" cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span>My Assignments</span>
+          </a>
+          <a href="dashboard.html?view=calendar" id="nav-calendar" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <rect stroke="currentColor" stroke-width="2" x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"></line>
+              <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"></line>
+              <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"></line>
+            </svg>
+            <span>Calendar</span>
+          </a>
+          <a href="dashboard.html?view=meeting-prep" id="nav-meeting-prep" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 20v-1a4 4 0 014-4h6a4 4 0 014 4v1"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+              <path d="M17 11a4 4 0 110-6"></path>
+              <path d="M7 11a4 4 0 100-6"></path>
+            </svg>
+            <span>Meeting Preparation</span>
+          </a>
+
+          <p class="nav-heading">Resources</p>
+          <a href="guidelines.html" class="nav-item active" aria-current="page">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+            <span>Writing Guidelines</span>
+          </a>
+
+          <p class="nav-heading">Workflows</p>
+          <a href="dashboard.html?view=interviews" id="nav-interviews" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+            </svg>
+            <span>Catalyst in the Capital</span>
+          </a>
+          <a href="dashboard.html?view=opeds" id="nav-opeds" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <span>Op-Eds</span>
+          </a>
+          <a href="social.html" class="nav-item" aria-current="false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path>
+            </svg>
+            <span>Social Media</span>
+          </a>
+        </nav>
+
+        <button class="zoom-settings-toggle owner-only" id="open-zoom-settings" data-owner-display="flex" aria-expanded="false" style="display: none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6m8.66-14.66l-4.24 4.24m-4.24 4.24l-4.24 4.24m16.48 0l-4.24-4.24m-4.24-4.24l-4.24-4.24"></path>
+          </svg>
+          <span>Zoom Settings</span>
+        </button>
+        <div class="owner-only zoom-settings-panel" id="zoom-settings-panel" data-owner-display="block" style="display: none;" aria-hidden="true">
+          <div class="settings-section">
+            <h4 class="settings-section-title">Zoom Link</h4>
+            <div class="current-link-display">
+              <a id="zoom-link-display" class="link-preview" href="https://gwu-edu.zoom.us/j/97392237308" target="_blank" rel="noopener noreferrer" data-zoom-link>
+                https://gwu-edu.zoom.us/j/97392237308
+              </a>
+            </div>
+            <form id="zoom-link-form" class="settings-form">
+              <div class="input-group">
+                <input type="url" id="zoom-link-input" placeholder="Enter new Zoom link" required />
+                <button type="submit" class="save-btn">Update</button>
+              </div>
+            </form>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-section">
+            <h4 class="settings-section-title">Schedule Meeting</h4>
+            <form id="meeting-form" class="settings-form">
+              <div class="form-row">
+                <div class="input-field">
+                  <label>Date</label>
+                  <input type="date" id="meeting-date-input" required />
+                </div>
+                <div class="input-field">
+                  <label>Time</label>
+                  <input type="time" id="meeting-time-input" required />
+                </div>
+              </div>
+              <div class="input-field">
+                <label>Timezone</label>
+                <select id="meeting-timezone-input">
+                  <option value="America/New_York">Eastern Time (ET)</option>
+                  <option value="America/Chicago">Central Time (CT)</option>
+                  <option value="America/Denver">Mountain Time (MT)</option>
+                  <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                  <option value="UTC">UTC</option>
+                </select>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="save-btn primary">Save Meeting</button>
+                <button type="button" class="clear-btn" id="clear-meeting-button">Clear</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="user-profile">
+            <div class="user-avatar" id="user-avatar" aria-hidden="true">U</div>
+            <div class="user-details">
+              <span id="user-name">Loading...</span>
+              <span id="user-role">writer</span>
+            </div>
+          </div>
+          <button id="logout-button" class="logout-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+            </svg>
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content guidelines-main">
+
+        <!-- Hero Header -->
+        <header class="guidelines-hero">
+          <div class="guidelines-hero-inner">
+            <div class="hero-top-row">
+              <p class="hero-eyebrow">
+                <span class="hero-eyebrow-dot" aria-hidden="true"></span>
+                Editorial Standards
+              </p>
+              <a
+                class="hero-watch-link"
+                href="https://youtu.be/p9RAkeH6CjU"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 6.82v10.36a1 1 0 001.5.87l8.64-5.18a1 1 0 000-1.72L9.5 5.95A1 1 0 008 6.82z"></path></svg>
+                <span>Watch Meeting with Professor Kintisch</span>
+              </a>
+            </div>
+            <h1>Writing & Editorial Guidelines</h1>
+            <p class="hero-subtitle">
+              Everything Catalyst writers need to craft clear, credible, and compelling science stories — distilled from our editorial sessions with Professor Kintisch.
+            </p>
+          </div>
+        </header>
+
+        <!-- Two-column layout: content + sticky TOC -->
+        <div class="guidelines-layout">
+          <div class="guidelines-body">
+
+          <!-- ================================================= -->
+          <!-- SECTION 1 — Know Your Audience                     -->
+          <!-- ================================================= -->
+          <section class="guideline-section" id="audience">
+            <div class="section-label">
+              <span class="section-number">01</span>
+              <span class="section-tag">Foundation</span>
+            </div>
+            <h2 class="section-title">Know Your Audience</h2>
+            <p class="section-intro">
+              Every writing decision — vocabulary, assumed knowledge, level of explanation — flows from a clear picture of who is reading. At Catalyst, that picture is specific.
+            </p>
+
+            <div class="highlight-box highlight-primary">
+              <div class="highlight-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              </div>
+              <div>
+                <p class="highlight-label">The Catalyst Reader</p>
+                <p>Catalyst is written <strong>for students in college and above who are into science.</strong> This is your north star. Readers are intellectually curious and science-literate, but they are not necessarily experts in your specific topic. You should assume intelligence without assuming specialized knowledge.</p>
+              </div>
+            </div>
+
+            <div class="rule-cards">
+              <div class="rule-card">
+                <div class="rule-card-icon blue">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </div>
+                <h4>Curious, Not Expert</h4>
+                <p>Your reader is engaged with science broadly, but probably isn't a specialist in your topic. Explain concepts clearly — but don't condescend. Respect their intelligence.</p>
+              </div>
+              <div class="rule-card">
+                <div class="rule-card-icon green">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path></svg>
+                </div>
+                <h4>Accessible Language</h4>
+                <p>Define jargon the first time you use it. Never assume a term is universally known. When in doubt, add a brief, one-clause explanation in parentheses or in the next sentence.</p>
+              </div>
+              <div class="rule-card">
+                <div class="rule-card-icon purple">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"></path></svg>
+                </div>
+                <h4>College-Level Reading</h4>
+                <p>You're not writing for a general newspaper audience, and you're not writing a journal abstract. Aim for the level of a well-written science magazine article — substantive, but readable.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================================================= -->
+          <!-- SECTION 2 — The Lead                               -->
+          <!-- ================================================= -->
+          <section class="guideline-section" id="lead">
+            <div class="section-label">
+              <span class="section-number">02</span>
+              <span class="section-tag">Structure</span>
+            </div>
+            <h2 class="section-title">Writing the Lead</h2>
+            <p class="section-intro">
+              The lead (or "lede") is the most important sentence — or paragraph — in your piece. It's the only thing standing between your story and a reader clicking away. Get it wrong and nothing else matters.
+            </p>
+
+            <div class="highlight-box highlight-amber">
+              <div class="highlight-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              </div>
+              <div>
+                <p class="highlight-label">The Surprising Lead</p>
+                <p>The best leads are <strong>surprising.</strong> They give the reader something they didn't expect — an unexpected fact, a counterintuitive finding, a vivid scene, or a provocative question that reframes how you think about the topic. A surprising lead signals to the reader: <em>this story is worth your time.</em></p>
+              </div>
+            </div>
+
+            <h3 class="subsection-title">What a Lead Must Accomplish</h3>
+            <div class="checklist">
+              <div class="checklist-item">
+                <div class="check-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div>
+                  <strong>Hook the reader immediately.</strong> You have one sentence to earn the second sentence. Every word counts.
+                </div>
+              </div>
+              <div class="checklist-item">
+                <div class="check-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div>
+                  <strong>Signal the story's stakes.</strong> Why does this matter? Why now? The lead should make the reader feel the urgency or wonder of the topic.
+                </div>
+              </div>
+              <div class="checklist-item">
+                <div class="check-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div>
+                  <strong>Set the tone.</strong> Is this a mystery to be unraveled? A surprising discovery? A human story? The lead establishes the emotional register for everything that follows.
+                </div>
+              </div>
+              <div class="checklist-item">
+                <div class="check-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div>
+                  <strong>Create a promise to the reader.</strong> The lead implicitly says: "if you keep reading, I will answer this question or deliver this payoff." You must then keep that promise.
+                </div>
+              </div>
+            </div>
+
+            <h3 class="subsection-title">Lead Types to Know</h3>
+            <div class="example-blocks">
+              <div class="example-block">
+                <span class="example-tag example-tag-good">Anecdote Lead</span>
+                <p>Open with a specific moment, scene, or person that illustrates the broader topic. Grounds abstract science in a human story. Highly effective for feature writing.</p>
+              </div>
+              <div class="example-block">
+                <span class="example-tag example-tag-good">Surprising Fact Lead</span>
+                <p>Lead with a counterintuitive or astonishing statistic or finding. "Despite decades of research, scientists still can't explain why…" Immediately creates curiosity.</p>
+              </div>
+              <div class="example-block">
+                <span class="example-tag example-tag-good">Question Lead</span>
+                <p>Pose the central question your piece answers. Use sparingly — only when the question itself is genuinely surprising. Avoid vague or rhetorical questions ("Have you ever wondered…?").</p>
+              </div>
+              <div class="example-block">
+                <span class="example-tag example-tag-avoid">Summary Lead (avoid)</span>
+                <p>A dry summary of what the article is about ("This article examines…" or "Researchers at GW have discovered…"). Reads like a press release. Avoid for features — save for news briefs only.</p>
+              </div>
+            </div>
+
+            <div class="pro-tip">
+              <div class="pro-tip-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                Pro Tip
+              </div>
+              <p>Write your lead last. Once you know your whole story — every quote, finding, and twist — you'll know which detail is truly the most surprising or compelling. Most writers find a much better lead buried in the middle of their first draft.</p>
+            </div>
+          </section>
+
+          <!-- ================================================= -->
+          <!-- SECTION 3 — Finding Your Angle                     -->
+          <!-- ================================================= -->
+          <section class="guideline-section" id="angle">
+            <div class="section-label">
+              <span class="section-number">03</span>
+              <span class="section-tag">Reporting</span>
+            </div>
+            <h2 class="section-title">Finding Your Angle</h2>
+            <p class="section-intro">
+              Every good science story starts not with a topic, but with an angle — a specific, concrete lens through which a broader theme becomes real and readable. The angle is the difference between a story and an essay.
+            </p>
+
+            <div class="highlight-box highlight-green">
+              <div class="highlight-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </div>
+              <div>
+                <p class="highlight-label">The Local Window Into a Global Story</p>
+                <p>One powerful approach: find a local, specific example that illuminates a global trend. Writing about AI in higher education? Zoom in on a pioneering program right here in the DMV. The specific grounds the abstract — and it gives readers something concrete to connect with. It also means you can reach out and actually interview someone.</p>
+              </div>
+            </div>
+
+            <h3 class="subsection-title">Questions to Find Your Angle</h3>
+            <div class="question-list">
+              <div class="question-item">
+                <span class="q-num">1</span>
+                <p>What is the <strong>most surprising thing</strong> I learned while researching this? Start there.</p>
+              </div>
+              <div class="question-item">
+                <span class="q-num">2</span>
+                <p>Is there a <strong>specific person, place, lab, or program</strong> that embodies the broader trend? Use it as your entry point.</p>
+              </div>
+              <div class="question-item">
+                <span class="q-num">3</span>
+                <p>What does <strong>my reader not know</strong> that they should? What assumptions does this story challenge?</p>
+              </div>
+              <div class="question-item">
+                <span class="q-num">4</span>
+                <p>What is the <strong>unresolved tension</strong> in this topic? Good stories live in the space between what we know and what we don't.</p>
+              </div>
+              <div class="question-item">
+                <span class="q-num">5</span>
+                <p>Why does this matter <strong>right now</strong>? What makes this the moment to tell this story?</p>
+              </div>
+            </div>
+
+            <div class="angle-contrast">
+              <div class="contrast-col contrast-weak">
+                <div class="contrast-label">Too Broad (No Angle)</div>
+                <p>"This article looks at the role of AI in higher education."</p>
+                <p class="contrast-note">This is a topic, not a story. Where's the specific? Who's involved? What's happening now?</p>
+              </div>
+              <div class="contrast-divider">→</div>
+              <div class="contrast-col contrast-strong">
+                <div class="contrast-label">Specific Angle</div>
+                <p>"UMD is one of a handful of universities in the country to have launched a dedicated AI literacy major — and it's drawing students from every discipline."</p>
+                <p class="contrast-note">Specific institution. Concrete claim. Implies a story worth following.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================================================= -->
+          <!-- SECTION 4 — Headlines & Titles                     -->
+          <!-- ================================================= -->
+          <section class="guideline-section" id="titles">
+            <div class="section-label">
+              <span class="section-number">04</span>
+              <span class="section-tag">Craft</span>
+            </div>
+            <h2 class="section-title">Headlines &amp; Titles</h2>
+            <p class="section-intro">
+              A headline is a promise and a sales pitch compressed into a single line. It needs to stop a scrolling reader, convey the story's value, and make them click — without being misleading or clickbaity.
+            </p>
+
+            <div class="highlight-box highlight-primary">
+              <div class="highlight-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+              </div>
+              <div>
+                <p class="highlight-label">Go Aggressive</p>
+                <p>Don't write the safe, vague headline. Push for something with energy. Consider strong modifiers that stress urgency and importance: <strong>"urgent," "necessary," "essential," "critical," "first," "already."</strong> A title should carry the same weight as the story it introduces.</p>
+              </div>
+            </div>
+
+            <h3 class="subsection-title">Headline Principles</h3>
+            <div class="principle-list">
+              <div class="principle-item">
+                <div class="principle-marker">Active</div>
+                <div>
+                  <strong>Use active voice.</strong> "Scientists Discover a Protein That Erases Fear" is more compelling than "A Protein Has Been Discovered That May Affect Fear Memory." The subject should be doing something.
+                </div>
+              </div>
+              <div class="principle-item">
+                <div class="principle-marker">Specific</div>
+                <div>
+                  <strong>Be specific, not vague.</strong> Avoid titles like "A New Study Changes Everything." What study? About what? Changes what? Specificity creates trust and curiosity.
+                </div>
+              </div>
+              <div class="principle-item">
+                <div class="principle-marker">Stakes</div>
+                <div>
+                  <strong>Signal the stakes.</strong> Great headlines tell the reader why this matters to them, to science, or to society. "The DMV Has a Model for Teaching AI — The Rest of the Country Doesn't Know It Yet."
+                </div>
+              </div>
+              <div class="principle-item">
+                <div class="principle-marker">Honest</div>
+                <div>
+                  <strong>Never overpromise.</strong> Your headline should match what your article delivers. If your story qualifies its claims, your headline must too. "May Help" is not the same as "Cures." Don't conflate them.
+                </div>
+              </div>
+            </div>
+
+            <div class="title-workshop">
+              <div class="workshop-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"></path><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"></path><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"></path><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"></path><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"></path><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"></path><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"></path><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"></path></svg>
+                Title Workshop: Before &amp; After
+              </div>
+              <div class="workshop-examples">
+                <div class="workshop-row">
+                  <span class="ws-before">AI in Universities: A Growing Trend</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                  <span class="ws-after">The AI Literacy Major That Could Reshape Every Campus</span>
+                </div>
+                <div class="workshop-row">
+                  <span class="ws-before">Research on Memory and Protein</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                  <span class="ws-after">Scientists Found the Protein That Lets Your Brain Forget Fear</span>
+                </div>
+                <div class="workshop-row">
+                  <span class="ws-before">A Look at Climate Change Effects</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                  <span class="ws-after">These Chesapeake Bay Ecosystems Are Already Past the Point of No Return</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================================================= -->
+          <!-- SECTION 5 — Voice & Credibility                   -->
+          <!-- ================================================= -->
+          <section class="guideline-section" id="voice">
+            <div class="section-label">
+              <span class="section-number">05</span>
+              <span class="section-tag">Identity</span>
+            </div>
+            <h2 class="section-title">Voice &amp; Credibility</h2>
+            <p class="section-intro">
+              Science journalism demands a paradox: you must write with personality and conviction, while maintaining the rigorous credibility of a scientist. Neither should be sacrificed. The goal is a voice that is both authoritative and alive.
+            </p>
+
+            <div class="two-col-concept">
+              <div class="concept-col">
+                <div class="concept-icon blue">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                </div>
+                <h4>Your Voice</h4>
+                <p>Your voice is what makes a reader choose to finish your article instead of someone else's version of the same topic. It's your rhythm, your curiosity on the page, the way you frame a question. Protect it — across publications, across topics, your voice is yours.</p>
+                <p style="margin-top: 0.75rem;">The best science writers make bold, clear statements. They don't hide behind academic hedging. They lead with confidence and let the evidence support them.</p>
+              </div>
+              <div class="concept-col">
+                <div class="concept-icon green">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                </div>
+                <h4>Credibility</h4>
+                <p>Credibility is what makes a reader trust you. It comes from: accurate science, honest attribution, appropriate caveats, and not overstating what the research actually says.</p>
+                <p style="margin-top: 0.75rem;">Think of credibility as the foundation your voice stands on. If readers sense you're overstating findings or editorializing without evidence, you lose them — and you lose them permanently.</p>
+              </div>
+            </div>
+
+            <h3 class="subsection-title">How to Let the Story Drive</h3>
+            <p>Aiden Brown raised a key tension: research culture trains you to present facts neutrally, but storytelling rewards bold, driving statements. The answer isn't to abandon one for the other — it's to let the <em>story</em> make the bold claim, supported by the evidence you've reported.</p>
+
+            <div class="voice-example-set">
+              <div class="voice-example bad">
+                <span class="ve-label ve-bad">Too Flat</span>
+                <p>"There is evidence suggesting that AI literacy programs may have positive effects on student outcomes."</p>
+                <p class="ve-note">Passive, hedged to the point of meaninglessness. The reader has no reason to care.</p>
+              </div>
+              <div class="voice-example also-bad">
+                <span class="ve-label ve-opinion">Too Editorial</span>
+                <p>"Universities must integrate AI literacy and competency into their curriculum."</p>
+                <p class="ve-note">This is the writer's opinion, not the story's conclusion. A journalist reports; they don't prescribe.</p>
+              </div>
+              <div class="voice-example good">
+                <span class="ve-label ve-good">Just Right</span>
+                <p>"UMD's AI literacy program is one of fewer than a dozen of its kind nationwide — and early data suggests its graduates are landing internships at twice the rate of peers from traditional CS programs."</p>
+                <p class="ve-note">Bold, specific, evidence-grounded. The facts make the argument. You just reported them clearly.</p>
+              </div>
+            </div>
+
+            <div class="pro-tip">
+              <div class="pro-tip-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                On Maintaining Your Voice Across Publications
+              </div>
+              <p>Different publications have different ethos, different style guides, different editorial personalities. And yet the writers who thrive across multiple outlets find that their core voice — their curiosity, their rhythm, their way of framing the world — is portable. Learn the constraints of each publication, then write within them as yourself.</p>
+            </div>
+          </section>
+
+          <!-- ================================================= -->
+          <!-- SECTION 6 — Opinion vs. Reporting                 -->
+          <!-- ================================================= -->
+          <section class="guideline-section" id="opinion">
+            <div class="section-label">
+              <span class="section-number">06</span>
+              <span class="section-tag">Integrity</span>
+            </div>
+            <h2 class="section-title">Opinion vs. Reporting</h2>
+            <p class="section-intro">
+              This is one of the most common — and most consequential — lines for new science writers to learn. Crossing it without knowing it can undermine your entire piece.
+            </p>
+
+            <div class="highlight-box highlight-red">
+              <div class="highlight-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              </div>
+              <div>
+                <p class="highlight-label">Red Flag: Prescriptive Language</p>
+                <p>As soon as you write <strong>"universities must," "we should," "it is imperative that," "scientists need to"</strong> — you have shifted from reporting to editorializing. Unless you're writing an op-ed, your job is to report what is and what research shows, not to tell institutions or people what to do.</p>
+              </div>
+            </div>
+
+            <h3 class="subsection-title">The Distinction in Practice</h3>
+            <div class="distinction-table">
+              <div class="dist-row dist-header">
+                <div class="dist-col">Reporting</div>
+                <div class="dist-col">Editorializing</div>
+              </div>
+              <div class="dist-row">
+                <div class="dist-col good-col">"Experts say AI literacy is increasingly seen as a core competency for graduates entering today's workforce."</div>
+                <div class="dist-col bad-col">"Universities must integrate AI literacy into their curriculum immediately."</div>
+              </div>
+              <div class="dist-row">
+                <div class="dist-col good-col">"The study found that early dietary interventions reduced obesity rates by 34% in participating schools."</div>
+                <div class="dist-col bad-col">"Schools need to prioritize nutrition education before it's too late."</div>
+              </div>
+              <div class="dist-row">
+                <div class="dist-col good-col">"Researchers argue the findings challenge existing protocols and may warrant a policy review."</div>
+                <div class="dist-col bad-col">"This research proves that current policy is wrong and must change."</div>
+              </div>
+            </div>
+
+            <p style="margin-top: 1.5rem;">Notice that in every "Reporting" example, the opinion or urgency is still present — but it belongs to experts, data, or researchers. Your job is to faithfully and clearly relay their conclusions, not to add your own conclusions on top of theirs.</p>
+
+            <div class="pro-tip">
+              <div class="pro-tip-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                Op-Eds Are the Exception
+              </div>
+              <p>Op-eds are explicitly opinion pieces and have different rules. Catalyst publishes both reported features and op-eds. Know which format you're writing in before you start, and apply the appropriate standards. If your piece starts drifting toward opinion in a reported feature, flag it with your editor — or consider whether the piece belongs in the op-ed section.</p>
+            </div>
+          </section>
+
+          <!-- ================================================= -->
+          <!-- SECTION 7 — Technical Accuracy                    -->
+          <!-- ================================================= -->
+          <section class="guideline-section" id="accuracy">
+            <div class="section-label">
+              <span class="section-number">07</span>
+              <span class="section-tag">Standards</span>
+            </div>
+            <h2 class="section-title">Technical Accuracy</h2>
+            <p class="section-intro">
+              Science journalism lives or dies on accuracy. A single factual error — especially on the underlying science — can destroy the credibility of an otherwise excellent piece. And in science, the consequences of misinformation can be real.
+            </p>
+
+            <div class="accuracy-principles">
+              <div class="accuracy-item">
+                <div class="acc-num">1</div>
+                <div>
+                  <h4>Don't Paraphrase If You're Not Sure</h4>
+                  <p>When you're restating a scientific concept, ask yourself: could I explain exactly why this is true? If the answer is no, you probably don't understand it well enough to write about it yet. Go back to your sources — papers, experts, textbooks — until you can explain it in your own words with confidence.</p>
+                </div>
+              </div>
+              <div class="accuracy-item">
+                <div class="acc-num">2</div>
+                <div>
+                  <h4>Email Your Sources When Uncertain</h4>
+                  <p>Got confused reading the papers? That's normal — and it's precisely what your interview subjects are for. Don't guess. Email the researcher. Ask them to clarify the mechanism. They would rather explain it than see it misrepresented in print. A two-sentence email can save you from a significant correction.</p>
+                </div>
+              </div>
+              <div class="accuracy-item">
+                <div class="acc-num">3</div>
+                <div>
+                  <h4>Precision in Mechanism Descriptions</h4>
+                  <p>Be especially careful describing biochemical or cellular mechanisms. Words like "strengthens," "weakens," "activates," "inhibits," "promotes," and "erases" are not interchangeable in biology. If a process is one of "remodeling" or "refining" rather than "weakening," use the right word. If you're not sure which word is right, that's a signal to go back to the source material.</p>
+                </div>
+              </div>
+              <div class="accuracy-item">
+                <div class="acc-num">4</div>
+                <div>
+                  <h4>Read the Primary Source</h4>
+                  <p>Don't rely solely on press releases, university news pages, or secondary summaries. Go to the actual paper. You don't need to understand every methodological detail, but you should read the abstract, results summary, and discussion to make sure you understand what the researchers are claiming — and what they're not.</p>
+                </div>
+              </div>
+              <div class="accuracy-item">
+                <div class="acc-num">5</div>
+                <div>
+                  <h4>Flag Uncertainty in Your Draft</h4>
+                  <p>If you're not confident about a specific claim or mechanism when submitting your draft, flag it explicitly with a comment for your editor. Don't hope it slips through. Editors and peer contributors can help you verify or reframe the uncertain passage. Transparency with your editor is always better than silent guessing.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="highlight-box highlight-amber">
+              <div class="highlight-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              </div>
+              <div>
+                <p class="highlight-label">Team Science</p>
+                <p>If you're stuck on a technical concept, bring it to the team. Someone with a different background — a biology major, a chemistry concentrator, someone who took that professor's course — may be able to quickly clarify a mechanism that's eluding you. Catalyst is a collaborative publication. Use your colleagues.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================================================= -->
+          <!-- SECTION 8 — Depth vs. Breadth                     -->
+          <!-- ================================================= -->
+          <section class="guideline-section" id="depth">
+            <div class="section-label">
+              <span class="section-number">08</span>
+              <span class="section-tag">Structure</span>
+            </div>
+            <h2 class="section-title">Depth vs. Breadth</h2>
+            <p class="section-intro">
+              One of the trickiest challenges in science journalism is giving readers real substance without losing them in the weeds — and keeping depth without closing off your audience.
+            </p>
+
+            <div class="highlight-box highlight-primary">
+              <div class="highlight-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"></path></svg>
+              </div>
+              <div>
+                <p class="highlight-label">Don't Write a Literature Review</p>
+                <p>One of the most common traps for science-trained writers: producing an article that reads like a survey paper — comprehensive, citation-heavy, methodologically accurate, and completely unreadable. Catalyst readers want a story, not a systematic review. You don't need to cover every study, every exception, every debate. Find the thread that illuminates the topic, and follow it.</p>
+              </div>
+            </div>
+
+            <h3 class="subsection-title">Strategies for the Balance</h3>
+            <div class="strategy-grid">
+              <div class="strategy-card">
+                <h4>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                  Use One Case to Tell the Whole Story
+                </h4>
+                <p>Instead of listing ten studies, go deep on one. Explain one research team's methodology in human terms. Let one finding carry the weight. Then zoom out to show how it fits into the larger picture. This is more memorable and more readable than a tour of the literature.</p>
+              </div>
+              <div class="strategy-card">
+                <h4>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg>
+                  Prioritize Ruthlessly
+                </h4>
+                <p>Not every fact you learned in your research belongs in the article. Interesting ≠ necessary. Ask for each piece of information: does this move the story forward? Does it help the reader understand the core finding? If not, cut it — or save it for a sidebar, a pull quote, or a future piece.</p>
+              </div>
+              <div class="strategy-card">
+                <h4>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path></svg>
+                  Let Experts Do the Heavy Lifting
+                </h4>
+                <p>You don't need to explain every technical nuance yourself. Quote your sources. Let the researcher explain in their own words what the mechanism does, why it matters. Your job is to put those quotes in the right context and sequence — not to replace them with your own paraphrase.</p>
+              </div>
+              <div class="strategy-card">
+                <h4>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12M12 12L8 16M12 12l4 4M4 6h16M4 10h6M4 14h4"></path></svg>
+                  Use Structure as a Guide
+                </h4>
+                <p>If you find yourself with 2,000 words and no clear through-line, your structure is the problem. Outline before you write. Know your lead, your three key sections, and your kicker. A clear structure keeps you from over-explaining and keeps the reader on track.</p>
+              </div>
+            </div>
+
+            <div class="pro-tip">
+              <div class="pro-tip-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                Niche Pieces Are Okay — With the Right Frame
+              </div>
+              <p>Catalyst publishes both broadly accessible pieces and deeper, more technical articles. A deep-dive into a niche topic isn't automatically wrong — but even a niche piece needs a frame that makes the non-expert care. Start broad (the big question), go narrow (the specific science), and come back broad (why this matters). That structure works for almost every level of technical complexity.</p>
+            </div>
+          </section>
+
+          <!-- ================================================= -->
+          <!-- SECTION 9 — Endings & Kickers                     -->
+          <!-- ================================================= -->
+          <section class="guideline-section" id="endings">
+            <div class="section-label">
+              <span class="section-number">09</span>
+              <span class="section-tag">Craft</span>
+            </div>
+            <h2 class="section-title">Endings &amp; Kickers</h2>
+            <p class="section-intro">
+              A great ending doesn't just stop the article — it lands it. The final paragraph (the "kicker") is your last impression, your parting gift to the reader. It should resonate, not trail off.
+            </p>
+
+            <div class="kicker-types">
+              <div class="kicker-type">
+                <div class="kicker-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path></svg>
+                </div>
+                <div>
+                  <h4>The Quote Kicker</h4>
+                  <p>The most reliable kicker in science journalism. End with a quote from a source that captures the story's emotional or intellectual core — something forward-looking, poetic, or unexpectedly candid. Good interviewers mine for this quote intentionally: "What keeps you up at night about this?" "What's the question your research hasn't answered yet?"</p>
+                </div>
+              </div>
+              <div class="kicker-type">
+                <div class="kicker-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 110 20A10 10 0 0112 2z"></path><path d="M12 6v6l4 2"></path></svg>
+                </div>
+                <div>
+                  <h4>The Callback Kicker</h4>
+                  <p>Return to something from the lead — an image, a character, an unanswered question — and resolve it or reframe it with new meaning. Creates a satisfying sense of narrative closure. Works especially well with anecdote leads.</p>
+                </div>
+              </div>
+              <div class="kicker-type">
+                <div class="kicker-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </div>
+                <div>
+                  <h4>The Implication Kicker</h4>
+                  <p>End with the larger implication of your story — the next question, the future this points toward, the bigger puzzle this is a piece of. Opens outward rather than closes. Effective for topics where there's no tidy resolution, because the research is still unfolding.</p>
+                </div>
+              </div>
+            </div>
+
+            <h3 class="subsection-title">Mining for Your Kicker</h3>
+            <p>If you struggle to find a kicker, the issue is often in your interviews. Go back through your transcripts and notes. Look for:</p>
+            <div class="checklist" style="margin-top: 1rem;">
+              <div class="checklist-item">
+                <div class="check-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div>Quotes that express wonder, uncertainty, or unexpected candor about the research</div>
+              </div>
+              <div class="checklist-item">
+                <div class="check-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div>Statements about what the researcher hopes to discover next, or what still puzzles them</div>
+              </div>
+              <div class="checklist-item">
+                <div class="check-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div>A detail or anecdote that didn't fit anywhere in the body but carries emotional resonance</div>
+              </div>
+              <div class="checklist-item">
+                <div class="check-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div>The moment in your interview when the researcher said something you weren't expecting — often that's where the real kicker is hiding</div>
+              </div>
+            </div>
+
+            <div class="highlight-box highlight-amber">
+              <div class="highlight-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              </div>
+              <div>
+                <p class="highlight-label">The "Summary" Ending</p>
+                <p>Avoid ending with a paragraph that simply summarizes what the article covered ("In conclusion, this study shows that…"). The reader just read your article — they know what it covered. A kicker should add something new: an emotional note, a forward-looking statement, a resonant quote. Don't summarize; resonate.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================================================= -->
+          <!-- SECTION 10 — The Editing Process                  -->
+          <!-- ================================================= -->
+          <section class="guideline-section" id="editing">
+            <div class="section-label">
+              <span class="section-number">10</span>
+              <span class="section-tag">Workflow</span>
+            </div>
+            <h2 class="section-title">The Editing Process</h2>
+            <p class="section-intro">
+              Great journalism is not written in isolation — it's written in collaboration. The editing process is not a judgment; it's the final stage of making your work as strong as it can be.
+            </p>
+
+            <div class="editing-stages">
+              <div class="edit-stage">
+                <div class="stage-num">1</div>
+                <div class="stage-content">
+                  <h4>Submit Your Draft Openly</h4>
+                  <p>Sharing an unfinished draft with editors and colleagues is an act of trust — and courage. The editing session only works if you're genuinely open to feedback. Don't defend first drafts; first drafts are supposed to be imperfect. The goal is to make the story better, not to protect what you wrote.</p>
+                </div>
+              </div>
+              <div class="edit-stage">
+                <div class="stage-num">2</div>
+                <div class="stage-content">
+                  <h4>Read All Editor Comments Before Responding</h4>
+                  <p>When your draft comes back with edits, read through all of them before you make a single change. Understand the full scope of the feedback. Some comments will feel minor; some will feel major. Reading the full picture helps you see the pattern in the feedback — what larger issue the individual notes are pointing to.</p>
+                </div>
+              </div>
+              <div class="edit-stage">
+                <div class="stage-num">3</div>
+                <div class="stage-content">
+                  <h4>Question Edits You Don't Understand</h4>
+                  <p>If an edit doesn't make sense to you, ask. "I see you changed X — can you help me understand why?" is a completely valid question. Understanding the reasoning behind an edit teaches you something for every future draft. It's also how you make sure you don't accidentally accept a suggestion that changes your meaning.</p>
+                </div>
+              </div>
+              <div class="edit-stage">
+                <div class="stage-num">4</div>
+                <div class="stage-content">
+                  <h4>Verify After Edits</h4>
+                  <p>After an edit changes a technical claim or mechanism, re-verify the accuracy. Editing can introduce errors — not through carelessness, but because editors are working quickly and may not have your depth of knowledge on the specific science. You're the author; the accuracy is ultimately your responsibility.</p>
+                </div>
+              </div>
+              <div class="edit-stage">
+                <div class="stage-num">5</div>
+                <div class="stage-content">
+                  <h4>Disagreement Is Welcome</h4>
+                  <p>If you disagree with an editor's suggestion, say so — respectfully and with a rationale. "I'd like to keep this phrasing because it's more technically precise" is a valid response. Editors are not always right. But you need to make the case. Passive acceptance of edits you disagree with doesn't help your piece or your growth as a writer.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="highlight-box highlight-green">
+              <div class="highlight-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              </div>
+              <div>
+                <p class="highlight-label">The Editorial Session Is a Learning Opportunity</p>
+                <p>Every group editing session — like the ones we hold with Professor Kentish — is a masterclass in disguise. Even if it's not your piece being reviewed, pay close attention to the feedback. The same structural problems, the same voice issues, the same credibility traps appear again and again across different writers and different topics. The lessons are transferable.</p>
+              </div>
+            </div>
+
+            <!-- Quick Reference Card -->
+            <div class="quick-ref">
+              <h3 class="qr-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg>
+                Writer's Quick-Reference Checklist
+              </h3>
+              <p class="qr-subtitle">Run through this before submitting any draft.</p>
+              <div class="qr-grid">
+                <div class="qr-item">
+                  <div class="qr-check"></div>
+                  <span>Is my lead surprising, specific, and impossible to skip?</span>
+                </div>
+                <div class="qr-item">
+                  <div class="qr-check"></div>
+                  <span>Have I found a concrete angle, not just a topic?</span>
+                </div>
+                <div class="qr-item">
+                  <div class="qr-check"></div>
+                  <span>Is my headline active, specific, and does it stress the stakes?</span>
+                </div>
+                <div class="qr-item">
+                  <div class="qr-check"></div>
+                  <span>Have I avoided prescriptive opinion language?</span>
+                </div>
+                <div class="qr-item">
+                  <div class="qr-check"></div>
+                  <span>Is every technical claim verified against primary sources?</span>
+                </div>
+                <div class="qr-item">
+                  <div class="qr-check"></div>
+                  <span>Did I flag any uncertain science with a comment for my editor?</span>
+                </div>
+                <div class="qr-item">
+                  <div class="qr-check"></div>
+                  <span>Does the piece read like a story, not a literature review?</span>
+                </div>
+                <div class="qr-item">
+                  <div class="qr-check"></div>
+                  <span>Does my ending land — quote, callback, or implication?</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          </div><!-- /.guidelines-body -->
+
+          <!-- Sticky Table of Contents -->
+          <nav class="toc" aria-label="Table of contents">
+            <p class="toc-heading">On this page</p>
+            <ol class="toc-list">
+              <li><a href="#audience" class="toc-link">Know Your Audience</a></li>
+              <li><a href="#lead" class="toc-link">Writing the Lead</a></li>
+              <li><a href="#angle" class="toc-link">Finding Your Angle</a></li>
+              <li><a href="#titles" class="toc-link">Headlines &amp; Titles</a></li>
+              <li><a href="#voice" class="toc-link">Voice &amp; Credibility</a></li>
+              <li><a href="#opinion" class="toc-link">Opinion vs. Reporting</a></li>
+              <li><a href="#accuracy" class="toc-link">Technical Accuracy</a></li>
+              <li><a href="#depth" class="toc-link">Depth vs. Breadth</a></li>
+              <li><a href="#endings" class="toc-link">Endings &amp; Kickers</a></li>
+              <li><a href="#editing" class="toc-link">The Editing Process</a></li>
+            </ol>
+          </nav>
+
+        </div><!-- /.guidelines-layout -->
+      </main>
+    </div><!-- /#app-container -->
+
+    <script src="guidelines.js"></script>
+  </body>
+</html>
