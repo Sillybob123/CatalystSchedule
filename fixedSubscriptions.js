@@ -64,15 +64,53 @@ function setupBulletproofSubscriptions() {
             if (currentlyViewedProjectId) {
                 const project = allProjects.find(p => p.id === currentlyViewedProjectId);
                 if (project) {
-                    // Just update activity feed and status, not the entire modal
-                    console.log('[BULLETPROOF] Updating project activity feed only');
+                    // Update activity feed
+                    console.log('[BULLETPROOF] Updating project modal (activity, status, editor)');
                     if (typeof renderActivityFeed === 'function') {
                         renderActivityFeed(project.activity || []);
                     }
+                    // Update status
                     const statusEl = document.getElementById('details-status');
-                    if (statusEl && typeof getProjectState === 'function') {
+                    if (statusEl && typeof resolveProjectState === 'function') {
+                        const state = resolveProjectState(project, currentView, currentUser);
+                        statusEl.textContent = state.statusText;
+                    } else if (statusEl && typeof getProjectState === 'function') {
                         const state = getProjectState(project, currentView, currentUser);
                         statusEl.textContent = state.statusText;
+                    }
+                    // Update editor name display
+                    const editorEl = document.getElementById('details-editor');
+                    if (editorEl) {
+                        editorEl.textContent = project.editorName || 'Not Assigned';
+                    }
+                    // Update assign/reassign button text
+                    const assignButton = document.getElementById('assign-editor-button');
+                    if (assignButton) {
+                        if (project.editorId) {
+                            assignButton.innerHTML = `
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+                                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                                </svg>
+                                Reassign Editor
+                            `;
+                        } else {
+                            assignButton.innerHTML = `
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                                </svg>
+                                Assign Editor
+                            `;
+                        }
+                    }
+                    // Update editor dropdown selection
+                    if (typeof populateEditorDropdown === 'function') {
+                        populateEditorDropdown(project.editorId);
+                    }
+                    // Update inactivity banner
+                    if (typeof updateInactivityBanner === 'function') {
+                        updateInactivityBanner(project);
                     }
                 } else {
                     console.log('[BULLETPROOF] Project no longer exists, closing modal');

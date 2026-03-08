@@ -191,7 +191,8 @@ async function handleTaskCompletion(projectId, taskName, isCompleted, db, curren
     console.log(`[TASK UPDATE] ${taskName} = ${isCompleted} for project ${projectId}`);
     
     const updates = {
-        [`timeline.${taskName}`]: isCompleted
+        [`timeline.${taskName}`]: isCompleted,
+        lastActivity: firebase.firestore.FieldValue.serverTimestamp()
     };
     
     // Add automatic state transitions

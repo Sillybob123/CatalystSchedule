@@ -49,26 +49,39 @@ db.enablePersistence({ synchronizeTabs: true })
 
 /**
  * Ensure realtime subscriptions are initialized after all scripts load.
- * Retries a few times because fixedSubscriptions.js loads after dashboard.js.
+ * Uses a promise-based approach instead of polling for faster startup.
  */
-function ensureSubscriptionsInitialized(attempt = 0) {
-    const MAX_ATTEMPTS = 10;
+let _subscriptionsResolve;
+const subscriptionsReady = new Promise(resolve => { _subscriptionsResolve = resolve; });
 
+function ensureSubscriptionsInitialized() {
     if (typeof window.initializeSubscriptions === 'function') {
-        console.log('[INIT] Initializing realtime subscriptions');
+        console.log('[INIT] Initializing realtime subscriptions immediately');
         window.initializeSubscriptions();
+        _subscriptionsResolve();
         return;
     }
 
-    if (attempt < MAX_ATTEMPTS) {
-        const nextAttempt = attempt + 1;
-        console.warn(`[INIT] Subscriptions not ready (attempt ${nextAttempt}/${MAX_ATTEMPTS}), retrying...`);
-        setTimeout(() => ensureSubscriptionsInitialized(nextAttempt), 100);
-        return;
-    }
+    // If not ready yet, set a hook so fixedSubscriptions.js triggers it on load
+    console.log('[INIT] Waiting for fixedSubscriptions.js...');
+    const origInit = window.initializeSubscriptions;
+    Object.defineProperty(window, '_pendingSubscriptionInit', { value: true, writable: true });
 
-    console.error('[INIT] Failed to initialize subscriptions after multiple attempts');
-    showNotification('Live updates failed to start. Please refresh the page.', 'error');
+    // Also do a short poll as fallback (but much faster — 20ms intervals, 25 attempts = 500ms max)
+    let attempt = 0;
+    const poll = setInterval(() => {
+        attempt++;
+        if (typeof window.initializeSubscriptions === 'function') {
+            clearInterval(poll);
+            console.log(`[INIT] Subscriptions ready after ${attempt * 20}ms`);
+            window.initializeSubscriptions();
+            _subscriptionsResolve();
+        } else if (attempt >= 25) {
+            clearInterval(poll);
+            console.error('[INIT] Failed to initialize subscriptions');
+            _subscriptionsResolve(); // resolve anyway so UI isn't stuck
+        }
+    }, 20);
 }
 
 // ==================
@@ -93,6 +106,7 @@ async function approveProposal(projectId) {
         await db.collection('projects').doc(projectId).update({
             proposalStatus: 'approved',
             'timeline.Topic Proposal Complete': true,
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: 'approved the proposal',
                 authorName: currentUserName,
@@ -133,6 +147,7 @@ async function updateProposalStatus(status) {
         console.log('[UPDATE STATUS] Updating proposal status to:', status, 'for project:', currentlyViewedProjectId);
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             proposalStatus: status,
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `${status} the proposal`,
                 authorName: currentUserName,
@@ -168,6 +183,7 @@ async function handleAddComment() {
 
     try {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `commented: "${comment}"`,
                 authorName: currentUserName,
@@ -205,8 +221,10 @@ async function handleAssignEditor() {
         await db.collection('projects').doc(currentlyViewedProjectId).update({
             editorId: editorId,
             editorName: editor.name,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
             activity: firebase.firestore.FieldValue.arrayUnion({
-                text: isReassignment 
+                text: isReassignment
                     ? `reassigned editor from ${previousEditorName} to ${editor.name}`
                     : `assigned ${editor.name} as editor`,
                 authorName: currentUserName,
@@ -776,7 +794,23 @@ auth.onAuthStateChanged(async (user) => {
     currentUser = user;
 
     try {
-        const userDoc = await db.collection('users').doc(user.uid).get();
+        // Start subscriptions and data fetching IMMEDIATELY in parallel with user doc
+        // This is the key optimization: don't wait for user doc before starting data loads
+        ensureSubscriptionsInitialized();
+
+        const dataFetchPromise = Promise.all([
+            fetchEditors(),
+            fetchAllUsers(),
+            loadAvailabilityOverrides()
+        ]);
+
+        // Fetch user doc — try cache first for instant load, fall back to server
+        let userDoc;
+        try {
+            userDoc = await db.collection('users').doc(user.uid).get({ source: 'cache' });
+        } catch (cacheErr) {
+            userDoc = await db.collection('users').doc(user.uid).get();
+        }
 
         if (!userDoc.exists) {
             const defaultUserData = {
@@ -786,7 +820,8 @@ auth.onAuthStateChanged(async (user) => {
                 createdAt: new Date()
             };
 
-            await db.collection('users').doc(user.uid).set(defaultUserData);
+            // Don't await the set — let it happen in background, we already have the data
+            db.collection('users').doc(user.uid).set(defaultUserData);
             currentUserName = defaultUserData.name;
             currentUserRole = defaultUserData.role;
         } else {
@@ -797,30 +832,30 @@ auth.onAuthStateChanged(async (user) => {
 
         // Show UI immediately after getting user info
         setupUI();
+
+        // Setup UI controls before showing the app
+        setupNavAndListeners();
+        applyInitialViewFromUrl();
+
+        // Reveal the app
         document.getElementById('loader').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
 
-        // Parallelize data fetching and setup (non-blocking)
-        Promise.all([
-            fetchEditors(),
-            fetchAllUsers(),
-            loadAvailabilityOverrides()
-        ]).then(() => {
-            console.log('[INIT] User data loaded successfully');
-        }).catch(error => {
-            console.error('[INIT] Error fetching user data:', error);
-        });
-
-        // Setup UI controls (non-blocking)
-        setupNavAndListeners();
-        applyInitialViewFromUrl();
+        // Non-critical setup — run after UI is visible
         setupOwnerOnlyControls();
         subscribeToMeetingSettings();
         setupMeetingPrepControls();
         subscribeToMeetingPrepGroups();
 
-        // Initialize subscriptions in background (non-blocking)
-        ensureSubscriptionsInitialized();
+        // Wait for data fetch to finish, then re-render once with full data
+        dataFetchPromise.then(() => {
+            console.log('[INIT] User data loaded successfully');
+            if (typeof renderCurrentViewEnhanced === 'function') {
+                renderCurrentViewEnhanced();
+            }
+        }).catch(error => {
+            console.error('[INIT] Error fetching user data:', error);
+        });
 
     } catch (error) {
         console.error("Initialization Error:", error);
@@ -4356,6 +4391,7 @@ function refreshDetailsModal(project) {
     renderDeadlines(project, isAuthor, isEditor, isAdmin);
     renderDeadlineRequestSection(project, isAuthor, isAdmin);
     renderActivityFeed(project.activity || []);
+    updateInactivityBanner(project);
 
     const deleteButton = document.getElementById('delete-project-button');
     if (deleteButton) {
@@ -5704,6 +5740,96 @@ function filterProjects() {
     }
 }
 
+/**
+ * Returns the last activity date for a project.
+ * Uses `lastActivity` field if available, otherwise falls back to the most recent
+ * activity log entry timestamp, then `updatedAt`, then `createdAt`.
+ */
+function getLastActivityDate(project) {
+    // Try dedicated lastActivity field first
+    if (project.lastActivity) {
+        if (project.lastActivity.seconds) return new Date(project.lastActivity.seconds * 1000);
+        if (project.lastActivity instanceof Date) return project.lastActivity;
+        if (typeof project.lastActivity === 'string') return new Date(project.lastActivity);
+    }
+
+    // Fall back to most recent activity log entry
+    if (project.activity && project.activity.length > 0) {
+        let latestMs = 0;
+        for (const entry of project.activity) {
+            let ts = entry.timestamp;
+            if (!ts) continue;
+            let ms = 0;
+            if (ts.seconds) ms = ts.seconds * 1000;
+            else if (ts instanceof Date) ms = ts.getTime();
+            else if (typeof ts === 'string') ms = new Date(ts).getTime();
+            else if (typeof ts === 'number') ms = ts;
+            if (ms > latestMs) latestMs = ms;
+        }
+        if (latestMs > 0) return new Date(latestMs);
+    }
+
+    // Fall back to updatedAt
+    if (project.updatedAt) {
+        if (project.updatedAt.seconds) return new Date(project.updatedAt.seconds * 1000);
+        if (project.updatedAt instanceof Date) return project.updatedAt;
+    }
+
+    // Fall back to createdAt
+    if (project.createdAt) {
+        if (project.createdAt.seconds) return new Date(project.createdAt.seconds * 1000);
+        if (project.createdAt instanceof Date) return project.createdAt;
+    }
+
+    return null;
+}
+
+/**
+ * Returns the number of days since the last activity on a project.
+ */
+function getDaysInactive(project) {
+    const lastDate = getLastActivityDate(project);
+    if (!lastDate) return 0;
+    const now = new Date();
+    return Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Shows or hides the inactivity banner in the project details modal.
+ * Only visible to admins and the project owner.
+ */
+function updateInactivityBanner(project) {
+    const banner = document.getElementById('inactivity-banner');
+    if (!banner) return;
+
+    const isAdmin = currentUserRole === 'admin';
+    const isAuthor = currentUser && currentUser.uid === project.authorId;
+
+    if (!isAdmin && !isAuthor) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    const daysInactive = getDaysInactive(project);
+    const lastDate = getLastActivityDate(project);
+    const state = resolveProjectState(project, currentView, currentUser);
+
+    if (daysInactive > 9 && state.column !== 'Completed' && lastDate) {
+        const formattedDate = lastDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        banner.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            Been inactive since <strong>${formattedDate}</strong> — <span class="inactive-days">${daysInactive} days</span> with no progress
+        `;
+        banner.style.display = 'flex';
+    } else {
+        banner.style.display = 'none';
+    }
+}
+
 function createProjectCard(project) {
     if (project.isTask) {
         return createTaskCardForAssignments(project);
@@ -5724,7 +5850,12 @@ function createProjectCard(project) {
         columnClass = 'column-pending';
     }
 
-    card.className = `kanban-card status-${state.color} ${columnClass}`;
+    // Check inactivity — flash if inactive >9 days and not completed
+    const daysInactive = getDaysInactive(project);
+    const isInactive = daysInactive > 9 && state.column !== 'Completed';
+    const inactiveClass = isInactive ? 'card-inactive-flash' : '';
+
+    card.className = `kanban-card status-${state.color} ${columnClass} ${inactiveClass}`.trim();
     card.dataset.id = project.id;
     card.dataset.type = 'project';
 
@@ -5738,11 +5869,20 @@ function createProjectCard(project) {
                                    (project.deadlineChangeRequest && project.deadlineChangeRequest.status === 'pending') ?
         '<span class="deadline-request-indicator">⏰</span>' : '';
 
+    let inactiveTag = '';
+    if (isInactive) {
+        const isAdmin = currentUserRole === 'admin';
+        const isOwner = currentUser && currentUser.uid === project.authorId;
+        const idleLabel = (isAdmin || isOwner) ? `${daysInactive}d idle` : 'idle';
+        inactiveTag = `<span class="card-inactive-tag"><span class="inactive-dot"></span>${idleLabel}</span>`;
+    }
+
     card.innerHTML = `
         <h4 class="card-title">${project.title} ${deadlineRequestIndicator}</h4>
         <div class="card-meta">
             <span class="card-type">${project.type}</span>
             <span class="card-status">${state.statusText}</span>
+            ${inactiveTag}
         </div>
         <div class="progress-bar-container">
             <div class="progress-bar" style="width: ${progress}%"></div>
@@ -6820,6 +6960,7 @@ async function handleSaveProposal() {
         await db.collection('projects').doc(projectId).update({
             proposal: newProposal,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: 'updated the proposal',
                 authorName: currentUserName || 'Unknown User',
@@ -6939,6 +7080,7 @@ async function handleSetDeadlines() {
     try {
         await db.collection('projects').doc(project.id).update({
             deadlines: updatedDeadlines,
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: changedLabels.length > 0
                     ? `updated project deadlines (${changedLabels.join(', ')})`
@@ -6992,6 +7134,7 @@ async function handleRequestDeadlineChange() {
                 status: 'pending',
                 requestedAt: new Date()
             },
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `requested deadline changes. Reason: ${reason.trim()}`,
                 authorName: currentUserName,
@@ -7018,6 +7161,7 @@ async function handleApproveDeadlineRequest() {
 
     try {
         const updates = {
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `approved deadline change request from ${request.requestedBy}`,
                 authorName: currentUserName,
@@ -7055,6 +7199,7 @@ async function handleRejectDeadlineRequest() {
 
     try {
         const updates = {
+            lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
             activity: firebase.firestore.FieldValue.arrayUnion({
                 text: `rejected deadline change request from ${request.requestedBy}`,
                 authorName: currentUserName,
